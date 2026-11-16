@@ -140,6 +140,7 @@ StepResult Scheduler::step() {
   const uint32_t end = clock.nowMs();
 
   wpmMeter.addWordUpdate(frame.wordCount, end - start);
+  if (frame.skippedBefore != 0) wordAudit.declareSkip(frame.skippedBefore);
   wordAudit.recordFrame(frame.firstWordIndex, frame.lastWordIndex, frame.wordCount);
   clearing.noteWordUpdate(frame.lastWord.endsBlock());
   frameShown = true;

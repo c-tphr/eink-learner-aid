@@ -11,6 +11,7 @@ add_executable(RsvpCoreTest
   WordOrderAuditTest.cpp
   SchedulerTest.cpp
   PlaybackSweepTest.cpp
+  IntentionalSkipTest.cpp
   ${REPO_ROOT}/lib/RsvpCore/RsvpText.cpp
   ${REPO_ROOT}/lib/RsvpCore/WordClassifier.cpp
   ${REPO_ROOT}/lib/RsvpCore/FocusLetter.cpp

@@ -32,6 +32,7 @@ struct Frame {
   uint16_t wordLength[MAX_WORDS_PER_FRAME] = {};  // byte length of each word
   uint32_t firstWordIndex = 0;                    // chapter word index of the first word
   uint32_t lastWordIndex = 0;                     // chapter word index of the last word
+  uint32_t skippedBefore = 0;                     // the first word's Token::skippedBefore
 
   // Focus: the focus letter of the middle word, word (wordCount - 1) / 2, i.e. the first word of
   // a pair. Offsets are into `text`.
