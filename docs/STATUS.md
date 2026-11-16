@@ -4,15 +4,17 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 ## Where we are
 
-_Updated 2026-11-18._
+_Updated 2026-11-19._
 
-- **Milestone:** M0 Foundation: F1 done; F2 (#3) in rework (pull request #55), which gates F3, F4, the simulator and all user-facing work. M2 spikes S1 to S3 done. The portable libraries for M4 and M5 are done ahead of the firmware build: RsvpCore (R1, R2) and CheckpointCore (C1a, C1b).
-- **Merged:** #1 (PR #41), #2 F1 (PR #42, merge commit), #13 P1 (#43), #10 S2 (#45), #14 P3 (#46), #11 S3 (#47), #9 S1 (#48), plan change (#50), #18 R1 (#51), #15 P2a (#52), #24 C1a (#53), #19 R2 (#54), #25 C1b (#57)
-- **In rework:** #3 F2 (PR #55: firmware builds; simulator needs the patch mechanism); #49 P6 (PR #56: Python passes; C++ fixture reader must move to the new expected-file layout)
-- **Assigned, in progress:** #35 D5 (guarded flash tool, started before D4 against synthetic images)
-- **Next when dependencies merge:** after F2: #4 F3, #5 F4, #12 S4, #6 E2, #7 E1. After P6: #20 R3, #16 P2b. Then #8 E3 (needs F4, E2), #21 R4a.
-- **Blockers:** none beyond the two reworks.
-- **Waiting on the owner (not blocking yet):** enable "Automatically delete head branches"; confirm GitHub Actions is enabled (no workflow run has ever been triggered by a pull request here, although upstream's `ci.yml` runs on `pull_request`). F3 cannot be validated until Actions runs.
+- **Milestone:** M0 build gate met: `picco` and `simulator_picco` build in a cloud session (F1, F2 merged). CI (F3) is in progress and GitHub Actions is running. M2: S1 to S3 done, S4 in progress. M3: P1, P2a, P2b, P3, P6 done; P4 in progress. M4: R1, R2, R3 done (portable libraries). M5: C1a, C1b done. M6: D5 and the early-check sheet (D6a) done.
+- **Merged:** #1 (PR #41), #2 F1 (#42, merge commit), #13 P1 (#43), #10 S2 (#45), #14 P3 (#46), #11 S3 (#47), #9 S1 (#48), plan change (#50), #18 R1 (#51), #15 P2a (#52), #24 C1a (#53), #19 R2 (#54), #3 F2 (#55), #49 P6 (#56), #25 C1b (#57), #35 D5 (#59), #60 D6a (#61), #16 P2b (#62), #20 R3 (#63)
+- **Assigned, in progress:** #4 F3 (CI), #5 F4 (flag, skeletons, first ESP32 compile of RsvpCore and CheckpointCore), #12 S4 (control map), #6 E2 (scenario harness), #7 E1 (sim.sh, devcontainer), #17 P4 (/prep-book, checker)
+- **Next when dependencies merge:** #8 E3 (needs F4, E2), then #21 R4a (needs E3, S4, E2), #34 D4 (needs F3), #38 P5 (needs P4), #30 D1 (needs R4a)
+- **Blockers:** none hard. Soft: `usc1.contabostorage.com` is not allowlisted (see below).
+- **Waiting on the owner:**
+  1. Add `usc1.contabostorage.com` to the cloud environment's allowlist. It is a download mirror of the PlatformIO registry: `dl.registry.platformio.org` redirects to it or to `github.com` at random. Setup usually succeeds by retrying, but can fail; re-running `./scripts/cloud-setup.sh` is the workaround.
+  2. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md` (setup, identify, backup, summary). Return only the summary file.
+  3. Enable "Automatically delete head branches" (merged task branches accumulate; sessions cannot delete them).
 
 ## Last decisions
 
@@ -35,31 +37,36 @@ _Updated 2026-11-18._
 - 2026-11-18: Checkpoint behaviour fixed by C1b (PR #57, 20 decisions): re-arming is literal (previous page then next page over a section end fires again); skip is offered after Incorrect too; only `book.source_sha256`-matching state keeps position; answer-revealed is never persisted.
 - 2026-11-18: Hidden, page-break and `rt` content never splits a word (tags inside are ignored), per the S1 prototype.
 
+- 2026-11-19: Fixture layout: chapter 2's notes moved to a separate endnotes document so the three-prompt checkpoint's section ends its chapter again; chapter 1 keeps an in-chapter footnote. A section followed by note bodies does not end its chapter (resume lands on the notes; RSVP passes over them).
+- 2026-11-19: R3: a word before `<br>` is a paragraph end for RSVP; a source declares intentionally skipped note words through `Token::skippedBefore` so the word-order audit stays exact.
+- 2026-11-19: P2b: `report` re-runs `validate` and `verify-check` and trusts no stored result; exclusions come from the optional draft; firmware limits are mirrored in Python with a test against `CheckpointLimits.h`.
+- 2026-11-19: Lesson applied to assignments: when one in-flight task changes a shared fixture, tasks that read it are not merged until it lands, and briefs name the files a task must not change.
+
 ## Issue map
 
 | ID | Issue | Milestone | State |
 | --- | --- | --- | --- |
 | B0 | #1 | M0 | merged |
 | F1 | #2 | M0 | merged |
-| F2 | #3 | M0 | in rework (PR #55) |
-| F3 | #4 | M0 | open |
-| F4 | #5 | M0 | open |
-| E2 | #6 | M1 | open |
-| E1 | #7 | M1 | open |
+| F2 | #3 | M0 | merged |
+| F3 | #4 | M0 | in progress |
+| F4 | #5 | M0 | in progress |
+| E2 | #6 | M1 | in progress |
+| E1 | #7 | M1 | in progress |
 | E3 | #8 | M1 | open |
 | S1 | #9 | M2 | merged |
 | S2 | #10 | M2 | merged |
 | S3 | #11 | M2 | merged |
-| S4 | #12 | M2 | open |
+| S4 | #12 | M2 | in progress |
 | P1 | #13 | M3 | merged |
 | P3 | #14 | M3 | merged |
 | P2a | #15 | M3 | merged |
-| P2b | #16 | M3 | open |
-| P6 | #49 | M3 | in rework (PR #56) |
-| P4 | #17 | M3 | open |
+| P2b | #16 | M3 | merged |
+| P6 | #49 | M3 | merged |
+| P4 | #17 | M3 | in progress |
 | R1 | #18 | M4 | merged |
 | R2 | #19 | M4 | merged |
-| R3 | #20 | M4 | open |
+| R3 | #20 | M4 | merged |
 | R4a | #21 | M4 | open |
 | R4b | #22 | M4 | open |
 | R5 | #23 | M4 | open |
@@ -74,7 +81,8 @@ _Updated 2026-11-18._
 | D3a | #32 | M6 | open |
 | D3b | #33 | M6 | open |
 | D4 | #34 | M6 | open |
-| D5 | #35 | M6 | in progress |
+| D5 | #35 | M6 | merged |
+| D6a | #60 | M7 | merged (early read-only check sheet) |
 | D6 | #36 | M6 | open |
 | A0 | #37 | M6 | open |
 | P5 | #38 | M7 | open |
@@ -89,7 +97,11 @@ _Updated 2026-11-18._
 - Host tests upstream are CMake and GoogleTest under `test/`: 924 pass at the pinned commit (about 5 minutes to build on 4 cores).
 - Cloud builds: run `./scripts/cloud-setup.sh` first in every session (about 3 minutes from empty caches, seconds afterwards). A plain `pio run` on empty caches fails with `CERTIFICATE_VERIFY_FAILED` because pioarduino replaces the CA settings; worse, its `idf_tools.py` falls back to unverified downloads, which the setup script treats as a failure. Building a `custom_sdkconfig` environment (upstream `default`) in the same core directory triggers a reinstall that hits the TLS problem again; re-run the setup script. `picco` builds in about 5.5 minutes: flash 5,449,518 B of the 7,431,782 B two-slot budget, RAM 34.4%.
 - Upload hazard confirmed by `pio run -e picco -t envdump`: `UPLOADERFLAGS` holds 0x0, 0x8000 and 0xe000 images although `FLASH_EXTRA_IMAGES` is empty.
-- Host suite on `main`: 1,113 tests (924 upstream, 115 RsvpCore, 74 CheckpointCore). Python: `python3 -m pytest tools/prep -q` (281 on `main`).
+- Host suite on `main`: 1,209 tests (924 upstream, RsvpCore, CheckpointCore, WordIndex incl. renderer parity). Python: `python3 -m pytest tools/prep -q` (617, several minutes because EPUBCheck runs) and `python -m pytest tools/device -q` (190, in a virtualenv from `tools/device/requirements-test.txt`).
+- Simulator: `pio run -e simulator_picco` applies `scripts/simulator_patches/` automatically; headless run: `xvfb-run -a .pio/build/simulator_picco/program` with `CROSSPOINT_SIM_INPUT_SCRIPT="0:WAIT:Entering activity: Home;1500:SHOT:home;2500:QUIT"` (SHOT writes a BMP at the given path).
+- Upstream renderer quirks found by the parity test (not ours, not fixed): the last word of a table caption is never drawn; rows of a grid table split across pages are drawn line by line. Neither affects RSVP positions or anchors.
+- The flash tool has never run on Windows or on a device; `docs/DEVICE_EARLY_CHECK.md` is the first real run. Never post backups or `.bin` blobs: the repo is public.
+- GitHub Actions is enabled; upstream's "PR Formatting" workflow fails on every pull request here until F3 replaces it.
 - The cloud VM pauses when the session is idle, so wall-clock durations are unreliable; scripts time with `/proc/uptime`.
 - Network: all ten allowlisted hosts and the five upstream repos respond; no host refused so far. F2's smoke test gives the complete list.
 - Pushing `task/<n>-<slug>` branches works. Merged branches are not deleted (setting is off and sessions cannot delete branches).
