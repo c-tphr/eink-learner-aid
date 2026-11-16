@@ -78,7 +78,7 @@ TEST(PanelIdentity, NamesAndSdkVariants) {
   EXPECT_STREQ(panelName(PanelId::DEPG0397), "DEPG0397");
   EXPECT_STREQ(panelName(PanelId::OPM040B3), "OPM040B3");
   EXPECT_STREQ(panelName(PanelId::SE0400NQW47), "SE0400NQW47");
-  EXPECT_STREQ(panelName(PanelId::SIMULATOR), "simulator");
+  EXPECT_STREQ(panelName(PanelId::SIMULATED), "simulator");
   // The SDK's PiccoPanel values 0..4.
   EXPECT_EQ(panelFromVariant(0), PanelId::UNKNOWN);
   EXPECT_EQ(panelFromVariant(1), PanelId::YRD0426);
@@ -91,10 +91,10 @@ TEST(PanelIdentity, NamesAndSdkVariants) {
 
 TEST(PanelIdentity, StockIsAlwaysAllowedTrialsOnlyInTheSimulatorUntilD2) {
   for (const PanelId panel : {PanelId::UNKNOWN, PanelId::YRD0426, PanelId::DEPG0397, PanelId::OPM040B3,
-                              PanelId::SE0400NQW47, PanelId::SIMULATOR}) {
+                              PanelId::SE0400NQW47, PanelId::SIMULATED}) {
     EXPECT_TRUE(defaultProfileAllowed(ProfileId::STOCK, panel)) << panelName(panel);
     for (const ProfileId trial : {ProfileId::TRIAL_A, ProfileId::TRIAL_B, ProfileId::TRIAL_C, ProfileId::TRIAL_D}) {
-      EXPECT_EQ(defaultProfileAllowed(trial, panel), panel == PanelId::SIMULATOR)
+      EXPECT_EQ(defaultProfileAllowed(trial, panel), panel == PanelId::SIMULATED)
           << panelName(panel) << " " << profileInfo(trial).key;
     }
   }

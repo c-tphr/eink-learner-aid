@@ -1,9 +1,65 @@
-#include "RsvpFeature.h"
+#include "DisplayProfile.h"
 
 #if CROSSPOINT_RSVP_ENABLED
-// Placeholder: proves this directory builds only with the RSVP flag. Task E3 (#8) replaces it.
-namespace rsvp_skeleton {
-extern const char DISPLAY_PROFILE[];
-const char DISPLAY_PROFILE[] = "DisplayProfile";
-}  // namespace rsvp_skeleton
+
+#include <Arduino.h>
+#include <Logging.h>
+
+#if defined(SIMULATOR)
+#include "SimulatorDisplayBackend.h"
+#else
+#include "DeviceDisplayBackend.h"
 #endif
+
+namespace displayprofile {
+
+namespace {
+
+const char* kindName(const RefreshKind kind) { return kind == RefreshKind::UPDATE ? "update" : "clear"; }
+
+uint32_t countOf(const DisplayBackend& backend, const RefreshKind kind) {
+  return kind == RefreshKind::UPDATE ? backend.stats().updates.count : backend.stats().clears.count;
+}
+
+}  // namespace
+
+uint32_t MillisClock::nowMs() { return static_cast<uint32_t>(millis()); }
+
+DisplayBackend& firmwareBackend(GfxRenderer& renderer) {
+#if defined(SIMULATOR)
+  static SimulatorDisplayBackend backend(renderer);
+#else
+  static DeviceDisplayBackend backend(renderer);
+#endif
+  return backend;
+}
+
+// The count printed is the call's own number: stats are updated after present*() returns.
+void logRefresh(const DisplayBackend& backend, const RefreshKind kind, const uint32_t ms) {
+  LOG_DBG("DSP", "%s n=%lu profile=%s ms=%lu", kindName(kind), static_cast<unsigned long>(countOf(backend, kind) + 1),
+          backend.info().key, static_cast<unsigned long>(ms));
+}
+
+void logModelledRefresh(const DisplayBackend& backend, const ModelledCall& call) {
+  LOG_DBG("DSP", "%s n=%lu profile=%s ms=%lu model=%lu real=%lu slept=%lu", kindName(call.kind),
+          static_cast<unsigned long>(countOf(backend, call.kind) + 1), backend.info().key,
+          static_cast<unsigned long>(call.totalMs), static_cast<unsigned long>(call.modelMs),
+          static_cast<unsigned long>(call.realMs), static_cast<unsigned long>(call.sleptMs));
+}
+
+void logStats(const DisplayBackend& backend) {
+  const RefreshStats& u = backend.stats().updates;
+  const RefreshStats& c = backend.stats().clears;
+  LOG_DBG("DSP",
+          "stats profile=%s panel=%s updates=%lu min=%lu max=%lu mean=%lu last=%lu clears=%lu min=%lu max=%lu "
+          "mean=%lu last=%lu",
+          backend.info().key, panelName(backend.panel()), static_cast<unsigned long>(u.count),
+          static_cast<unsigned long>(u.minMs), static_cast<unsigned long>(u.maxMs),
+          static_cast<unsigned long>(u.meanMs()), static_cast<unsigned long>(u.lastMs),
+          static_cast<unsigned long>(c.count), static_cast<unsigned long>(c.minMs), static_cast<unsigned long>(c.maxMs),
+          static_cast<unsigned long>(c.meanMs()), static_cast<unsigned long>(c.lastMs));
+}
+
+}  // namespace displayprofile
+
+#endif  // CROSSPOINT_RSVP_ENABLED

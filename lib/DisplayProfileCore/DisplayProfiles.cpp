@@ -26,7 +26,7 @@ const char* panelName(const PanelId panel) {
       return "OPM040B3";
     case PanelId::SE0400NQW47:
       return "SE0400NQW47";
-    case PanelId::SIMULATOR:
+    case PanelId::SIMULATED:
       return "simulator";
     case PanelId::UNKNOWN:
     default:
@@ -39,7 +39,7 @@ PanelId panelFromVariant(const uint8_t variant) {
 }
 
 bool defaultProfileAllowed(const ProfileId id, const PanelId panel) {
-  return id == ProfileId::STOCK || panel == PanelId::SIMULATOR;
+  return id == ProfileId::STOCK || panel == PanelId::SIMULATED;
 }
 
 }  // namespace displayprofile

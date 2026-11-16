@@ -81,7 +81,7 @@ struct Parts {
 
 class FakeDisplayBackend final : private fake_detail::Parts, public ModelledBackend {
  public:
-  FakeDisplayBackend(FakeClock& clock, const TimingModel& model = TimingModel(), PanelId panel = PanelId::SIMULATOR)
+  FakeDisplayBackend(FakeClock& clock, const TimingModel& model = TimingModel(), PanelId panel = PanelId::SIMULATED)
       : Parts(clock), ModelledBackend(fakePresenter, clock, fakeSleeper, model, panel), clock(clock) {}
 
   // The real refresh time the fake presenter spends before the remainder is slept.

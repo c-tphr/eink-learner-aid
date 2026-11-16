@@ -66,7 +66,7 @@ enum class PanelId : uint8_t {
   DEPG0397 = 2,     // SSD1677
   OPM040B3 = 3,     // SSD1677
   SE0400NQW47 = 4,  // the stock "SSD2677" driver
-  SIMULATOR = 100,  // the desktop simulator: no glass to protect
+  SIMULATED = 100,  // the desktop simulator: no glass to protect (not SIMULATOR: a build macro)
 };
 
 // "unknown", "YRD0426", "DEPG0397", "OPM040B3", "SE0400NQW47" or "simulator".

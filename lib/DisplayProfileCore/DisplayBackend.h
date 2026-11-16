@@ -39,7 +39,7 @@ class DisplayBackend {
  public:
   virtual ~DisplayBackend() = default;
 
-  // The panel the display driver found (PanelId::SIMULATOR in the simulator).
+  // The panel the display driver found (PanelId::SIMULATED in the simulator).
   virtual PanelId panel() const = 0;
 
   // Whether `id` may be used on this panel now. Stock is always allowed; see
@@ -110,7 +110,7 @@ struct ModelledCall {
 class ModelledBackend : public DisplayBackend {
  public:
   ModelledBackend(Presenter& presenter, rsvp::Clock& clock, Sleeper& sleeper, const TimingModel& model,
-                  PanelId panel = PanelId::SIMULATOR)
+                  PanelId panel = PanelId::SIMULATED)
       : presenter(presenter), clock(clock), sleeper(sleeper), timingModel(model), panelId(panel) {}
 
   PanelId panel() const override { return panelId; }
