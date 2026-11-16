@@ -1,0 +1,11 @@
+# Onyx Picco two-slot layout, proposed by spike S3 (docs/spikes/S3-two-slot.md).
+# nvs and otadata keep the stock offsets and sizes from partitions_picco.csv.
+# The vendor safeboot app and the spiffs area are dropped; their space goes to
+# two equal app slots. 0xFE0000-0xFEFFFF is left unallocated (see the finding).
+# boot_app0.bin must be written at the otadata offset 0x15000, not at 0xE000.
+# Name,   Type, SubType,  Offset,   Size,     Flags
+nvs,      data, nvs,      0x9000,   0xC000,
+otadata,  data, ota,      0x15000,  0x2000,
+app0,     app,  ota_0,    0x20000,  0x7E0000,
+app1,     app,  ota_1,    0x800000, 0x7E0000,
+coredump, data, coredump, 0xFF0000, 0x10000,
