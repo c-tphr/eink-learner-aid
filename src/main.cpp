@@ -44,6 +44,7 @@
 #include "activities/ActivityManager.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
 #include "components/UITheme.h"
+#include "display/DisplaySelfTest.h"
 #include "fontIds.h"
 #include "platform/UsbSerialJtagHandoff.h"
 #include "reading/RsvpLinkCheck.h"
@@ -1035,6 +1036,7 @@ void loop() {
 
   const unsigned long activityStartTime = millis();
   activityManager.loop();
+  runDisplaySelfTestIfRequested(renderer);
   const unsigned long activityDuration = millis() - activityStartTime;
 
   const unsigned long loopDuration = millis() - loopStartTime;

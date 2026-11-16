@@ -99,6 +99,7 @@ add_subdirectory(protected_paths)
 add_subdirectory(rsvp_core)
 add_subdirectory(checkpoint_core)
 add_subdirectory(word_index)
+add_subdirectory(display_profile)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME translation_spacing COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_translation_spacing.py)

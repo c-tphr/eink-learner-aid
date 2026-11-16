@@ -1,0 +1,26 @@
+# The second run of display_timing_model (see there): the same self-test with the model set to 0
+# for updates and clears, the setting existing fast scenarios rely on. A separate scenario because
+# the harness sets environment variables per scenario, not per run.
+#
+# Checks, from the firmware's own log lines:
+#   - model=0 and slept=0 on every update and the clear: no delay was added at all;
+#   - ms below 1,000 (1 to 3 digits): a sanity bound only, generous for a loaded runner; the
+#     proof is slept=0, which does not depend on machine speed;
+#   - the "Simulator model" line names the environment as the source of both values.
+description = "Display timing model with 0 ms: the self-test's updates and clear add no delay"
+
+env = { vars = { CROSSPOINT_SIM_DISPLAY_SELFTEST = "3", CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+steps = [
+  { wait_screen = "Browse Files", note = "an empty card boots to Home" },
+  { wait_log = "\\[DSP\\] Simulator model stock: update 0 ms \\(env\\), clear 0 ms \\(env\\)" },
+  { wait_log = "\\[DSP\\] Self-test: 3 updates and 1 clear, profile stock" },
+  { wait_log = "\\[DSP\\] update n=1 profile=stock ms=\\d{1,3} model=0 real=\\d+ slept=0$" },
+  { wait_log = "\\[DSP\\] update n=2 profile=stock ms=\\d{1,3} model=0 real=\\d+ slept=0$" },
+  { wait_log = "\\[DSP\\] update n=3 profile=stock ms=\\d{1,3} model=0 real=\\d+ slept=0$" },
+  { wait_log = "\\[DSP\\] clear n=1 profile=stock ms=\\d{1,3} model=0 real=\\d+ slept=0$" },
+  { wait_log = "\\[DSP\\] stats profile=stock panel=simulator updates=3 " },
+  { wait_log = "\\[DSP\\] Self-test done" },
+  { shot = "band", note = "the band after update 3 of 3: drawn the same way with no delay" },
+  { compare = "band" },
+]
