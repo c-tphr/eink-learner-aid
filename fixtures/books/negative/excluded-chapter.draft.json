@@ -1,0 +1,63 @@
+{
+  "format": "rsvp-draft",
+  "version": 1,
+  "book": {
+    "title": "The Lighthouse Keeper's Almanac",
+    "language": "en",
+    "source_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+    "instructions_version": "fixture"
+  },
+  "excluded": [
+    {
+      "chapter_href": "text/title.xhtml",
+      "first_paragraph": "d01-p001",
+      "last_paragraph": "d01-p003",
+      "reason": "Front matter: title page."
+    },
+    {
+      "chapter_href": "text/chapter-2.xhtml",
+      "first_paragraph": "d03-p001",
+      "last_paragraph": "d03-p013",
+      "reason": "Not prepared: only chapters 1 and 3 are prepared in this edition."
+    }
+  ],
+  "sections": [
+    {
+      "id": "s0001",
+      "chapter_href": "text/chapter-1.xhtml",
+      "first_paragraph": "d02-p001",
+      "last_paragraph": "d02-p006",
+      "label": "Arrival at Gannet Rock"
+    },
+    {
+      "id": "s0002",
+      "chapter_href": "text/chapter-1.xhtml",
+      "first_paragraph": "d02-p007",
+      "last_paragraph": "d02-p010",
+      "label": "Winding the clockwork"
+    },
+    {
+      "id": "s0005",
+      "chapter_href": "text/chapter-3.xhtml",
+      "first_paragraph": "d04-p001",
+      "last_paragraph": "d04-p008",
+      "label": "The keeper's log"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0001",
+      "section": "s0001",
+      "prompts": [
+        {
+          "id": "c0001-p1",
+          "prompt": "How could sailors tell the Gannet Rock light apart from the other lights on the coast?",
+          "answer": "Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash every ten seconds, which no other light on the coast did.",
+          "supporting_paragraphs": [
+            "d02-p006"
+          ]
+        }
+      ]
+    }
+  ]
+}

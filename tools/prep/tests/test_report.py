@@ -165,6 +165,55 @@ def test_history_two_rounds_ready(tmp_path):
         ("drafter", "drafter-model-a"), ("checker", "fixture-sample"), ("checker", "checker-model-b")}
     assert "| 1 | checker | I1 |" in ev.markdown
     assert "Rounds of drafting and checking: 2." in ev.markdown
+    assert "- Drafter model: drafter-model-a (2026-01-01) in rounds 1 and 2." in ev.markdown
+    assert ("- Checker model: checker-model-b (2026-01-02), in round 2, the round that decided the result; earlier "
+            "rounds: fixture-sample (2026-01-01) in round 1.") in ev.markdown
+    assert [m["deciding"] for m in r["models"] if m["role"] == "checker"] == [False, True]
+    assert R.validate_report_schema(r) == []
+
+
+def test_checker_model_of_the_deciding_round_when_the_same_model_checked_earlier(tmp_path):
+    work = tmp_path / "work"
+    broken = NEGATIVE / "broken-link.prepared.epub"
+    _round(work, 1, broken, check_for(broken, passing=False), _draft())
+    _round(work, 2, PREPARED, check_for(PREPARED), _draft())
+    ev = R.evaluate(ORIGINAL, PREPARED, history=work, created=TS, epubcheck=ok_epubcheck)
+    assert ("- Checker model: fixture-sample (2026-01-01), in round 2, the round that decided the result; earlier "
+            "rounds: the same model in round 1.") in ev.markdown
+
+
+def test_ready_with_minor_issues_lists_them_apart(tmp_path):
+    work = tmp_path / "work"
+    check = check_for(PREPARED)
+    check["issues"] = [{"id": "R1-I1", "severity": "minor", "target": "c0002-p1", "description": "Two questions.",
+                        "suggested_fix": "Ask one.", "status": "open"}]
+    _round(work, 1, PREPARED, check, _draft())
+    ev = R.evaluate(ORIGINAL, PREPARED, history=work, created=TS, epubcheck=ok_epubcheck)
+    assert ev.ready, ev.reasons
+    md = ev.markdown
+    assert "No issues were raised apart from the minor ones below." in md
+    assert "## Minor issues: these do not block delivery" in md and "do not block" in md
+    assert "| 1 | R1-I1 (minor) | c0002-p1 | Two questions. Suggested fix: Ask one. |" in md
+    assert "| Open |" not in md
+    assert [i["open"] for i in ev.report["issues"]] == [True]  # the JSON still records it as open
+
+
+def test_committed_real_book_still_reproduces_ready(tmp_path):
+    """Prepared under instructions 1.0 and tools 1.0.0: the current tools still deliver it unchanged."""
+    books = ORIGINAL.parent
+    original, prepared = books / "paine-essays.epub", books / "paine-essays.prepared.epub"
+    history = books.parents[1] / "docs" / "evidence" / "p5"
+    ev = R.evaluate(original, prepared, history=history, created=TS, epubcheck=ok_epubcheck)
+    assert ev.ready, ev.reasons
+    written = R.write_report(ev, tmp_path, original, prepared)
+    assert (tmp_path / "paine-essays.prepared.epub").read_bytes() == prepared.read_bytes()
+    assert len(written) == 3 and ev.report["book"]["instructions_version"] == "1.0"
+    md = ev.markdown
+    assert "text/titlepage.xhtml: a range with no words excluded by the draft" in md and "0--1" not in md
+    assert "the round that decided the result" in md
+    assert md.count("| 2 | R2-I") == 4 and "## Minor issues: these do not block delivery" in md
+    exclusions = next(c for c in ev.report["validation"]["checks"] if c["name"] == "exclusions")
+    assert exclusions["status"] == "pass"
 
 
 def test_history_three_failed_rounds_not_ready_with_open_issues(tmp_path):
