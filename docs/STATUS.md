@@ -4,17 +4,20 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 ## Where we are
 
-_Updated 2026-11-19._
+_Updated 2026-11-19 (after a container restart; see "How to resume")._
 
-- **Milestone:** M0 build gate met: `picco` and `simulator_picco` build in a cloud session (F1, F2 merged). CI (F3) is in progress and GitHub Actions is running. M2: S1 to S3 done, S4 in progress. M3: P1, P2a, P2b, P3, P6 done; P4 in progress. M4: R1, R2, R3 done (portable libraries). M5: C1a, C1b done. M6: D5 and the early-check sheet (D6a) done.
-- **Merged:** #1 (PR #41), #2 F1 (#42, merge commit), #13 P1 (#43), #10 S2 (#45), #14 P3 (#46), #11 S3 (#47), #9 S1 (#48), plan change (#50), #18 R1 (#51), #15 P2a (#52), #24 C1a (#53), #19 R2 (#54), #3 F2 (#55), #49 P6 (#56), #25 C1b (#57), #35 D5 (#59), #60 D6a (#61), #16 P2b (#62), #20 R3 (#63)
-- **Assigned, in progress:** #4 F3 (CI), #5 F4 (flag, skeletons, first ESP32 compile of RsvpCore and CheckpointCore), #12 S4 (control map), #6 E2 (scenario harness), #7 E1 (sim.sh, devcontainer), #17 P4 (/prep-book, checker)
-- **Next when dependencies merge:** #8 E3 (needs F4, E2), then #21 R4a (needs E3, S4, E2), #34 D4 (needs F3), #38 P5 (needs P4), #30 D1 (needs R4a)
-- **Blockers:** none hard. Soft: `usc1.contabostorage.com` is not allowlisted (see below).
+- **Milestones:** M0 complete (F1 to F4 merged, Project CI green). M1: E1 and E2 merged, E3 in progress. M2 complete (S1 to S4 merged and written into the plan). M3: P1, P2a, P2b, P3, P4, P6 merged. M4: R1, R2, R3 merged (libraries); the UI tasks start after E3. M5: C1a, C1b merged (library). M6: D5 and the early-check sheet merged; D4 in progress. M7: P5 in progress.
+- **Merged since the last update:** #12 S4 (PR #66) and its plan change (#67), #6 E2 (#68), #17 P4 (#69), #5 F4 (#70), #7 E1 (#71), #4 F3 (#64).
+- **Assigned, in progress (each has uncommitted work in its working copy under `.claude/worktrees/`; none had pushed a branch at the restart):**
+  - #8 E3: DisplayProfile and simulator timing model (branch `task/8-display-profile-sim-timing`).
+  - #34 D4: `picco_2slot` target, size gate, update policy (branch `task/34-picco-2slot-target`).
+  - #38 P5: the real book (branch `task/38-prepare-real-book`). The whole Standard Ebooks collection *Essays* by Thomas Paine is prepared: 55 sections, 130 prompts; round 1 failed on the lead's own instruction to exclude six essays (withdrawn), round 2 passed; `report` says READY in the work folder `scratchpad/p5/out`. Remaining: commit, acceptance checks, pull request.
+- **Next when dependencies merge:** #21 R4a (needs E3), then #22 R4b, #23 R5, #26 C2; #30 D1 (needs R4a); #37 A0 release workflow (needs D4); #36 D6 checklist; #72 housekeeping.
+- **Blockers:** none.
 - **Waiting on the owner:**
-  1. Add `usc1.contabostorage.com` to the cloud environment's allowlist. It is a download mirror of the PlatformIO registry: `dl.registry.platformio.org` redirects to it or to `github.com` at random. Setup usually succeeds by retrying, but can fail; re-running `./scripts/cloud-setup.sh` is the workaround.
-  2. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md` (setup, identify, backup, summary). Return only the summary file.
-  3. Enable "Automatically delete head branches" (merged task branches accumulate; sessions cannot delete them).
+  1. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md`. Return only the summary file.
+  2. Optional: try the simulator in a Codespace (`docs/SIMULATOR.md`); it has never run in a real Codespace.
+  3. Decide what the root `CLAUDE.md` should say for this fork. It is upstream CrossPoint's agent guide (imported with the base) and tells agents never to open pull requests, never to push without a human instruction, and to hand every firmware change to a human; that contradicts this project's workflow (plan section 11). The orchestrator follows the owner's direct instructions and the plan; a successor session will see the same conflict.
 
 ## Last decisions
 
@@ -42,6 +45,11 @@ _Updated 2026-11-19._
 - 2026-11-19: P2b: `report` re-runs `validate` and `verify-check` and trusts no stored result; exclusions come from the optional draft; firmware limits are mirrored in Python with a test against `CheckpointLimits.h`.
 - 2026-11-19: Lesson applied to assignments: when one in-flight task changes a shared fixture, tasks that read it are not merged until it lands, and briefs name the files a task must not change.
 
+- 2026-11-19: The checker runs as a subagent of the orchestrator's session (implementers must not create cloud sessions); for long books it writes its JSON reply to the round's `checker-reply.txt` and returns only a summary.
+- 2026-11-19: Real book: Common Sense is not a standalone Standard Ebooks title; the collection *Essays* is used unmodified and prepared in full, because the preparation rules allow excluding only front and back matter.
+- 2026-11-19: Control scheme from S4 adopted (short press moves the highlight, 0.7 s hold activates; hold a side key in page view to enter RSVP); bindings in `src/controls/ControlMap.h`.
+- 2026-11-19: CI is pinned to `ubuntu-24.04` (GCC 15 on the newer image breaks two files; issue #72). Upstream workflows are restricted to the upstream repository.
+
 ## Issue map
 
 | ID | Issue | Milestone | State |
@@ -49,21 +57,21 @@ _Updated 2026-11-19._
 | B0 | #1 | M0 | merged |
 | F1 | #2 | M0 | merged |
 | F2 | #3 | M0 | merged |
-| F3 | #4 | M0 | in progress |
-| F4 | #5 | M0 | in progress |
-| E2 | #6 | M1 | in progress |
-| E1 | #7 | M1 | in progress |
-| E3 | #8 | M1 | open |
+| F3 | #4 | M0 | merged |
+| F4 | #5 | M0 | merged |
+| E2 | #6 | M1 | merged |
+| E1 | #7 | M1 | merged |
+| E3 | #8 | M1 | in progress |
 | S1 | #9 | M2 | merged |
 | S2 | #10 | M2 | merged |
 | S3 | #11 | M2 | merged |
-| S4 | #12 | M2 | in progress |
+| S4 | #12 | M2 | merged |
 | P1 | #13 | M3 | merged |
 | P3 | #14 | M3 | merged |
 | P2a | #15 | M3 | merged |
 | P2b | #16 | M3 | merged |
 | P6 | #49 | M3 | merged |
-| P4 | #17 | M3 | in progress |
+| P4 | #17 | M3 | merged |
 | R1 | #18 | M4 | merged |
 | R2 | #19 | M4 | merged |
 | R3 | #20 | M4 | merged |
@@ -80,14 +88,15 @@ _Updated 2026-11-19._
 | D2 | #31 | M6 | open |
 | D3a | #32 | M6 | open |
 | D3b | #33 | M6 | open |
-| D4 | #34 | M6 | open |
+| D4 | #34 | M6 | in progress |
 | D5 | #35 | M6 | merged |
 | D6a | #60 | M7 | merged (early read-only check sheet) |
 | D6 | #36 | M6 | open |
 | A0 | #37 | M6 | open |
-| P5 | #38 | M7 | open |
+| P5 | #38 | M7 | in progress |
 | A1 | #39 | M7 | open |
 | A2 | #40 | M8 | open |
+| H1 | #72 | M7 | open (housekeeping) |
 
 ## Facts learned so far
 
@@ -109,6 +118,8 @@ _Updated 2026-11-19._
 
 ## How to resume
 
-1. Read this file, then `docs/PLAN.md`.
-2. List open issues and open pull requests.
-3. Validate any open pull request (re-run its acceptance commands yourself), then pick the next issue whose dependencies are merged.
+1. Read this file, then `docs/PLAN.md` (the Change log at its top lists what the spikes changed).
+2. List open issues and open pull requests. Validate any open pull request yourself (check out the branch, re-run its acceptance commands, read Project CI's checks), then pick the next issue whose dependencies are merged.
+3. Run `./scripts/cloud-setup.sh` before any `pio` command.
+4. After a container restart, background implementers are stopped but their working copies under `.claude/worktrees/agent-*/` survive: check `git status` in each, and resume the implementer with a message, or commit and push its work-in-progress yourself. Ask implementers to push work-in-progress early.
+5. The preparation checker for a real book is run by the orchestrator as a fresh subagent: instructions are the body of `.claude/agents/prep-checker.md`, input is only `WORK/checker`, the reply goes to `WORK/rounds/NN/checker-reply.txt`.
