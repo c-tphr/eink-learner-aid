@@ -1,0 +1,392 @@
+{
+  "format": "rsvp-validation-report",
+  "version": 1,
+  "status": "READY",
+  "ready": true,
+  "created": "2026-11-19T22:43:17Z",
+  "book": {
+    "title": "Essays",
+    "language": "en-US",
+    "instructions_version": "1.0"
+  },
+  "original": {
+    "file": "paine-essays.epub",
+    "sha256": "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561"
+  },
+  "prepared": {
+    "file": "paine-essays.prepared.epub",
+    "sha256": "c9afc99966c698b85c7755670264daaf2b32e1f331c932092bb02887ea23ca50"
+  },
+  "delivered": "paine-essays.prepared.epub",
+  "rounds": 2,
+  "history": true,
+  "models": [
+    {
+      "role": "drafter",
+      "model": "claude-opus-5-5",
+      "date": "2026-11-19",
+      "round": 1
+    },
+    {
+      "role": "checker",
+      "model": "claude-fable-5-2",
+      "date": "2026-11-19",
+      "round": 1
+    }
+  ],
+  "tools": {
+    "name": "tools.prep",
+    "version": "1.0.0",
+    "word_rules_version": 1,
+    "epubcheck_version": "5.3.0"
+  },
+  "reasons": [],
+  "checks": [
+    {
+      "name": "open",
+      "title": "Both files open as EPUBs and every spine document parses",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "source-hash",
+      "title": "The checkpoint file names the original's SHA-256, and the original was not changed",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "checkpoint-item",
+      "title": "The package declares rsvp/checkpoints.json exactly once, as application/json",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "checkpoint-file",
+      "title": "The checkpoint file passes its schema and cross-reference rules (unique ids, plain text)",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "firmware-limits",
+      "title": "The checkpoint file is within the firmware's limits",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "anchors",
+      "title": "Every section's two anchors exist once, in its chapter, as empty spans, in order, without overlap",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "word-boundaries",
+      "title": "Every anchor sits between two words, outside tables and code blocks",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "coverage",
+      "title": "Sections cover the body text; everything else is footnotes or listed excluded matter",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "word-counts",
+      "title": "Every section's word_count equals the words between its anchors",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "text-unchanged",
+      "title": "Every spine document has the original's words, flags, markers and footnote marks",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "archive-unchanged",
+      "title": "Only the anchors, one manifest line and the checkpoint file differ from the original",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "epubcheck",
+      "title": "EPUBCheck reports no errors",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "validator-record",
+      "title": "The latest stored validator result passed, for exactly this prepared file and original",
+      "status": "pass",
+      "source": "report"
+    },
+    {
+      "name": "checker-files",
+      "title": "The checker's result is for exactly this prepared file, this original and these instructions",
+      "status": "pass",
+      "source": "checker"
+    },
+    {
+      "name": "checker-complete",
+      "title": "The checker gave one verdict per prompt and section, and every cited paragraph lies inside the prompt's own section",
+      "status": "pass",
+      "source": "checker"
+    },
+    {
+      "name": "checker-verdict",
+      "title": "The checker passed every prompt and every section, with no open blocking issue",
+      "status": "pass",
+      "source": "checker"
+    }
+  ],
+  "issues": [
+    {
+      "round": "1",
+      "raised_by": "checker",
+      "code": "R1-I1",
+      "where": "book",
+      "description": "Six essays of the book's body are excluded instead of being divided into sections: d04-p001 to d04-p012 (The Republican Proclamation, 657 words), d05-p001 to d05-p039 (Anti-Monarchal Essay, 2563 words), d06-p001 to d06-p038 (Declaration of Rights, 847 words), d07-p001 to d07-p088 (Dissertation on First Principles of Government, 8704 words), d08-p001 to d08-p087 (The Decline and Fall of the English System of Finance, 9624 words) and d09-p001 to d09-p090 (Agrarian Justice, 8076 words). The stated reason, 'only Common Sense is prepared in this edition', is not one of the grounds the instructions allow: section 3 permits excluding only front matter and back matter, and requires that content carrying the author's own argument gets sections like any chapter. These documents are body text (for example d07-p002 'There is no subject more interesting to every man than the subject of government'). Suggested fix: Remove the six exclusions for d04 to d09 and divide each of those documents into sections under the section rules (each short essay under 600 words or with one topic as one section), with checkpoints where the instructions call for them; keep the existing ids s0001 to s0023 and c0001 to c0023 unchanged and give the new sections and checkpoints the next unused numbers. Within d09, only matter that is truly front or back matter may stay excluded.",
+      "severity": "blocking",
+      "resolution": "Not raised again by the checker in round 2",
+      "open": false
+    },
+    {
+      "round": "1",
+      "raised_by": "checker",
+      "code": "R1-I2",
+      "where": "c0004-p3",
+      "description": "In the answer, 'God said they had rejected him' leaves it unclear whether 'him' is God or Samuel. d03-p047 says the opposite of the second reading: 'they have not rejected thee, but they have rejected me'. Suggested fix: Replace 'God said they had rejected him' with 'God said it was God, not Samuel, they had rejected'.",
+      "severity": "minor",
+      "resolution": "Not raised again by the checker in round 2",
+      "open": false
+    },
+    {
+      "round": "1",
+      "raised_by": "checker",
+      "code": "R1-I3",
+      "where": "c0009-p2",
+      "description": "The answer says America was discovered 'just before the Reformation'. d03-p082 says only 'The reformation was preceded by the discovery of America'; the section does not say how closely. Suggested fix: Remove the word 'just' ('the time of America's discovery, before the Reformation, ...').",
+      "severity": "minor",
+      "resolution": "Not raised again by the checker in round 2",
+      "open": false
+    },
+    {
+      "round": "2",
+      "raised_by": "checker",
+      "code": "R2-I1",
+      "where": "c0035-p1",
+      "description": "The prompt asks three things at once (titles, how aristocracy began, its effect on the mind), covering d07-p063 to d07-p068. The answer is fully supported and the prompt passes; the instructions ask for one question with at most two closely linked parts. Suggested fix: Narrow the prompt to two linked parts (for example how aristocracy began and what its titles hide) and shorten the answer to match, or leave as is if the single prompt is preferred for this short section.",
+      "severity": "minor",
+      "resolution": "Open",
+      "open": true
+    },
+    {
+      "round": "2",
+      "raised_by": "checker",
+      "code": "R2-I2",
+      "where": "c0038-p1",
+      "description": "The first sentence says 'Insurrection and discretionary power are justified only by necessity'. d07-p084 applies 'justified by necessity' expressly to the means of overthrow, 'in general, insurrections'; of the 'discretionary exercise of power' it says that the revolutionary party 'permit to themselves' it at the commencement and that 'were the practice to continue, liberty would never be established'. The reading is fair and the prompt passes, but the wording is slightly stronger than the text. Suggested fix: Reword the first sentence along the lines of: Insurrection is justified by necessity while despotism is being overthrown, but the discretionary power revolutionaries allow themselves at the start must not continue.",
+      "severity": "minor",
+      "resolution": "Open",
+      "open": true
+    },
+    {
+      "round": "2",
+      "raised_by": "checker",
+      "code": "R2-I3",
+      "where": "c0046-p2",
+      "description": "The answer ends 'which would stop new notes, loans and advances for the war'. d08-p078 names new emissions of bank notes, new advances to government or to the emperor, and new emissions on exchequer bills; it does not use the word loans (the stopping of 'new loans' is said of 1696 in d08-p052, section s0043). The sense is the same and the prompt passes. Suggested fix: Replace 'new notes, loans and advances for the war' with 'new notes, new advances to the government for the war and new exchequer bills'.",
+      "severity": "minor",
+      "resolution": "Open",
+      "open": true
+    },
+    {
+      "round": "2",
+      "raised_by": "checker",
+      "code": "R2-I4",
+      "where": "c0050-p3",
+      "description": "The answer glosses agrarian law as 'dividing up cultivated land'. d09-p036 does not define the term; it says only that agrarian law would be unjust 'in a country improved by cultivation' because a man is not 'a joint proprietor of cultivated earth'. The gloss matches that sense and the prompt passes, but the wording is not the section's. Suggested fix: Replace 'Agrarian law, dividing up cultivated land, would be unjust' with 'Agrarian law, which would treat everyone as joint owner of cultivated land, would be unjust'.",
+      "severity": "minor",
+      "resolution": "Open",
+      "open": true
+    }
+  ],
+  "validation": {
+    "format": "rsvp-validation",
+    "version": 1,
+    "tool": {
+      "name": "tools.prep",
+      "version": "1.0.0",
+      "word_rules_version": 1,
+      "epubcheck_version": "5.3.0"
+    },
+    "created": "2026-11-19T22:43:17Z",
+    "original": {
+      "file": "paine-essays.epub",
+      "sha256": "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561"
+    },
+    "prepared": {
+      "file": "paine-essays.prepared.epub",
+      "sha256": "c9afc99966c698b85c7755670264daaf2b32e1f331c932092bb02887ea23ca50"
+    },
+    "draft": {
+      "file": "draft.json",
+      "sha256": "1e3cb5aa6211b56b9a8d56570192c63e311f06a200936f55d028cb62584e0549"
+    },
+    "coverage_mode": "draft",
+    "passed": true,
+    "checks": [
+      {
+        "name": "open",
+        "title": "Both files open as EPUBs and every spine document parses",
+        "status": "pass",
+        "failures": [],
+        "details": []
+      },
+      {
+        "name": "source-hash",
+        "title": "The checkpoint file names the original's SHA-256, and the original was not changed",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "source_sha256 matches the original (96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561)",
+          "the original is byte-identical before and after validation"
+        ]
+      },
+      {
+        "name": "checkpoint-item",
+        "title": "The package declares rsvp/checkpoints.json exactly once, as application/json",
+        "status": "pass",
+        "failures": [],
+        "details": []
+      },
+      {
+        "name": "checkpoint-file",
+        "title": "The checkpoint file passes its schema and cross-reference rules (unique ids, plain text)",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "55 sections, 55 checkpoints, 130 prompts"
+        ]
+      },
+      {
+        "name": "firmware-limits",
+        "title": "The checkpoint file is within the firmware's limits",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "91475 bytes"
+        ]
+      },
+      {
+        "name": "anchors",
+        "title": "Every section's two anchors exist once, in its chapter, as empty spans, in order, without overlap",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "55 of 55 sections resolved to two anchors in their chapter"
+        ]
+      },
+      {
+        "name": "word-boundaries",
+        "title": "Every anchor sits between two words, outside tables and code blocks",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "110 anchors checked"
+        ]
+      },
+      {
+        "name": "coverage",
+        "title": "Sections cover the body text; everything else is footnotes or listed excluded matter",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "exclusions from the draft",
+          "text/titlepage.xhtml: words 0--1 excluded by the draft: Front matter: title page (an image only).",
+          "text/titlepage.xhtml: 0 of 0 words in sections, 0 in footnotes",
+          "text/imprint.xhtml: words 0-191 excluded by the draft: Front matter: the publisher's imprint.",
+          "text/imprint.xhtml: 0 of 192 words in sections, 0 in footnotes",
+          "text/common-sense.xhtml: 19335 of 19335 words in sections, 0 in footnotes",
+          "text/the-republican-proclamation.xhtml: 657 of 657 words in sections, 0 in footnotes",
+          "text/anti-monarchal-essay.xhtml: 2563 of 2563 words in sections, 0 in footnotes",
+          "text/declaration-of-rights.xhtml: 847 of 847 words in sections, 0 in footnotes",
+          "text/dissertation-on-first-principles-of-government.xhtml: 8704 of 8704 words in sections, 0 in footnotes",
+          "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml: 9624 of 9624 words in sections, 0 in footnotes",
+          "text/agrarian-justice.xhtml: words 0-647 excluded by the draft: Front matter of this essay: its title heading followed by the Editor's Introduction (publication history written by the edition's editor, not by the author); the author's own text begins at the Author's Inscription (d09-p006).",
+          "text/agrarian-justice.xhtml: 7428 of 8076 words in sections, 0 in footnotes",
+          "text/endnotes.xhtml: 0 of 2279 words in sections, 2279 in footnotes",
+          "text/colophon.xhtml: words 0-163 excluded by the draft: Back matter: the publisher's colophon.",
+          "text/colophon.xhtml: 0 of 164 words in sections, 0 in footnotes",
+          "text/uncopyright.xhtml: words 0-344 excluded by the draft: Back matter: the publisher's licence statement (Uncopyright).",
+          "text/uncopyright.xhtml: 0 of 345 words in sections, 0 in footnotes"
+        ]
+      },
+      {
+        "name": "word-counts",
+        "title": "Every section's word_count equals the words between its anchors",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "55 sections counted"
+        ]
+      },
+      {
+        "name": "text-unchanged",
+        "title": "Every spine document has the original's words, flags, markers and footnote marks",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "12 spine documents compared word for word"
+        ]
+      },
+      {
+        "name": "archive-unchanged",
+        "title": "Only the anchors, one manifest line and the checkpoint file differ from the original",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "31 original members; changed: epub/content.opf, epub/text/agrarian-justice.xhtml, epub/text/anti-monarchal-essay.xhtml, epub/text/common-sense.xhtml, epub/text/declaration-of-rights.xhtml, epub/text/dissertation-on-first-principles-of-government.xhtml, epub/text/the-decline-and-fall-of-the-english-system-of-finance.xhtml, epub/text/the-republican-proclamation.xhtml"
+        ]
+      },
+      {
+        "name": "epubcheck",
+        "title": "EPUBCheck reports no errors",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "EPUBCheck 5.3.0: 0 errors, 0 warnings"
+        ]
+      }
+    ]
+  },
+  "check_verification": {
+    "format": "rsvp-check-verification",
+    "version": 1,
+    "tool": {
+      "name": "tools.prep",
+      "version": "1.0.0"
+    },
+    "created": "2026-11-19T22:43:17Z",
+    "original": {
+      "file": "paine-essays.epub",
+      "sha256": "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561"
+    },
+    "prepared": {
+      "file": "paine-essays.prepared.epub",
+      "sha256": "c9afc99966c698b85c7755670264daaf2b32e1f331c932092bb02887ea23ca50"
+    },
+    "check": {
+      "file": "check.json",
+      "sha256": "62195f63121964bcb42decae690672a1c6db3b76b2bbad36711bb512e7afc76f"
+    },
+    "checker": {
+      "model": "claude-fable-5-2",
+      "date": "2026-11-19"
+    },
+    "checker_verdict": "pass",
+    "consistent": true,
+    "passed": true,
+    "failures": []
+  }
+}
