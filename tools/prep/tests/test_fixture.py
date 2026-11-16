@@ -18,7 +18,7 @@ import pytest
 from jsonschema import Draft202012Validator, validators
 
 from tools.prep import checkpoints as cp
-from tools.prep import epubcheck
+from tools.prep import epubcheck, refs
 from tools.prep.fixture import generate as gen
 
 REPO = Path(__file__).resolve().parents[3]
@@ -139,6 +139,16 @@ def _body_blocks(root):
     return [el for el in root.find(f"{XHTML}body") if el.tag[len(XHTML) :] in BLOCK_TAGS]
 
 
+def paragraph_refs() -> dict[str, list[str]]:
+    """Per spine href, the paragraph reference of each body block, recounted from spine position and order."""
+    docs = spine_documents()
+    out = {}
+    for spine_index, (href, root) in enumerate(docs, start=1):
+        blocks = _body_blocks(root)
+        out[href] = [refs.paragraph_ref(spine_index, len(docs), n, len(blocks)) for n in range(1, len(blocks) + 1)]
+    return out
+
+
 def _mid_chapter(root, element):
     blocks = list(root.find(f"{XHTML}body"))
     i = blocks.index(element)
@@ -238,6 +248,16 @@ def test_expected_words_match_an_independent_recount():
         assert [n["after_word"] for n in expected["noterefs"]] == marks, href
 
 
+def test_expected_paragraph_refs_follow_spine_position_and_block_order():
+    by_href = paragraph_refs()
+    for doc in EXPECTED["documents"]:
+        assert [b["paragraph"] for b in doc["blocks"]] == by_href[doc["href"]]
+        notes = [p for f in doc["footnotes"] for p in f["paragraphs"]]
+        prefix = by_href[doc["href"]][0].split("-")[0]
+        assert [p["paragraph"] for p in notes] == [f"{prefix}-n{n:03d}" for n in range(1, len(notes) + 1)]
+    assert by_href["text/chapter-1.xhtml"][5] == "d02-p006"
+
+
 def test_expected_non_prose_text_and_footnotes_match_the_xhtml():
     docs = {d["href"]: d for d in EXPECTED["documents"]}
     for href, root in spine_documents():
@@ -260,7 +280,7 @@ def test_expected_non_prose_text_and_footnotes_match_the_xhtml():
         assert [a.get("id") for a in asides] == [f["id"] for f in expected["footnotes"]]
         for aside, note in zip(asides, expected["footnotes"]):
             got = [{"id": p.get("id"), "words": "".join(p.itertext()).split()} for p in aside]
-            assert got == note["paragraphs"]
+            assert got == [{"id": p["id"], "words": p["words"]} for p in note["paragraphs"]]
         for ref in expected["noterefs"]:
             sups = [s for s in root.iter(f"{XHTML}sup") if s.find(f"{XHTML}a").get("href") == f"#{ref['note']}"]
             assert len(sups) == 1 and sups[0].find(f"{XHTML}a").text == ref["mark"]
@@ -282,9 +302,11 @@ def test_section_word_ranges_follow_the_blocks():
     docs = {d["href"]: d for d in EXPECTED["documents"]}
     for section in EXPECTED["sections"]:
         doc = docs[section["chapter_href"]]
-        blocks = {b["id"]: b for b in doc["blocks"]}
+        blocks = {b["paragraph"]: b for b in doc["blocks"]}
         assert section["first_word"] == blocks[section["first_paragraph"]]["first_word"]
         assert section["last_word"] == blocks[section["last_paragraph"]]["last_word"]
+        assert blocks[section["first_paragraph"]]["id"] == section["first_block_id"]
+        assert blocks[section["last_paragraph"]]["id"] == section["last_block_id"]
         assert section["word_count"] == section["last_word"] - section["first_word"] + 1
         assert doc["words"][section["first_word"]] == section["first_word_text"]
         assert doc["words"][section["last_word"]] == section["last_word_text"]
@@ -373,7 +395,7 @@ def test_draft_x_members_are_allowed():
 
 
 def test_draft_ranges_cover_the_body_without_overlap():
-    block_ids = {href: [el.get("id") for el in _body_blocks(root)] for href, root in spine_documents()}
+    block_ids = paragraph_refs()
     owner: dict[tuple[str, str], str] = {}
     for entry in DRAFT["excluded"] + DRAFT["sections"]:
         ids = block_ids[entry["chapter_href"]]
@@ -406,7 +428,7 @@ def test_draft_checkpoints_have_the_required_shape():
     assert set(sections) - {c["section"] for c in checkpoints}, "need a section without a checkpoint"
     assert len({c["section"] for c in checkpoints}) == len(checkpoints)
     assert [c["id"] for c in checkpoints] == ["c0001", "c0002"]
-    block_ids = {href: [el.get("id") for el in _body_blocks(root)] for href, root in spine_documents()}
+    block_ids = paragraph_refs()
     draft_sections = {s["id"]: s for s in DRAFT["sections"]}
     for c in checkpoints:
         s = draft_sections[c["section"]]

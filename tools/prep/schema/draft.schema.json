@@ -38,8 +38,9 @@
       "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$(?!\\n)"
     },
     "paragraphRef": {
-      "description": "A paragraph-level block of the named document, as numbered by 'prep extract'. For the synthetic fixture these are the XHTML id attributes (for example 'c1-p003').",
-      "$ref": "#/$defs/id"
+      "description": "A reading-stream block as numbered by 'prep extract' (tools/prep/refs.py): 'd' + 1-based spine position (at least 2 digits) + '-p' + 1-based block number in that document (at least 3 digits), for example 'd02-p006'. Never a source XHTML id. Footnote bodies ('dNN-nNNN') cannot be cited.",
+      "type": "string",
+      "pattern": "^d[0-9]{2,}-p[0-9]{3,}$(?!\\n)"
     },
     "href": {
       "description": "A spine document's manifest href, relative to the package (OPF) file, as in checkpoints.json 'chapter_href'.",
