@@ -1,6 +1,6 @@
 # tools/prep
 
-Book preparation tools (docs/PLAN.md section 8). So far this package holds the checkpoint file schema and its validator. The `extract`, `build`, `validate` and `report` commands come in later tasks.
+Book preparation tools (docs/PLAN.md section 8). So far this package holds the checkpoint file schema and its validator, the draft file schema, the synthetic fixture book generator (`fixture/`) and an EPUBCheck runner (`epubcheck.py`). The `extract`, `build`, `validate` and `report` commands come in later tasks.
 
 ```sh
 pip install -r tools/prep/requirements.txt
@@ -126,3 +126,87 @@ How a C++ parser test should consume it:
 4. Apply the same layer order and stop at the first failing layer, so the sets match.
 
 A sample may be added only together with its manifest entry. `tests/test_checkpoints.py` fails if the two drift apart, if an invalid sample lists more than one code, or if any issue code has no sample.
+
+## The draft file, version 1
+
+`draft.json` is what the drafter session writes (plan section 8, step 2) and what `prep build` will read (step 3). Its JSON Schema is `schema/draft.schema.json` (draft 2020-12). The worked example is `fixtures/books/fixture.draft.json`. `prep build` may refine this format; until then it is the contract.
+
+```json
+{
+  "format": "rsvp-draft",
+  "version": 1,
+  "book": { "title": "...", "language": "en", "source_sha256": "<hash of the original EPUB>", "instructions_version": "1.0" },
+  "excluded": [
+    { "chapter_href": "text/title.xhtml", "first_paragraph": "fm-p001", "last_paragraph": "fm-p003", "reason": "Front matter: title page." }
+  ],
+  "sections": [
+    { "id": "s0001", "chapter_href": "text/chapter-1.xhtml", "first_paragraph": "c1-p001", "last_paragraph": "c1-p006", "label": "Arrival at Gannet Rock" }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0001",
+      "section": "s0001",
+      "prompts": [
+        { "id": "c0001-p1", "prompt": "...?", "answer": "...", "supporting_paragraphs": ["c1-p006"] }
+      ]
+    }
+  ]
+}
+```
+
+| Member | Rule |
+| --- | --- |
+| `format`, `version` | `"rsvp-draft"` and integer `1` |
+| `book` | `title`, `language`, `instructions_version`: non-empty strings. `source_sha256`: SHA-256 of the original EPUB, 64 lowercase hex digits; `prep build` refuses a draft made from another file |
+| `excluded` | Array, may be empty. Each entry is a paragraph range (`chapter_href`, `first_paragraph`, `last_paragraph`) plus a non-empty `reason`. Lists front or back matter that belongs to no section |
+| `sections` | At least one, in reading order. Each is a paragraph range plus `id` (id syntax) and a non-empty `label`. It becomes one section of `checkpoints.json`; `word_count` and the anchors are computed by `prep build` |
+| `checkpoints` | Array, may be empty. `id`, `section` (a section id) and `prompts` (at least one, file order kept) |
+| prompt | `id`, `prompt` (1 to 300 characters), `answer` (1 to 600 characters), `supporting_paragraphs` (at least one paragraph reference, no repeats) |
+
+Definitions:
+
+- **Paragraph range.** `chapter_href` is a spine document's href relative to the OPF, as in `checkpoints.json`. `first_paragraph` and `last_paragraph` are inclusive references to paragraph-level blocks of that document (headings, paragraphs, figures, tables, code blocks). A paragraph reference uses the id syntax. For the synthetic fixture it is the block's XHTML `id` (`c1-p003`); for other books it is the number `prep extract` assigns, a format that task fixes.
+- **Ids** use the id syntax of `checkpoints.json`. Conventions (not rules): sections `s0001`, `s0002`, ...; checkpoints `c0001`, ... in order; prompts `<checkpoint id>-p1`, `-p2`, ...
+- **Closed schema.** Unlike `checkpoints.json`, every object rejects unknown members, so a misspelt member in a drafter's output is caught at once. Members whose names start with `x_` are allowed and ignored.
+
+Cross-reference rules (checked by `tests/test_fixture.py` for the fixture now, and by `prep build` later):
+
+1. Section ids are unique, checkpoint ids are unique, prompt ids are unique across the file.
+2. Every paragraph reference exists in its `chapter_href`. `last_paragraph` is not before `first_paragraph`, so a range lies inside one document (plan rule 1).
+3. Ranges (sections and exclusions together) do not overlap, and every paragraph-level block of every spine document is in exactly one of them. Footnote bodies (`aside epub:type="footnote"`) are outside the reading stream and are neither covered nor excluded.
+4. Sections appear in reading order.
+5. A checkpoint names an existing section; at most one checkpoint per section (plan rule 2).
+6. Every `supporting_paragraphs` entry lies inside the checkpoint's section.
+7. `prompt` and `answer` are plain text and not blank, as defined for `checkpoints.json` above.
+
+## Synthetic fixture book
+
+`fixture/generate.py` writes `fixtures/books/fixture.epub`, `fixture.draft.json`, `fixture.expected.json` and `README.md` from the data in `fixture/content.py`, byte for byte reproducibly and with the standard library only. `fixtures/books/README.md` has the content inventory and word counts.
+
+```sh
+python3 tools/prep/fixture/generate.py           # regenerate after editing fixture/content.py
+python3 tools/prep/fixture/generate.py --check   # exit 1 and name each stale file
+```
+
+`fixture.expected.json` is the ground truth other layers compare against. It is computed from the source data, not by parsing the EPUB. Its `rules` member states the word definition, which is implemented by the single function `tokenize` in `fixture/generate.py` so that a later task can align it with the firmware's parser:
+
+- A word is a maximal run of characters other than U+0020, U+0009, U+000A and U+000D in the visible text of one prose block (`h1`, `h2`, `p`). Punctuation stays attached; an unspaced em dash joins its neighbours into one word. Nothing is normalised or stripped.
+- Inline elements (`em`, `strong`) do not split or drop words.
+- A footnote reference mark (`sup > a[epub:type=noteref]`) is not a word; its position is recorded as `after_word`. Footnote bodies are listed separately and are not in the chapter's word stream.
+- Figures, tables and code blocks contribute no words; their position is `after_word` and their inner text is listed in their block entry.
+- Indices are 0-based over a whole document. A section's start anchor belongs immediately before its `first_word`, its end anchor immediately after its `last_word`.
+
+## EPUBCheck
+
+```sh
+python3 -m tools.prep.epubcheck fixtures/books/fixture.epub   # exit 0 when there are no errors
+```
+
+```python
+from tools.prep.epubcheck import EpubcheckUnavailable, run_epubcheck
+
+report = run_epubcheck("book.epub")   # Report(version, returncode, messages)
+report.errors, report.warnings        # lists of Message(severity, id, message, locations)
+```
+
+`epubcheck.py` pins EPUBCheck 5.3.0 and its SHA-256, downloads the release zip from github.com once, verifies it and unpacks it into `$EPUBCHECK_CACHE_DIR`, else `$XDG_CACHE_HOME/eink-learner-aid`, else `~/.cache/eink-learner-aid` (outside the repository). It needs Java (`$JAVA_HOME/bin/java` or `java` on `PATH`). When Java is missing or the download is refused or fails verification it raises `EpubcheckUnavailable` with the host and error; the tests that need EPUBCheck then skip with that message.

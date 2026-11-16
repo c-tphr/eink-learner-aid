@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/c-tphr/eink-learner-aid/tools/prep/schema/draft.schema.json",
+  "title": "Preparation draft, version 1",
+  "description": "draft.json written by the drafter session (docs/PLAN.md section 8, step 2) and read by 'prep build'. Sections are inclusive paragraph ranges inside one spine document; checkpoints carry prompts, reference answers and the paragraphs that support each answer. Cross-reference rules (ids exist, ranges ordered, no overlap, full coverage, support inside the section, plain text) are listed in tools/prep/README.md.",
+  "$comment": "Unlike checkpoints.schema.json this schema is closed (additionalProperties: false) so a drafter's misspelt member is caught; members starting with 'x_' are allowed for experiments. Patterns end in $(?!\\n) for the reason given in checkpoints.schema.json. Lengths are Unicode code points.",
+  "type": "object",
+  "required": ["format", "version", "book", "excluded", "sections", "checkpoints"],
+  "properties": {
+    "format": { "const": "rsvp-draft" },
+    "version": { "type": "integer", "const": 1 },
+    "book": { "$ref": "#/$defs/book" },
+    "excluded": {
+      "description": "Front or back matter left out of every section, as paragraph ranges. May be empty.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/excludedRange" }
+    },
+    "sections": {
+      "description": "In reading order.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "checkpoints": {
+      "description": "May be empty. At most one checkpoint per section.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/checkpoint" }
+    }
+  },
+  "patternProperties": { "^x_": true },
+  "additionalProperties": false,
+  "$defs": {
+    "id": {
+      "description": "Same id syntax as checkpoints.json: ASCII letters, digits, '_' and '-', starting with a letter or digit, at most 64 characters.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$(?!\\n)"
+    },
+    "paragraphRef": {
+      "description": "A paragraph-level block of the named document, as numbered by 'prep extract'. For the synthetic fixture these are the XHTML id attributes (for example 'c1-p003').",
+      "$ref": "#/$defs/id"
+    },
+    "href": {
+      "description": "A spine document's manifest href, relative to the package (OPF) file, as in checkpoints.json 'chapter_href'.",
+      "type": "string",
+      "minLength": 1
+    },
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "book": {
+      "type": "object",
+      "required": ["title", "language", "source_sha256", "instructions_version"],
+      "properties": {
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "language": { "$ref": "#/$defs/nonEmptyString" },
+        "source_sha256": {
+          "description": "SHA-256 of the original EPUB the paragraph references were taken from, 64 lowercase hex digits.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$(?!\\n)"
+        },
+        "instructions_version": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "patternProperties": { "^x_": true },
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "required": ["chapter_href", "first_paragraph", "last_paragraph"],
+      "properties": {
+        "chapter_href": { "$ref": "#/$defs/href" },
+        "first_paragraph": { "$ref": "#/$defs/paragraphRef" },
+        "last_paragraph": {
+          "description": "Inclusive. Same document as first_paragraph, not before it.",
+          "$ref": "#/$defs/paragraphRef"
+        }
+      }
+    },
+    "excludedRange": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/range" }],
+      "required": ["reason"],
+      "properties": {
+        "chapter_href": true,
+        "first_paragraph": true,
+        "last_paragraph": true,
+        "reason": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "patternProperties": { "^x_": true },
+      "additionalProperties": false
+    },
+    "section": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/range" }],
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "chapter_href": true,
+        "first_paragraph": true,
+        "last_paragraph": true,
+        "label": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "patternProperties": { "^x_": true },
+      "additionalProperties": false
+    },
+    "checkpoint": {
+      "type": "object",
+      "required": ["id", "section", "prompts"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "section": { "$ref": "#/$defs/id" },
+        "prompts": {
+          "description": "Kept in file order.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/prompt" }
+        }
+      },
+      "patternProperties": { "^x_": true },
+      "additionalProperties": false
+    },
+    "prompt": {
+      "type": "object",
+      "required": ["id", "prompt", "answer", "supporting_paragraphs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "prompt": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "answer": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "supporting_paragraphs": {
+          "description": "Paragraphs of the checkpoint's own section that support the answer.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/paragraphRef" }
+        }
+      },
+      "patternProperties": { "^x_": true },
+      "additionalProperties": false
+    }
+  }
+}
