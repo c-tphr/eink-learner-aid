@@ -1,0 +1,45 @@
+# Battery-pull test: read to page 2 of chapter 1, SIGKILL the simulator, start it
+# again on the same SD folder, reopen the book from Home and check the same page.
+#
+# After a kill the firmware boots to Home with a "continue reading" card for the
+# book (it reopens the book by itself only after a sleep from the reader,
+# src/main.cpp lastSleepFromReader), so the book is reopened with ENTER on that card.
+description = "Turn to a later page, kill the process (SIGKILL), restart on the same SD card, reopen the book: same page"
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+]
+
+steps = [
+  # Run 1: open the book and turn to chapter 1, page 2 (the page with the figure).
+  { wait_screen = "Browse Files" },
+  { press = "ENTER" },
+  { wait_screen = "SD card | books" },
+  { press = "ENTER" },
+  { wait_screen = "fixture | .epub" },
+  { press = "ENTER" },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { shot = "before_kill" },
+  # progress.bin: spine 1, page 1 (little-endian 16-bit values)
+  { expect_file = ".crosspoint/epub_*/progress.bin", hex_prefix = "0100 0100" },
+  { kill = true, note = "SIGKILL to the process group: no shutdown code runs" },
+  { expect_file = ".crosspoint/epub_*/progress.bin", hex_prefix = "0100 0100" },
+
+  # Run 2: same SD folder.
+  { start = true },
+  { wait_screen = "Keeper's Almanac | Mara Ellery Quill | Browse Files", note = "Home shows the continue-reading card" },
+  { wait_log = "No known cover image for thumbnail", note = "Home has finished loading the card" },
+  { press = "ENTER", note = "the card is selected: reopen the book" },
+  { wait_log = "Loaded cache: 1, 1", note = "the reader read spine 1, page 1 from progress.bin" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { shot = "after_restart" },
+  { screen_has = "Figure | 1. | Gannet | Rock" },
+  { quit = true },
+
+  { compare = "before_kill" },
+  { compare = "after_restart", same_as = "before_kill", note = "pixel-identical to the page before the kill" },
+]
