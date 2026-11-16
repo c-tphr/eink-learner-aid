@@ -29,6 +29,7 @@
   .\session.ps1 monitor               # record serial output until Ctrl+C
   .\session.ps1 restore "work\picco-backup-....bin"
   .\session.ps1 identify -Port COM5   # name the port if more than one device is connected
+  .\session.ps1 summary              # one text file, safe to post, from the work folder
 
 .NOTES
   Exit codes are piccoflash's: 0 OK, 1 STOP (nothing written), 3 already
@@ -41,7 +42,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('setup', 'identify', 'backup', 'plan', 'flash', 'monitor', 'restore', 'ports')]
+    [ValidateSet('setup', 'identify', 'backup', 'plan', 'flash', 'monitor', 'restore', 'ports', 'summary')]
     [string]$Command,
 
     [Parameter(Position = 1)]
