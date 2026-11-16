@@ -8,16 +8,16 @@ _Updated 2026-11-19 (after a container restart; see "How to resume")._
 
 - **Milestones:** M0 complete (F1 to F4 merged, Project CI green). M1: E1 and E2 merged, E3 in progress. M2 complete (S1 to S4 merged and written into the plan). M3: P1, P2a, P2b, P3, P4, P6 merged. M4: R1, R2, R3 merged (libraries); the UI tasks start after E3. M5: C1a, C1b merged (library). M6: D5 and the early-check sheet merged; D4 in progress. M7: P5 in progress.
 - **Merged since the last update:** #12 S4 (PR #66) and its plan change (#67), #6 E2 (#68), #17 P4 (#69), #5 F4 (#70), #7 E1 (#71), #4 F3 (#64).
-- **Assigned, in progress (each has uncommitted work in its working copy under `.claude/worktrees/`; none had pushed a branch at the restart):**
+- **Merged since:** #38 P5 (PR #74): the real book, Paine's *Essays*, READY after two rounds (55 sections, 130 prompts).
+- **Assigned, in progress:** #75 P7 (preparation workflow fixes found by P5), and:
   - #8 E3: DisplayProfile and simulator timing model (branch `task/8-display-profile-sim-timing`).
   - #34 D4: `picco_2slot` target, size gate, update policy (branch `task/34-picco-2slot-target`).
-  - #38 P5: the real book (branch `task/38-prepare-real-book`). The whole Standard Ebooks collection *Essays* by Thomas Paine is prepared: 55 sections, 130 prompts; round 1 failed on the lead's own instruction to exclude six essays (withdrawn), round 2 passed; `report` says READY in the work folder `scratchpad/p5/out`. Remaining: commit, acceptance checks, pull request.
 - **Next when dependencies merge:** #21 R4a (needs E3), then #22 R4b, #23 R5, #26 C2; #30 D1 (needs R4a); #37 A0 release workflow (needs D4); #36 D6 checklist; #72 housekeeping.
 - **Blockers:** none.
 - **Waiting on the owner:**
   1. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md`. Return only the summary file.
   2. Optional: try the simulator in a Codespace (`docs/SIMULATOR.md`); it has never run in a real Codespace.
-  3. Decide what the root `CLAUDE.md` should say for this fork. It is upstream CrossPoint's agent guide (imported with the base) and tells agents never to open pull requests, never to push without a human instruction, and to hand every firmware change to a human; that contradicts this project's workflow (plan section 11). The orchestrator follows the owner's direct instructions and the plan; a successor session will see the same conflict.
+  3. (Done 2026-11-19: the owner chose a preamble in `AGENTS.md`/`CLAUDE.md` stating that this fork's workflow overrides upstream's agent rules on pull requests and handoff.)
 
 ## Last decisions
 
@@ -93,10 +93,11 @@ _Updated 2026-11-19 (after a container restart; see "How to resume")._
 | D6a | #60 | M7 | merged (early read-only check sheet) |
 | D6 | #36 | M6 | open |
 | A0 | #37 | M6 | open |
-| P5 | #38 | M7 | in progress |
+| P5 | #38 | M7 | merged |
 | A1 | #39 | M7 | open |
 | A2 | #40 | M8 | open |
 | H1 | #72 | M7 | open (housekeeping) |
+| P7 | #75 | M7 | in progress (preparation workflow fixes) |
 
 ## Facts learned so far
 

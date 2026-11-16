@@ -1,5 +1,15 @@
 # CrossPoint Reader agent guide
 
+> **This repository is the eink-learner-aid fork. Read this box first.**
+>
+> This file is upstream CrossPoint's guide for agents (`CLAUDE.md` is a link to it). It is kept as upstream wrote it, below this box, so the fork stays easy to compare with upstream. The project owner has set a different way of working for this fork, and where the two disagree, the fork's rules apply:
+>
+> - **Workflow.** Work here is planned in `docs/PLAN.md` (section 11) and tracked in `docs/STATUS.md` and the GitHub issues. An orchestrating agent assigns each issue to an implementing agent, validates the result itself and merges it. Implementers follow `docs/IMPLEMENTER_GUIDE.md`: one issue, one branch `task/<n>-<slug>`, one pull request, which the implementer opens and describes. The sections below named "Human ownership" and "Mandatory firmware handoff" (no autonomous agents, no commits or pushes without a human instruction, never open a pull request, pull request text written by a human, four reviews and human acceptance before a commit, hardware testing before a pull request) are upstream's rules for contributions sent to upstream. They do not apply to work in this fork. Integration targets `main`, not `develop`.
+> - **Still binding here.** The owner's fixed decisions in `docs/PLAN.md` section 1. Never run a PlatformIO `upload` target or anything that flashes a device outside the guarded tool in `tools/device/`. Nobody on the team has the device: hardware testing is the owner's single device session (`docs/PLAN.md` section 10). Do not copy code from forks whose licence is not confirmed compatible. Never post device backups or `.bin` files: the repository is public.
+> - **Still applies from the guide below.** All technical guidance: the FreeInk SDK and HAL contracts, hardware and memory limits, coding conventions and comment rules, UI and input rules, generated files and cache versioning, build and test workflow, plain English in repository prose. New code for this fork lives behind the `CROSSPOINT_RSVP` flag (`docs/ARCHITECTURE-RSVP.md`), and every edit to an upstream file is listed in `docs/BASE.md`.
+> - **Scope.** `SCOPE.md` describes what upstream accepts. This fork's scope is `docs/PRD.md` and `docs/PLAN.md`.
+> - **In a cloud session**, run `./scripts/cloud-setup.sh` before any `pio` command.
+
 CrossPoint Reader is open-source e-reader firmware for Xteink and other FreeInk-supported devices. Its mission is a lightweight, high-performance reading experience focused on EPUB rendering. The X3/X4's ESP32-C3 remains the resource baseline: roughly 380 KB usable RAM, no PSRAM, and a single framebuffer sized for the selected panel. Other board profiles have different CPUs, display sizes, input, and memory capabilities; check the selected profile before assuming them.
 
 ## FreeInk SDK
