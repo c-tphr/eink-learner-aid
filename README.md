@@ -7,6 +7,8 @@ A fork of the [CrossPoint](https://github.com/crosspoint-reader/crosspoint-reade
 
 It also carries a workflow for preparing books with checkpoint data and a simulator that runs in GitHub Codespaces.
 
+The pinned CrossPoint base is recorded in [docs/BASE.md](docs/BASE.md); upstream's own README is kept at [docs/upstream/README.md](docs/upstream/README.md).
+
 | Document | What it is |
 | --- | --- |
 | [docs/PRD.md](docs/PRD.md) | What v1 must do |
