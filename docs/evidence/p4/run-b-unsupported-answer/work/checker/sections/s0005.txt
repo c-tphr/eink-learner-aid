@@ -1,0 +1,43 @@
+# Section s0005: The keeper's log
+# Document text/chapter-3.xhtml (whole text: text/d04-chapter-3.txt).
+# Paragraphs d04-p001 to d04-p008 (8 blocks), 321 words.
+# Just before it: start of text/chapter-3.xhtml. Just after it: end of text/chapter-3.xhtml.
+# Cite only the paragraph references below; they are this section's whole text.
+
+[d04-p001] heading h1, 3 words, id c3-p001
+The Keeper's Log
+
+[d04-p002] paragraph, 73 words, id c3-p002
+When spring came, Dr. Vane began to copy the old logbooks into a simple list so that she could study them. Ione had kept the log for nineteen years, 1907– 1925, and its pages held the time, the weather and the state of the light for every hour of every night. Some pages were stained with salt water, and a few were so faded that she had to read them by the window.
+
+[d04-p003] paragraph, 40 words, id c3-p003
+The doctor wanted to know how often the fog signal had been needed. Counting by hand would take weeks, so she wrote a short program instead. It read one line per hour and added up the hours marked as fog.
+
+[d04-p004] code, 25 words, id c3-p004
+[Code: <pre>; 6 lines]
+
+[d04-p005] paragraph, 47 words, id c3-p005
+The answer surprised them both. Over nineteen years the horn had sounded for more than four thousand hours, and nearly half of those hours fell in November and December. Why had nobody noticed before? Ione said that a keeper only ever sees one night at a time.
+
+[d04-p006] paragraph, 53 words, id c3-p006
+She also counted the nights when the clockwork had stopped. There were only three in nineteen years. Each time, Ione had climbed into the lamp room and turned the great lens by hand until dawn, walking it round and round so that passing ships would still see one white flash every ten seconds.
+
+[d04-p007] paragraph, 40 words, id c3-p007
+Dr. Vane sent her figures to the lighthouse board with a request for a second engine and a larger coal store. The reply came in June: the board agreed, and the new engine would arrive before the next fog season.
+
+[d04-p008] paragraph, 40 words, id c3-p008
+On her last evening on the rock, the doctor climbed the steps once more and watched Ione light the lamp. The beam swept out across the strait, one white flash every ten seconds, exactly as it had for nineteen years.
+
+## Checkpoint c0005 (shown when the reader reaches the end of this section; 2 prompts, in this order)
+
+### Prompt c0005-p1
+What did Dr. Vane's count of the old logbooks show about the fog signal, and why had nobody noticed it before?
+
+### Reference answer c0005-p1
+Over nineteen years the horn had sounded for more than four thousand hours, and nearly half of those hours fell in November and December. Nobody had noticed because, as Ione said, a keeper only ever sees one night at a time.
+
+### Prompt c0005-p2
+What did Dr. Vane do with her figures, and what came of it?
+
+### Reference answer c0005-p2
+She sent them to the lighthouse board with a request for a second engine and a larger coal store. In June the board agreed, and the new engine was to arrive before the next fog season.

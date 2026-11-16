@@ -297,7 +297,8 @@ def test_epubcheck_errors_fail_and_unavailable_is_not_a_pass():
 
 
 def test_negative_manifest_lists_every_file():
-    listed = {e["file"] for e in MANIFEST["prepared"]} | {e["file"] for e in MANIFEST["checks"]} | {"manifest.json"}
+    listed = ({e["file"] for e in MANIFEST["prepared"]} | {e["file"] for e in MANIFEST["checks"]} | {"manifest.json"}
+              | {e[k] for e in MANIFEST["checker"] for k in ("file", "draft")})
     assert listed == {p.name for p in NEGATIVE.iterdir()}
     assert "broken-link.prepared.epub" in listed
     for entry in MANIFEST["prepared"]:
@@ -313,6 +314,15 @@ def test_negative_fixture_fails_exactly_its_checks(entry):
     assert set().union(*got.values()) == set(entry["codes"]), got
     assert not out.passed
     assert all(s in ("pass", "incomplete") for name, s in status(out.result).items() if name not in got)
+
+
+@pytest.mark.parametrize("entry", MANIFEST["checker"], ids=lambda e: e["file"])
+def test_checker_fixture_passes_the_validator(entry):
+    """Structurally valid, so only the AI checker can catch its planted fault."""
+    out = V.validate_files(ORIGINAL, NEGATIVE / entry["file"], NEGATIVE / entry["draft"], epubcheck=real_epubcheck,
+                           created=TS)
+    assert out.passed, failing(out.result)
+    assert out.result["coverage_mode"] == "draft"
 
 
 # --------------------------------------------------------------------------

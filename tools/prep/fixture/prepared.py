@@ -18,6 +18,13 @@ Sibling of ``generate.py``, run after it: it reads the committed
   each, failing exactly the checks ``negative/manifest.json`` names.
 - ``negative/*.check.json``: checker results ``prep verify-check`` must
   reject, with the codes the manifest names.
+- ``negative/<name>.draft.json`` and ``negative/<name>.prepared.epub``: the
+  fixture draft with one planted content fault that only the AI checker can
+  catch (an answer with a claim its section does not support; a prompt that
+  gives its answer away), and ``prep build`` output for it. ``prep validate``
+  passes them; the checker must fail the named prompt for the named
+  criterion. They carry the current ``tools/prep/INSTRUCTIONS.md`` version so
+  ``prep checker-input`` accepts them.
 - ``negative/manifest.json``: the list.
 
 Unlike ``generate.py`` this uses the preparation tools themselves (``prep
@@ -41,6 +48,7 @@ if __package__ in (None, ""):
 from tools.prep.build import build_bytes, checkpoint_bytes  # noqa: E402
 from tools.prep.epub import load_book_bytes  # noqa: E402
 from tools.prep.epubzip import Archive  # noqa: E402
+from tools.prep.loop import instructions_version  # noqa: E402
 
 BOOKS = REPO / "fixtures" / "books"
 ORIGINAL = "fixture.epub"
@@ -255,6 +263,47 @@ CHECK_VARIANTS: list[tuple[str, list[str], str, Callable[[dict[str, Any], str], 
 
 
 # --------------------------------------------------------------------------
+# Checker fixtures: structurally valid, one planted content fault each
+
+
+def _set_prompt(draft: dict[str, Any], pid: str, **fields: Any) -> None:
+    prompt = next(p for c in draft["checkpoints"] for p in c["prompts"] if p["id"] == pid)
+    prompt.update(fields)
+
+
+# (file stem, prompt id, criterion that must be false, reason, mutation of the draft)
+CHECKER_VARIANTS: list[tuple[str, str, str, str, Callable[[dict[str, Any]], None]]] = [
+    ("unsupported-answer", "c0001-p1", "supported_by_section",
+     "The reference answer of c0001-p1 (section s0001, d02-p001 to d02-p006) adds that the flash is made by a lens "
+     "with four bright panels turning once every forty seconds. That is true in the book, but only section s0002 "
+     "says it (d02-p008); s0001 describes the lens only as rings of cut glass that bend one flame into a beam "
+     "(d02-p005). The draft cites d02-p005 and d02-p006 as if they supported it.",
+     lambda d: _set_prompt(d, "c0001-p1", answer=(
+         "Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash "
+         "every ten seconds, made by a lens with four bright panels that turned once every forty seconds; no other "
+         "light on the coast did the same."), supporting_paragraphs=["d02-p005", "d02-p006"])),
+    ("answer-given-away", "c0002-p1", "does_not_give_away_answer",
+     "The prompt of c0002-p1 names the answer it asks for: it asks how the fisherman found his way 'by steering "
+     "toward the sound of its fog horn', and the reference answer (supported by d03-p009) is that he steered by "
+     "the sound of the fog horn alone.",
+     lambda d: _set_prompt(d, "c0002-p1", prompt=(
+         "How did the fisherman find his way to the lighthouse in the fog by steering toward the sound of its fog "
+         "horn?"))),
+]
+
+
+def checker_variant_drafts(draft: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Each checker fixture's draft: the fixture draft under the current instructions, with one planted fault."""
+    out = {}
+    for stem, _, _, _, mutate in CHECKER_VARIANTS:
+        variant = copy.deepcopy(draft)
+        variant["book"]["instructions_version"] = instructions_version()
+        mutate(variant)
+        out[stem] = variant
+    return out
+
+
+# --------------------------------------------------------------------------
 # Entry points
 
 
@@ -278,10 +327,13 @@ def generate_files(books: Path = BOOKS) -> dict[str, bytes]:
                        "that 'prep validate ../fixture.epub FILE' must reject; 'failing_checks' is the exact set of "
                        "checks with status fail, 'codes' the exact set of failure codes. 'checks': checker results "
                        "that 'prep verify-check ../fixture.epub ../fixture.prepared.epub FILE' must reject with "
-                       "exactly 'codes'.",
+                       "exactly 'codes'. 'checker': drafts and prepared files that 'prep validate ../fixture.epub "
+                       "FILE' passes but in which the AI checker must fail 'prompt' for 'criterion' (a check.json "
+                       "member that must be false) and pass every other prompt.",
         "original": f"../{ORIGINAL}",
         "prepared": [],
         "checks": [],
+        "checker": [],
     }
     for stem, checks, codes, reason, mutate in VARIANTS:
         name = f"{stem}.prepared.epub"
@@ -294,6 +346,14 @@ def generate_files(books: Path = BOOKS) -> dict[str, bytes]:
         name = f"{stem}.check.json"
         out[f"{NEGATIVE}/{name}"] = _json_bytes(variant)
         manifest["checks"].append({"file": name, "prepared": f"../{PREPARED}", "codes": codes, "reason": reason})
+    book = load_book_bytes(original, ORIGINAL)
+    drafts = checker_variant_drafts(draft)
+    for stem, pid, criterion, reason, _ in CHECKER_VARIANTS:
+        draft_bytes = _json_bytes(drafts[stem])
+        out[f"{NEGATIVE}/{stem}.draft.json"] = draft_bytes
+        out[f"{NEGATIVE}/{stem}.prepared.epub"] = build_bytes(book, draft_bytes).data
+        manifest["checker"].append({"draft": f"{stem}.draft.json", "file": f"{stem}.prepared.epub", "prompt": pid,
+                                    "criterion": criterion, "reason": reason})
     out[MANIFEST] = _json_bytes(manifest)
     return out
 

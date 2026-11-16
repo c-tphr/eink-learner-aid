@@ -1,0 +1,115 @@
+```json
+{
+  "format": "rsvp-check",
+  "version": 1,
+  "prepared_sha256": "5ce896509473045e9ccd44409bd707c1cee08d8982ff7b6c2fe7e67f66cb9d49",
+  "original_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "instructions_version": "1.0",
+  "checker": { "model": "claude-fable-5-2", "date": "2026-11-19" },
+  "round": 1,
+  "prompts": [
+    {
+      "id": "c0001-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d02-p006"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (each light has its own pattern and sailors count the flashes): d02-p006, 'every light on the coast had its own pattern, and that sailors counted the flashes'. Idea 2 (Gannet Rock's unique pattern): d02-p006, 'Gannet Rock gave one white flash every ten seconds; no other light on the coast did the same'. The prompt names neither the pattern nor the counting, and the answer is short and plain enough for a paraphrased recall."
+    },
+    {
+      "id": "c0002-p1",
+      "verdict": "fail",
+      "supported_by_section": true,
+      "citations": ["d03-p009"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": false,
+      "evidence": "Fails does_not_give_away_answer: the prompt ends 'by steering toward the sound of its fog horn', which is the answer itself ('He steered by the sound of the fog horn alone'). Nothing is left to recall except the incidental detail of the blast pattern. The answer is otherwise supported: d03-p009, 'He had steered by the sound of the horn alone— two blasts, then silence, then two blasts again— until his boat grounded on the shingle below the tower'."
+    },
+    {
+      "id": "c0002-p2",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p010", "d03-p011"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (cause is phosphorescence, light from tiny living creatures in disturbed water): d03-p010, 'phosphorescence, the light made by tiny living creatures when the water is disturbed'. Idea 2 (not dangerous, but a sign of plankton and so of fish): d03-p011, 'It was not, said Dr. Vane, but it was a sign that the water was full of plankton, and where there was plankton there would be fish'. The answer uses only the body text, not footnote d05-n002. The prompt mentions the green light but not its cause or meaning."
+    },
+    {
+      "id": "c0002-p3",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p013"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Single idea (always carry oars in November, whatever the engine): d03-p013, 'never put to sea in November without oars, however good the engine'. The answer follows the text closely but is one plain idea that a reader can match in their own words; it does not use the reasons given only in footnote d05-n003. The prompt does not hint at oars or the engine."
+    }
+  ],
+  "sections": [
+    {
+      "id": "s0001",
+      "natural_boundary": true,
+      "evidence": "Starts at the chapter heading d02-p001 'The Lamp Room' and ends after d02-p006, where the arrival scene closes with Ione's explanation of flash patterns, just before the h2 heading d02-p007 'Winding the Clockwork' opens a new topic. At 233 words it is well under the 600-word target and the whole chapter is only 427 words, but the break is at a heading between two distinct topics, which the instructions allow; raised as a minor issue only."
+    },
+    {
+      "id": "s0002",
+      "natural_boundary": true,
+      "evidence": "Starts at the h2 heading d02-p007 'Winding the Clockwork' (heading included) and ends at the end of chapter 1 after d02-p010, the close of the first night. A complete episode (how the clockwork drive works and is wound). Short at 194 words; see the minor issue on the chapter 1 split."
+    },
+    {
+      "id": "s0003",
+      "natural_boundary": true,
+      "evidence": "Starts at the chapter heading d03-p001 'The Fog Season' and ends after d03-p007, which completes the explanation of the fog signal and the coal constraint ('They always chose safety'), just before the h2 heading d03-p008 'The Visitor from the Mainland' begins a new episode. 311 words in a 608-word chapter with two clearly separate topics divided by a heading."
+    },
+    {
+      "id": "s0004",
+      "natural_boundary": true,
+      "evidence": "Starts at the h2 heading d03-p008 (heading included) and ends at the end of chapter 2 after d03-p013, when the fog lifts and the fisherman leaves. One complete scene, 297 words."
+    },
+    {
+      "id": "s0005",
+      "natural_boundary": true,
+      "evidence": "The whole of chapter 3, d04-p001 to d04-p008, 321 words: a chapter shorter than 600 words is one section, as the instructions require."
+    }
+  ],
+  "issues": [
+    {
+      "id": "R1-I1",
+      "severity": "blocking",
+      "target": "c0002-p1",
+      "description": "The prompt gives away its answer. It asks 'How did the fisherman find his way to the lighthouse in the fog by steering toward the sound of its fog horn?', and the reference answer is that he steered by the sound of the fog horn (d03-p009). The key fact to be recalled is stated in the question.",
+      "suggested_fix": "Remove the clause 'by steering toward the sound of its fog horn' from the prompt, for example: 'How did the fisherman find his way to the lighthouse in the fog?' Keep the id and the answer unchanged.",
+      "status": "open"
+    },
+    {
+      "id": "R1-I2",
+      "severity": "minor",
+      "target": "s0003",
+      "description": "The section has no checkpoint. It is a 311-word body section, mostly prose, with ideas worth recalling: why fog makes the light useless (d03-p002, d03-p003), how the fog signal works and when it is started (d03-p004), and why the horn is not sounded all the time (d03-p007). None of the instructions' exceptions (a bridge under about 200 words, mostly table/code/images, nothing worth recalling) applies; the table d03-p005 is one block among six prose paragraphs.",
+      "suggested_fix": "Add a checkpoint for s0003 with one prompt on an essential idea stated in its prose, for example why the horn could not be sounded continuously (d03-p007).",
+      "status": "open"
+    },
+    {
+      "id": "R1-I3",
+      "severity": "minor",
+      "target": "s0005",
+      "description": "The section has no checkpoint. It is the whole of chapter 3 (321 words) and its prose states recallable findings: what the count of fog hours showed (d04-p005), what Ione did when the clockwork stopped (d04-p006), and what the lighthouse board agreed to (d04-p007). The code block d04-p004 is a single block, so the section is not mostly code.",
+      "suggested_fix": "Add a checkpoint for s0005 with one or two prompts drawn from the prose paragraphs, for example what the count of fog hours revealed and what came of it (d04-p005, d04-p007).",
+      "status": "open"
+    },
+    {
+      "id": "R1-I4",
+      "severity": "minor",
+      "target": "s0002",
+      "description": "Chapter 1 is 427 words in total, and the instructions say a chapter shorter than 600 words is one section unless it has two clearly separate topics. It is split at the h2 heading d02-p007 into s0001 (233 words) and s0002 (194 words). The split is defensible because the heading separates two topics, but both parts are far below the 600-word target, and s0002 has no checkpoint although it is not merely a bridge: d02-p008 and d02-p009 explain how the clockwork drive turns the lens and why it must be rewound.",
+      "suggested_fix": "Either merge s0002 into s0001 so that chapter 1 is one section (keeping id s0001 and its checkpoint), or keep the split and add a checkpoint for s0002 with one prompt on why and how the weight is rewound (d02-p008, d02-p009).",
+      "status": "open"
+    }
+  ],
+  "verdict": "fail"
+}
+```

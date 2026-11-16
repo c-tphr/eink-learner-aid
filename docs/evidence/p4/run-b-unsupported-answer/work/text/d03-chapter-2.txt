@@ -1,0 +1,45 @@
+# d03 text/chapter-2.xhtml
+# Spine position 3 of 5 (linear). Title: The Fog Season.
+# 13 blocks (d03-p001 to d03-p013), 608 words.
+# Each block: [reference] kind, word count, source id; then its text. A draft cites these references.
+# [^N] is a footnote mark (not a word). [Image: ...], [Table: ...], [Code: ...] stand for non-prose blocks;
+# their caption, cell and code words count in the word stream (RSVP pauses at them).
+
+[d03-p001] heading h1, 3 words, id c2-p001
+The Fog Season
+
+[d03-p002] paragraph, 48 words, id c2-p002
+In November the fog came. It rolled in from the sea in the late afternoon, and within an hour the beam of the lamp was swallowed a few yards from the glass. On those nights the light was almost useless; the keepers had to rely on sound instead.
+
+[d03-p003] paragraph, 51 words, id c2-p003
+Fog was the danger every keeper feared most. On a clear night a ship could see the light from twenty miles away, but in thick fog even the strongest beam could vanish within a stone's throw of the tower, and a ship might run onto the rocks without ever seeing it.
+
+[d03-p004] paragraph, 59 words, id c2-p004
+The fog signal stood in a low brick house beside the tower. An engine filled a tank with air, and the air was let out through a horn in a pattern of two blasts every minute. Ione started the engine as soon as she could no longer see the bell buoy, which lay half a mile to the south.
+
+[d03-p005] table, 42 words, id c2-p005
+[Table: <table>; 4 rows x 3 columns; caption "Lights and fog signals of the eastern coast"]
+
+[d03-p006] paragraph, 57 words, id c2-p006
+Ione kept a printed list of every light and fog signal on the coast pinned beside the door. Sailors learned these patterns by heart, because in the dark or in fog a pattern was the only thing that told one station from another. Under the list she had written two lines: Count the flashes. Trust the pattern.
+
+[d03-p007] paragraph, 51 words, id c2-p007
+Dr. Vane asked why the horn was not simply sounded all the time. Ione explained that the engine burned coal, and coal came out on the supply boat only once a month. If the fog lasted a week, they would have to choose between warmth and safety. They always chose safety.
+
+[d03-p008] heading h2, 5 words, id c2-p008
+The Visitor from the Mainland
+
+[d03-p009] paragraph, 78 words, id c2-p009
+On the ninth night of fog, someone knocked at the door. Ione opened it to find a young fisherman, half-frozen and shaking, who had rowed across from the mainland after his engine failed. He had steered by the sound of the horn alone— two blasts, then silence, then two blasts again— until his boat grounded on the shingle below the tower. His name was Peter Lund, and he ran a small café on the harbour at Skerry Point.
+
+[d03-p010] paragraph, 61 words, id c2-p010
+They gave him dry clothes and hot tea. While he warmed his hands, he told them something strange. Out on the water, every stroke of his oars had left a trail of green light, as if the sea itself were glowing. Dr. Vane knew the word for it: phosphorescence, the light made by tiny living creatures when the water is disturbed.[^2]
+
+[d03-p011] paragraph, 43 words, id c2-p011
+Peter asked whether the glow was dangerous. It was not, said Dr. Vane, but it was a sign that the water was full of plankton, and where there was plankton there would be fish. The fisherman grinned for the first time that night.
+
+[d03-p012] paragraph, 50 words, id c2-p012
+Ione made up a bed for him in the watch room, but he did not sleep. He sat by the window and listened to the horn, counting the blasts under his breath as if he were still out on the water, until at last the sky began to grow pale.
+
+[d03-p013] paragraph, 60 words, id c2-p013
+At dawn the fog lifted at last. Ione rowed Peter back to his boat, and together they pulled it off the shingle. Before he left, she gave him one piece of advice: never put to sea in November without oars, however good the engine.[^3] Then she went back up the one hundred and twelve steps to put out the lamp.

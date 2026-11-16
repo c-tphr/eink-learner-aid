@@ -1,0 +1,15 @@
+# d01 text/title.xhtml
+# Spine position 1 of 5 (linear). Title: Title page.
+# 3 blocks (d01-p001 to d01-p003), 20 words.
+# Each block: [reference] kind, word count, source id; then its text. A draft cites these references.
+# [^N] is a footnote mark (not a word). [Image: ...], [Table: ...], [Code: ...] stand for non-prose blocks;
+# their caption, cell and code words count in the word stream (RSVP pauses at them).
+
+[d01-p001] heading h1, 4 words, id fm-p001
+The Lighthouse Keeper's Almanac
+
+[d01-p002] paragraph, 3 words, id fm-p002
+Mara Ellery Quill
+
+[d01-p003] paragraph, 13 words, id fm-p003
+A synthetic book made for automated tests. Its people and places are invented.

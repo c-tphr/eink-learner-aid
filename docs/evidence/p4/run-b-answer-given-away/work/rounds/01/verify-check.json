@@ -1,0 +1,35 @@
+{
+  "format": "rsvp-check-verification",
+  "version": 1,
+  "tool": {
+    "name": "tools.prep",
+    "version": "1.0.0"
+  },
+  "created": "2026-11-19T11:48:40Z",
+  "original": {
+    "file": "fixture.epub",
+    "sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c"
+  },
+  "prepared": {
+    "file": "fixture.prepared.epub",
+    "sha256": "5ce896509473045e9ccd44409bd707c1cee08d8982ff7b6c2fe7e67f66cb9d49"
+  },
+  "check": {
+    "file": "check.json",
+    "sha256": "fac895d73f14799e3d9b00852fc746f9b2d1ebde30475f1f640eae69878d3a1b"
+  },
+  "checker": {
+    "model": "claude-fable-5-2",
+    "date": "2026-11-19"
+  },
+  "checker_verdict": "fail",
+  "consistent": true,
+  "passed": false,
+  "failures": [
+    {
+      "code": "checker-verdict-fail",
+      "location": "check.json#/verdict",
+      "message": "the checker did not pass the draft: prompts c0002-p1 fail; blocking issues R1-I1 are open"
+    }
+  ]
+}

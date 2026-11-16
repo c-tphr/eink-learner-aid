@@ -1,0 +1,30 @@
+# Section s0003: Fog signals
+# Document text/chapter-2.xhtml (whole text: text/d03-chapter-2.txt).
+# Paragraphs d03-p001 to d03-p007 (7 blocks), 311 words.
+# Just before it: start of text/chapter-2.xhtml. Just after it: d03-p008 (section s0004).
+# Cite only the paragraph references below; they are this section's whole text.
+
+[d03-p001] heading h1, 3 words, id c2-p001
+The Fog Season
+
+[d03-p002] paragraph, 48 words, id c2-p002
+In November the fog came. It rolled in from the sea in the late afternoon, and within an hour the beam of the lamp was swallowed a few yards from the glass. On those nights the light was almost useless; the keepers had to rely on sound instead.
+
+[d03-p003] paragraph, 51 words, id c2-p003
+Fog was the danger every keeper feared most. On a clear night a ship could see the light from twenty miles away, but in thick fog even the strongest beam could vanish within a stone's throw of the tower, and a ship might run onto the rocks without ever seeing it.
+
+[d03-p004] paragraph, 59 words, id c2-p004
+The fog signal stood in a low brick house beside the tower. An engine filled a tank with air, and the air was let out through a horn in a pattern of two blasts every minute. Ione started the engine as soon as she could no longer see the bell buoy, which lay half a mile to the south.
+
+[d03-p005] table, 42 words, id c2-p005
+[Table: <table>; 4 rows x 3 columns; caption "Lights and fog signals of the eastern coast"]
+
+[d03-p006] paragraph, 57 words, id c2-p006
+Ione kept a printed list of every light and fog signal on the coast pinned beside the door. Sailors learned these patterns by heart, because in the dark or in fog a pattern was the only thing that told one station from another. Under the list she had written two lines: Count the flashes. Trust the pattern.
+
+[d03-p007] paragraph, 51 words, id c2-p007
+Dr. Vane asked why the horn was not simply sounded all the time. Ione explained that the engine burned coal, and coal came out on the supply boat only once a month. If the fog lasted a week, they would have to choose between warmth and safety. They always chose safety.
+
+## No checkpoint
+
+The drafter gave this section no checkpoint.
