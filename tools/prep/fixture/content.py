@@ -8,12 +8,19 @@ Inline markup inside ``("p", ...)`` and heading strings:
 
 - ``*word*``        -> ``<em>word</em>``
 - ``**word**``      -> ``<strong>word</strong>``
-- ``[^fn1]``        -> a footnote reference mark linking to footnote ``fn1``.
-  It must follow a non-space character and be followed by a space or the
-  end of the paragraph, so it never sits inside a word.
+- ``[^fn1]``        -> a footnote reference mark linking to footnote ``fn1``,
+  in the markup form ``NOTE_FORMS`` gives it. It must follow a non-space
+  character and be followed by a space, a line break or the end of the
+  paragraph, so it never sits inside a word.
+- ``[br]``          -> ``<br/>``, a line break (it must follow a word).
+- ``[pb:12]``       -> a page-break marker
+  ``<span epub:type="pagebreak" role="doc-pagebreak" id="page12" ...>12</span>``,
+  whose text is in no word and never splits one.
 
-Prose is plain ASCII with single spaces, except for the one paragraph that
-deliberately holds non-ASCII characters (``c2-p009``: U+00E9 and U+2014).
+Prose is plain ASCII with single spaces, except where a word rule of
+docs/spikes/S1-word-stream.md section 5 needs a case (see ``TOKEN_CASES``):
+U+00A0 NO-BREAK SPACE, U+00AD SOFT HYPHEN, U+2013 EN DASH, U+2014 EM DASH,
+a decomposed e + U+0301 that the word rules compose to U+00E9.
 
 Block ids are not written here: the generator numbers every block of a
 document in order (``<prefix>-p001``, ``<prefix>-p002``, ...) and every
@@ -63,7 +70,7 @@ CHAPTERS = [
             (
                 "p",
                 "The supply boat reached Gannet Rock a little after noon. It had crossed the strait at "
-                "3.5 knots, which was as fast as old Tobin would ever push it. Dr. Vane stepped onto the "
+                "3.5 knots, which was as fast as old Tobin would ever push it. Dr.\u00a0Vane stepped onto the "
                 "landing stage with a leather bag in each hand and looked up at the tower. Was this really "
                 "where she would spend the winter?",
             ),
@@ -162,7 +169,8 @@ CHAPTERS = [
                 "p",
                 "Ione kept a printed list of every light and fog signal on the coast pinned beside the "
                 "door. Sailors learned these patterns by heart, because in the dark or in fog a pattern "
-                "was the only thing that told one station from another.",
+                "was the only thing that told one station from another. Under the list she had written "
+                "two lines:[br]Count the flashes.[br]Trust the pattern.",
             ),
             (
                 "p",
@@ -178,14 +186,15 @@ CHAPTERS = [
                 "fisherman, half-frozen and shaking, who had rowed across from the mainland after his "
                 "engine failed. He had steered by the sound of the horn alone\u2014two blasts, then "
                 "silence, then two blasts again\u2014until his boat grounded on the shingle below the "
-                "tower. His name was Peter Lund, and he ran a small caf\u00e9 on the harbour at Skerry "
+                "tower. His name was Peter Lund, and he ran a small cafe\u0301 on the harbour at Skerry "
                 "Point.",
             ),
             (
                 "p",
                 "They gave him dry clothes and hot tea. While he warmed his hands, he told them something "
                 "strange. Out on the water, every stroke of his oars had left a trail of green light, as "
-                "if the sea itself were glowing. Dr. Vane knew the word for it: phosphorescence, the light "
+                "if the sea itself were glowing. Dr. Vane knew the word for it: "
+                "phos\u00adpho\u00adres\u00adcence, the light "
                 "made by tiny living creatures when the water is disturbed.[^fn2]",
             ),
             (
@@ -219,7 +228,8 @@ CHAPTERS = [
             (
                 "p",
                 "When spring came, Dr. Vane began to copy the old logbooks into a simple list so that she "
-                "could study them. Ione had kept the log for nineteen years, and its pages held the time, "
+                "could study them. Ione had kept the log for nineteen years, 1907\u20131925, and its pages "
+                "held the time, "
                 "the weather and the state of the light for every hour of every night. Some pages were "
                 "stained with salt water, and a few were so faded that she had to read them by the window.",
             ),
@@ -255,7 +265,7 @@ CHAPTERS = [
             ),
             (
                 "p",
-                "Dr. Vane sent her figures to the lighthouse board with a request for a second engine and "
+                "Dr. Vane sent her figures to the light[pb:12]house board with a request for a second engine and "
                 "a larger coal store. The reply came in June: the board agreed, and the new engine would "
                 "arrive before the next fog season.",
             ),
@@ -271,8 +281,9 @@ CHAPTERS = [
 
 # Footnote bodies, keyed by the id used in ``[^...]`` marks. Each body is a
 # list of paragraphs. Marks are numbered 1, 2, 3 ... in order of first
-# reference across the book, and the note is placed in an
-# <aside epub:type="footnote"> at the end of the chapter that references it.
+# reference across the book. A note listed in ENDNOTES["notes"] is placed in
+# the endnotes document; any other note in an <aside epub:type="footnote"> at
+# the end of the chapter that references it.
 FOOTNOTES = {
     "fn1": [
         "Lenses of this kind were first built in the 1820s. They are made in rings so that the glass "
@@ -282,27 +293,65 @@ FOOTNOTES = {
     "fn3": ["Oars weigh little and never run out of fuel, so many small boats carried a pair as a spare."],
 }
 
-# Deliberate tokenisation cases: (case, block id, the exact word token).
-# The generator fails if the token is not a word of that block.
+# How each footnote reference mark is written. Section 5 knows two forms, and
+# the second comes in either nesting order:
+#   noteref   <sup><a epub:type="noteref" role="doc-noteref" href="#fn1">1</a></sup>
+#   sup-link  <sup><a href="#fn2">2</a></sup>
+#   link-sup  <a href="#fn3"><sup>3</sup></a>
+NOTE_FORMS = {"fn1": "noteref", "fn2": "sup-link", "fn3": "link-sup"}
+
+# The endnotes document, last in the spine (Standard Ebooks style): one
+# <section epub:type="endnotes"> holding a heading and one <li epub:type="endnote">
+# per note. Every word of it is in a NOTE region, and it has no reading-stream
+# block, so the draft neither covers nor excludes it. Chapter 2's notes live
+# here, so section s0004 (checkpoint c0002) still ends its chapter; chapter 1's
+# note stays in an in-chapter aside after s0002, which has no checkpoint.
+ENDNOTES = {
+    "href": "text/endnotes.xhtml",
+    "role": "endnotes",
+    "prefix": "en",
+    "title": "Notes",
+    "heading": "Notes",
+    "notes": ["fn2", "fn3"],
+    "blocks": [],
+}
+
+# Deliberate word-rule cases: (case, block id, the exact word, flags it must carry).
+# The generator fails if the word is not a word of that block or lacks a flag.
 TOKEN_CASES = [
-    ("Sentence ending in a full stop", "c1-p002", "noon."),
-    ("Decimal number (the point is not a sentence end)", "c1-p002", "3.5"),
-    ("Abbreviation with a full stop (not a sentence end)", "c1-p002", "Dr."),
-    ("Sentence ending in a question mark", "c1-p002", "winter?"),
-    ("Comma", "c1-p003", "Hartwell,"),
-    ("Quoted sentence: opening ASCII double quote attached to the first word", "c1-p003", '"The'),
-    ("Quoted sentence: closing double quote after the full stop", "c1-p003", 'weather."'),
-    ("Semicolon", "c1-p006", "seconds;"),
-    ("Sentence ending in an exclamation mark", "c1-p009", "turns!"),
-    ("Apostrophe inside a word", "c1-p009", "doctor's"),
-    ("Hyphenated compound (one word)", "c2-p009", "half-frozen"),
-    ("Em dash U+2014 with no spaces: joins its neighbours into one word", "c2-p009", "alone\u2014two"),
-    ("Em dash U+2014 with no spaces (second)", "c2-p009", "again\u2014until"),
-    ("Non-ASCII letter: precomposed e acute U+00E9", "c2-p009", "caf\u00e9"),
-    ("Colon", "c2-p010", "it:"),
-    ("Long word (15 letters) with trailing comma", "c2-p010", "phosphorescence,"),
-    ("Word inside an em element, comma outside it", "c2-p011", "not,"),
-    ("Word inside a strong element", "c2-p013", "never"),
+    ("Sentence ending in a full stop", "c1-p002", "noon.", []),
+    ("Decimal number", "c1-p002", "3.5", []),
+    ("Abbreviation with a full stop", "c1-p002", "Dr.", []),
+    ("No-break space U+00A0 (numeric reference) separates words: 'Dr.' and 'Vane' are two", "c1-p002", "Vane", []),
+    ("Sentence ending in a question mark", "c1-p002", "winter?", []),
+    ("Comma", "c1-p003", "Hartwell,", []),
+    ("Quoted sentence: opening ASCII double quote attached to the first word", "c1-p003", '"The', []),
+    ("Quoted sentence: closing double quote after the full stop", "c1-p003", 'weather."', []),
+    ("Figure caption: ordinary prose words after the IMAGE marker", "c1-p004", "Figure", []),
+    ("Word followed by a footnote mark (epub:type noteref form)", "c1-p005", "one.", ["NOTEREF", "PARA_END"]),
+    ("Semicolon", "c1-p006", "seconds;", []),
+    ("Sentence ending in an exclamation mark", "c1-p009", "turns!", []),
+    ("Apostrophe inside a word", "c1-p009", "doctor's", []),
+    ("Table cell: a word in the TABLE region", "c2-p005", "Skerry", ["NONPROSE"]),
+    ("Word before a `<br/>` line break", "c2-p006", "lines:", ["LINE_END"]),
+    ("Word before the second `<br/>`", "c2-p006", "flashes.", ["LINE_END"]),
+    ("Hyphenated compound (one word)", "c2-p009", "half-frozen", []),
+    ("Em dash U+2014 with no spaces: a word ends after the dash", "c2-p009", "alone\u2014", []),
+    ("Word after an unspaced em dash", "c2-p009", "two", []),
+    ("Em dash U+2014 with no spaces (second)", "c2-p009", "again\u2014", []),
+    ("Decomposed e + U+0301 is composed (NFC) to U+00E9", "c2-p009", "caf\u00e9", []),
+    ("Colon", "c2-p010", "it:", []),
+    ("Soft hyphens U+00AD are removed and never split", "c2-p010", "phosphorescence,", []),
+    ("Word followed by a footnote mark (sup > a href, no epub:type)", "c2-p010", "disturbed.",
+     ["NOTEREF", "PARA_END"]),
+    ("Word inside an em element, comma outside it", "c2-p011", "not,", []),
+    ("Word inside a strong element", "c2-p013", "never", []),
+    ("Word followed by a footnote mark (a href > sup, no epub:type)", "c2-p013", "engine.", ["NOTEREF"]),
+    ("En dash U+2013 with no spaces: a word ends after the dash", "c3-p002", "1907\u2013", []),
+    ("Word after an unspaced en dash", "c3-p002", "1925,", []),
+    ("Code in pre: a word in the CODE region", "c3-p004", "fog_hours", ["NONPROSE"]),
+    ("Page-break marker inside a word: its text is in no word and does not split it", "c3-p007", "lighthouse",
+     []),
 ]
 
 # ---------------------------------------------------------------------------

@@ -2,46 +2,56 @@
 
 ``load_book(path)`` returns a ``Book``: package metadata, the spine in reading
 order, the nav/NCX table of contents and, for every XHTML spine document, its
-blocks with their paragraph references (``tools/prep/refs.py``), kinds and
-words (``tools/prep/words.py``). ``extract`` writes this model to the work
-folder; ``build`` uses it to find where anchors go; ``validate`` (next task) is
-meant to load the original and the prepared file with it and compare.
+word stream (``tools/prep/words.py``, the firmware's word definition) and its
+blocks with their paragraph references (``tools/prep/refs.py``) and kinds.
+``extract`` writes this model to the work folder; ``build`` uses it to find
+where anchors go and how many words a section has; ``validate`` (next task)
+is meant to load the original and the prepared file with it and compare.
+
+Words are not decided here: every document's words, flags and markers come
+from ``words.word_stream``, and a block's words are the stream words that
+start inside its element (``Block.start``/``Block.end``). This module only
+decides which elements are blocks.
 
 Block rules (also in tools/prep/README.md, "Paragraph identity"):
 
-1. Only the ``body`` of an XHTML spine document is read. ``script``,
-   ``style``, ``template``, ``title``, ``noscript``, ``rt``, ``rp``, elements
-   with a ``hidden`` attribute and page-break markers (``role`` exactly
-   doc-pagebreak or ``epub:type`` exactly pagebreak) hold no words.
+1. Only the ``body`` of an XHTML spine document is read. Text that is in no
+   word (``head``, ``style``, ``script``, ``title``, ``rp``, ``rt``, elements
+   with a ``hidden`` attribute, page-break markers with ``role`` exactly
+   doc-pagebreak or ``epub:type`` exactly pagebreak) never makes a block.
 2. Atomic (non-prose) blocks: ``table`` (kind ``table``), ``pre`` (``code``),
    ``img``/``svg``/``picture`` (``image``), ``math`` (``math``),
    ``video``/``audio``/``object``/``iframe``/``embed``/``canvas`` (``media``),
    and ``figure`` when it holds one of those (kind taken from what it holds).
-   They count no words; their text is shown only as a placeholder.
-3. Footnote containers (``epub:type`` containing footnote, endnote,
-   rearnote, note, footnotes, endnotes or rearnotes; or ``role`` doc-footnote,
-   doc-endnote, doc-endnotes) are outside the reading stream. Their blocks are
-   numbered separately (``dNN-nNNN``, kind ``footnote``).
+   Their words (captions, cells, code) are in the stream like any other.
+3. Footnote and endnote bodies (``epub:type`` with a footnote, endnote or
+   endnotes token; or ``role`` doc-footnote, doc-endnote, doc-endnotes; the
+   NOTE regions of the word stream) are numbered separately (``dNN-nNNN``,
+   kind ``footnote``). Their words are in the stream, but a draft cannot cite
+   them.
 4. Any other element that has text of its own (a non-blank text node, or an
    inline child with words) is one prose block, including everything inside
-   it. Otherwise its element children are visited in order.
-5. A prose block with no words is not a block (empty spacer paragraphs).
+   it. Otherwise its element children are visited in order. Block-level
+   means an element at which the word pass splits words (section 5's
+   boundary elements other than ``br``, ``img`` and ``image``), so a block's
+   first and last words never straddle its tags.
+5. A prose block with no words is not a block (empty spacer paragraphs,
+   including ones holding only a no-break space).
 6. Block numbers count reading-stream blocks of one document in document
    order from 1; footnote blocks from 1 in their own series.
 
-Words of a prose block: the concatenated text of its descendants (inline
-elements do not split words), with ``br`` and block-level descendants acting
-as a space, minus footnote reference marks and minus atomic descendants;
-then ``tokenize``. A footnote reference mark is an ``a`` with ``epub:type``
-noteref or ``role`` doc-noteref, or text inside both a ``sup`` and an
-``a href`` to an internal ``#`` target, in either nesting order (the
-firmware's rule, docs/spikes/S1-word-stream.md section 5).
+"Text of its own" ignores footnote reference marks (an ``a`` with
+``epub:type`` noteref or ``role`` doc-noteref, or text inside both a ``sup``
+and an internal ``#`` link, in either nesting order), atomic descendants and
+footnote bodies, so block identities stay as they were before the word rules
+were aligned with the firmware.
 """
 
 from __future__ import annotations
 
 import hashlib
 import posixpath
+import re
 import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -49,7 +59,8 @@ from typing import Any, Iterator
 
 from . import refs
 from .epubzip import Archive, ZipFormatError
-from .words import tokenize
+from . import words as W
+from .words import WordStream, tokenize, word_stream
 from .xmltree import OPS_NS, XHTML_NS, Document, Element, XmlError, parse
 
 CONTAINER_PATH = "META-INF/container.xml"
@@ -61,22 +72,14 @@ SVG_NS = "http://www.w3.org/2000/svg"
 MATHML_NS = "http://www.w3.org/1998/Math/MathML"
 XHTML_MEDIA_TYPE = "application/xhtml+xml"
 
-INVISIBLE = {"script", "style", "template", "head", "title", "noscript", "rt", "rp"}
-EXTERNAL_SCHEMES = ("http:", "https:", "mailto:", "ftp:", "tel:", "javascript:")
-BLOCK_LEVEL = {
-    "address", "article", "aside", "blockquote", "body", "details", "dialog", "dd", "div", "dl", "dt", "fieldset",
-    "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hgroup", "hr", "li",
-    "main", "nav", "ol", "p", "pre", "section", "table", "ul", "summary", "menu", "caption", "tr", "td", "th",
-    "thead", "tbody", "tfoot",
-}
+# Elements at which the word pass splits words, other than br and the image elements.
+BLOCK_LEVEL = W.BOUNDARY_ELEMENTS - W.NON_PARAGRAPH_BOUNDARIES
 ATOMIC_KIND = {
     "table": "table", "pre": "code", "img": "image", "picture": "image", "math": "math", "video": "media",
     "audio": "media", "object": "media", "iframe": "media", "embed": "media", "canvas": "media",
 }
 HEADINGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
 LIST_ITEMS = {"li", "dt", "dd"}
-FOOTNOTE_TYPES = {"footnote", "endnote", "rearnote", "note", "footnotes", "endnotes", "rearnotes"}
-FOOTNOTE_ROLES = {"doc-footnote", "doc-endnote", "doc-endnotes"}
 # Parents in which an empty <span> may not stand as a child (HTML content models).
 NO_PHRASING_CHILD = {
     "html", "head", "table", "thead", "tbody", "tfoot", "tr", "colgroup", "ul", "ol", "dl", "menu", "select",
@@ -84,6 +87,7 @@ NO_PHRASING_CHILD = {
 }
 
 EPUB_TYPE = f"{{{OPS_NS}}}type"
+_XML_SPACE_RE = re.compile(r"[ \t\n\r]+")
 
 
 class EpubError(ValueError):
@@ -101,15 +105,20 @@ class Block:
     number: int
     kind: str  # heading, paragraph, list-item, blockquote, aside, footnote, image, table, code, math, media
     element: Element
-    words: list[str]
-    first_word: int | None  # index in the document's reading stream (prose reading-stream blocks only)
-    after_word: int  # index of the last reading-stream word before the block (-1 if none)
+    words: list[str]  # the stream words that start inside the element
+    start: int  # words of the document's stream started before the element's start tag
+    end: int  # ... and before its end tag; the block's words are [start, end)
     placeholder: str | None  # for atomic blocks: a one-line description
     note_id: str | None = None  # for footnote blocks: id of the footnote container
 
     @property
     def word_count(self) -> int:
         return len(self.words)
+
+    @property
+    def first_word(self) -> int:
+        """Index of the block's first word (of the next word when it has none)."""
+        return self.start
 
     @property
     def atomic(self) -> bool:
@@ -140,11 +149,7 @@ class Block:
         }
         if self.kind == "heading" and self.element.local in HEADINGS:
             out["level"] = int(self.element.local[1])
-        if self.first_word is not None:
-            out["first_word"] = self.first_word
-            out["last_word"] = self.first_word + self.word_count - 1
-        elif self.series == refs.MAIN:
-            out["after_word"] = self.after_word
+        out["first_word"] = self.first_word
         if self.placeholder is not None:
             out["placeholder"] = self.placeholder
         if self.note_id is not None:
@@ -169,7 +174,8 @@ class SpineDoc:
     doc: Document | None = None
     blocks: list[Block] = field(default_factory=list)  # reading stream
     notes: list[Block] = field(default_factory=list)  # footnote bodies
-    words: list[str] = field(default_factory=list)  # reading-stream words
+    stream: WordStream | None = None  # the document's words, flags, markers and anchors
+    words: list[str] = field(default_factory=list)  # the stream's word texts
 
     @property
     def is_xhtml(self) -> bool:
@@ -237,18 +243,15 @@ def _tokens(value: str | None) -> set[str]:
     return set((value or "").split())
 
 
-def is_footnote_container(el: Element) -> bool:
-    return bool(_tokens(el.get(EPUB_TYPE)) & FOOTNOTE_TYPES) or bool(_tokens(el.get("role")) & FOOTNOTE_ROLES)
+def squash(text: str) -> str:
+    """``text`` with runs of XML white space collapsed to one space and trimmed (for titles and labels)."""
+    return " ".join(_XML_SPACE_RE.split(text)).strip()
 
 
-def is_noteref(el: Element) -> bool:
-    """An ``a`` explicitly marked as a footnote reference (``epub:type`` noteref or ``role`` doc-noteref)."""
-    return el.local == "a" and ("noteref" in _tokens(el.get(EPUB_TYPE)) or "doc-noteref" in _tokens(el.get("role")))
-
-
-def is_internal_link(el: Element) -> bool:
-    href = el.get("href") or ""
-    return el.local == "a" and "#" in href and not href.lower().startswith(EXTERNAL_SCHEMES)
+# The word pass's element tests, under the names this module has always used.
+is_footnote_container = W.is_note_body
+is_noteref = W.is_explicit_noteref
+is_internal_link = W.is_internal_link
 
 
 def _mark_flags(el: Element) -> tuple[bool, bool]:
@@ -256,20 +259,15 @@ def _mark_flags(el: Element) -> tuple[bool, bool]:
     sup = link = False
     node: Element | None = el
     while node is not None:
-        sup = sup or node.local == "sup"
+        sup = sup or node.local.lower() == "sup"
         link = link or is_internal_link(node)
         node = node.parent
     return sup, link
 
 
 def is_invisible(el: Element) -> bool:
-    """Not part of any word (spike S1, section 5): script/style/..., ``hidden``, page breaks, ``rt``/``rp``."""
-    return (
-        (el.ns == XHTML_NS and el.local in INVISIBLE)
-        or el.get("hidden") is not None
-        or el.get("role") == "doc-pagebreak"
-        or el.get(EPUB_TYPE) == "pagebreak"
-    )
+    """Its text is in no word (section 5): head/style/script/title/rp, ``hidden``, page-break markers, ``rt``."""
+    return el.local.lower() in W.NONVISIBLE or W.hides_text(el)
 
 
 def atomic_kind(el: Element) -> str | None:
@@ -307,7 +305,7 @@ def prose_text(el: Element, show_noterefs: bool = False) -> str:
                 continue
             if is_invisible(child) or is_footnote_container(child):
                 continue
-            sup = in_sup or child.local == "sup"
+            sup = in_sup or child.local.lower() == "sup"
             link = in_link or is_internal_link(child)
             if is_noteref(child) or (sup and link):
                 # A footnote mark: an explicit noteref, or text inside both a <sup> and an
@@ -378,7 +376,7 @@ def _has_own_text(el: Element) -> bool:
 
 
 def _clip(text: str, limit: int = 120) -> str:
-    text = " ".join(tokenize(text))
+    text = squash(text)
     return text if len(text) <= limit else text[: limit - 3].rstrip() + "..."
 
 
@@ -429,7 +427,6 @@ def _prose_kind(el: Element) -> str:
 class _Raw:
     element: Element
     kind: str
-    words: list[str]
     placeholder: str | None
     note_id: str | None
 
@@ -442,18 +439,17 @@ def _segment(body: Element) -> tuple[list[_Raw], list[_Raw]]:
         if is_invisible(el) or is_noteref(el):
             return
         target = notes if note is not None else main
-        if note is None and is_footnote_container(el):
+        if is_footnote_container(el):  # the innermost body names the note (an endnote in its section)
             note = el
             target = notes
         note_id = note.get("id") if note is not None else None
         kind = atomic_kind(el)
         if kind is not None:
-            target.append(_Raw(el, "footnote" if note is not None else kind, [], placeholder_for(el, kind), note_id))
+            target.append(_Raw(el, "footnote" if note is not None else kind, placeholder_for(el, kind), note_id))
             return
         if _has_own_text(el):
-            words = tokenize(prose_text(el))
-            if words:
-                target.append(_Raw(el, "footnote" if note is not None else _prose_kind(el), words, None, note_id))
+            if tokenize(prose_text(el)):
+                target.append(_Raw(el, "footnote" if note is not None else _prose_kind(el), None, note_id))
             return
         for child in el.elements():
             visit(child, note)
@@ -463,30 +459,26 @@ def _segment(body: Element) -> tuple[list[_Raw], list[_Raw]]:
 
 
 def segment_document(sd: SpineDoc, spine_count: int) -> None:
-    """Fill ``sd.blocks``, ``sd.notes`` and ``sd.words`` from ``sd.doc``."""
+    """Fill ``sd.stream``, ``sd.words``, ``sd.blocks`` and ``sd.notes`` from ``sd.doc``."""
     assert sd.doc is not None
     root = sd.doc.root
     body = next((c for c in root.elements() if c.ns == XHTML_NS and c.local == "body"), None)
     head = next((c for c in root.elements() if c.ns == XHTML_NS and c.local == "head"), None)
     if head is not None:
         title = head.first(XHTML_NS, "title")
-        if title is not None and tokenize(title.text()):
-            sd.title = " ".join(tokenize(title.text()))
+        if title is not None and squash(title.text()):
+            sd.title = squash(title.text())
+    sd.stream = word_stream(sd.doc)
+    sd.words = sd.stream.texts
     if body is None:
         return
     main, notes = _segment(body)
-    words: list[str] = []
-    for number, raw in enumerate(main, start=1):
-        ref = refs.paragraph_ref(sd.index, spine_count, number, len(main), refs.MAIN)
-        first = len(words) if raw.words else None
-        sd.blocks.append(Block(ref, refs.MAIN, number, raw.kind, raw.element, raw.words, first, len(words) - 1,
-                               raw.placeholder, raw.note_id))
-        words.extend(raw.words)
-    sd.words = words
-    for number, raw in enumerate(notes, start=1):
-        ref = refs.paragraph_ref(sd.index, spine_count, number, len(notes), refs.NOTE)
-        sd.notes.append(Block(ref, refs.NOTE, number, raw.kind, raw.element, raw.words, None, -1, raw.placeholder,
-                              raw.note_id))
+    for series, raws, target in ((refs.MAIN, main, sd.blocks), (refs.NOTE, notes, sd.notes)):
+        for number, raw in enumerate(raws, start=1):
+            ref = refs.paragraph_ref(sd.index, spine_count, number, len(raws), series)
+            start, end = sd.stream.range_of(raw.element)
+            target.append(Block(ref, series, number, raw.kind, raw.element, sd.words[start:end], start, end,
+                                raw.placeholder, raw.note_id))
 
 
 # --------------------------------------------------------------------------
@@ -514,8 +506,8 @@ def _text_of_first(root: Element, ns: str, local: str) -> str | None:
     el = root.first(ns, local)
     if el is None:
         return None
-    words = tokenize(el.text())
-    return " ".join(words) if words else None
+    text = squash(el.text())
+    return text or None
 
 
 def _rel_to_opf(opf_dir: str, zip_path: str, fragment: str) -> str:
@@ -542,7 +534,7 @@ def _nav_entries(nav_path: str, doc: Document) -> list[tuple[str, str, int]]:
                 if href:
                     target = _resolve(nav_dir, href, nav_path) + (
                         "#" + urllib.parse.urldefrag(href)[1] if urllib.parse.urldefrag(href)[1] else "")
-                out.append((" ".join(tokenize(label_el.text())), target, depth))
+                out.append((squash(label_el.text()), target, depth))
             for sub in li.elements():
                 if sub.local == "ol":
                     walk_list(sub, depth + 1)
@@ -571,7 +563,7 @@ def _ncx_entries(ncx_path: str, doc: Document) -> list[tuple[str, str, int]]:
             if src:
                 frag = urllib.parse.urldefrag(src)[1]
                 target = _resolve(ncx_dir, src, ncx_path) + (f"#{frag}" if frag else "")
-            out.append((" ".join(tokenize(label.text())) if label is not None else "", target, depth))
+            out.append((squash(label.text()) if label is not None else "", target, depth))
             walk(point, depth + 1)
 
     walk(nav_map, 1)

@@ -1,19 +1,22 @@
 {
   "format": "rsvp-fixture-expected",
-  "version": 1,
+  "version": 2,
+  "rules_version": 1,
   "generated_by": "tools/prep/fixture/generate.py",
   "epub": "fixture.epub",
-  "epub_sha256": "b07c3ea9857b00644d284c0eae083bc504bfc895525d0a864c183b916e17c82c",
+  "epub_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
   "rules": {
-    "word": "A word is a maximal run of characters other than U+0020 SPACE, U+0009 TAB, U+000A LINE FEED and U+000D CARRIAGE RETURN, taken from the visible text of one prose block. Punctuation (. , ; : ? ! quotes, apostrophes, hyphens, em dashes) stays attached to the word it touches; an unspaced em dash therefore joins its neighbours into one word. No normalisation, case folding or stripping is applied; non-ASCII text is NFC as written.",
-    "prose_blocks": "Prose blocks are h1/h2 headings (kind 'heading') and p elements (kind 'paragraph') that are direct children of body. A block boundary always ends a word.",
-    "inline_elements": "Inline elements (em, strong) do not split or drop words: the text of a block is concatenated across inline tags before it is split into words.",
-    "noterefs": "A footnote reference mark (sup > a[epub:type=noteref]) is not a word and contributes no characters to the prose text. Its position is 'after_word': the index of the word it follows.",
-    "footnotes": "Footnote bodies (aside[epub:type=footnote] at the end of a chapter) are not part of the chapter's word stream; their words are listed separately under 'footnotes'.",
-    "non_prose_blocks": "figure (kind 'image'), table (kind 'table') and pre (kind 'code') contribute no words. Their position is 'after_word', the index of the last prose word before them, and their inner text (caption, cells, code lines) is listed in the block entry only.",
-    "indexing": "Word indices are 0-based over one document's whole word stream (not per block). 'after_word' is -1 when nothing precedes the item.",
-    "sections": "A section's start anchor goes immediately before word 'first_word' and its end anchor immediately after word 'last_word' of the section's chapter.",
-    "paragraphs": "'paragraph' is the reference 'prep extract' gives a block (tools/prep/refs.py): 'd' and the 1-based spine position, '-p' and the 1-based block number within the document (footnote paragraphs: '-n' and their own count). The draft cites these references, never the XHTML ids ('id'), which real books mostly lack."
+    "source": "Words follow docs/spikes/S1-word-stream.md section 5 ('What a word is'), the contract between lib/WordIndex and the preparation tools, plus one decision beyond it: footnote and endnote bodies are NOTE regions. tools/prep/words.py implements the rules; this file is derived independently from the generator's content model and cross-checked against that word pass.",
+    "rules_version": "rules_version counts changes to these word rules. Any change that can move a word index raises it, and the firmware's WordIndex rulesVersion should carry the same number.",
+    "words": "Each spine document's 'words' is its whole word stream in order: every word in <body>, including headings, figure captions, table cells and captions, code in pre, and footnote bodies. Separators are U+0009, U+000A, U+000C, U+000D, U+0020, U+00A0, U+1680, U+2000-U+200B, U+2028, U+2029, U+202F, U+205F and U+3000. The start and end tags of block elements (p, h1-h6, figure, figcaption, table, caption, tr, th, td, pre, aside, ...) and br and img end a word; inline elements (em, strong, a, sup, span) do not. A word also ends after an em dash or en dash that is followed by another non-separator. Soft hyphens and U+FEFF are removed, text is NFC-composed, and a word longer than 255 UTF-8 bytes is cut (BYTE_SPLIT). Punctuation stays attached.",
+    "text_in_no_word": "Footnote reference marks (an a with epub:type noteref or role doc-noteref, or text inside both a sup and an internal '#' link, in either nesting order), page-break markers, rt and elements with a hidden attribute are text in no word; they never split a word, and tags inside a page-break marker, rt or hidden element are ignored entirely (no boundary, no marker). The word a mark follows carries NOTEREF. Image alt text is never a word.",
+    "indexing": "Word indexes are 0-based over one document's word stream. Every range is [start, end): start is the index of the first word inside, end is one past the last.",
+    "flags": "'flags' maps each flag to the [start, end) runs of word indexes that carry it. PARA_END: last word before the start or end of a block element other than br and img, and the document's last word. LINE_END: last word before a br. NONPROSE: inside the outermost table or pre. HEADING: inside h1-h6. NOTEREF: see text_in_no_word. BYTE_SPLIT: cut at 255 bytes. There is no sentence-end flag: the firmware (lib/RsvpCore) decides sentence ends.",
+    "markers": "'markers' in document order: IMAGE (an img outside any table or pre, zero words long, at the index of the next word), TABLE (outermost table), CODE (outermost pre) and NOTE (a footnote or endnote body: epub:type footnote, endnote or endnotes, or role doc-footnote, doc-endnote or doc-endnotes; RSVP passes over it, page view shows it), each as [start, end).",
+    "blocks": "'blocks' lists every block prep extract numbers, in document order: 'paragraph' is the reference a draft cites (tools/prep/refs.py: 'd' and the 1-based spine position, '-p' and the block number; footnote paragraphs '-n' and their own count), 'id' the XHTML id, 'kind' as in structure.json, and 'first_word' and 'word_count' the block's words [first_word, first_word + word_count).",
+    "noterefs": "'noterefs' lists every footnote reference mark with its text ('mark'), its markup form, its 'href' (a fragment for an in-chapter note, the endnotes document plus fragment for an endnote) and 'word', the index of the word that carries its NOTEREF flag.",
+    "endnotes": "The last spine document holds endnotes: one <section epub:type='endnotes'>, so all its words are one NOTE region and it has no reading-stream block; 'footnotes' gives each endnote's [start, end) inside it.",
+    "sections": "A section's start anchor (<span id='rsvp-<id>-start'>) sits at word index 'start' (the number of words started before it) and its end anchor at 'end'; the section's words are [start, end) and 'word_count' is end - start, the number prep build writes to checkpoints.json. Footnote bodies that follow a chapter's last section are outside every section."
   },
   "documents": [
     {
@@ -23,39 +26,6 @@
       "role": "front-matter",
       "title": "Title page",
       "word_count": 20,
-      "blocks": [
-        {
-          "id": "fm-p001",
-          "paragraph": "d01-p001",
-          "kind": "heading",
-          "element": "h1",
-          "level": 1,
-          "first_word": 0,
-          "last_word": 3,
-          "word_count": 4
-        },
-        {
-          "id": "fm-p002",
-          "paragraph": "d01-p002",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 4,
-          "last_word": 6,
-          "word_count": 3
-        },
-        {
-          "id": "fm-p003",
-          "paragraph": "d01-p003",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 7,
-          "last_word": 19,
-          "word_count": 13
-        }
-      ],
-      "noterefs": [],
-      "inline_elements": [],
-      "footnotes": [],
       "words": [
         "The",
         "Lighthouse",
@@ -77,7 +47,65 @@
         "places",
         "are",
         "invented."
-      ]
+      ],
+      "flags": {
+        "PARA_END": [
+          [
+            3,
+            4
+          ],
+          [
+            6,
+            7
+          ],
+          [
+            19,
+            20
+          ]
+        ],
+        "LINE_END": [],
+        "NONPROSE": [],
+        "NOTEREF": [],
+        "HEADING": [
+          [
+            0,
+            4
+          ]
+        ],
+        "BYTE_SPLIT": []
+      },
+      "markers": [],
+      "blocks": [
+        {
+          "paragraph": "d01-p001",
+          "id": "fm-p001",
+          "kind": "heading",
+          "element": "h1",
+          "first_word": 0,
+          "word_count": 4,
+          "level": 1
+        },
+        {
+          "paragraph": "d01-p002",
+          "id": "fm-p002",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 4,
+          "word_count": 3
+        },
+        {
+          "paragraph": "d01-p003",
+          "id": "fm-p003",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 7,
+          "word_count": 13
+        }
+      ],
+      "noterefs": [],
+      "footnotes": [],
+      "inline_elements": [],
+      "page_breaks": []
     },
     {
       "spine_index": 2,
@@ -85,149 +113,7 @@
       "zip_path": "OEBPS/text/chapter-1.xhtml",
       "role": "chapter",
       "title": "The Lamp Room",
-      "word_count": 417,
-      "blocks": [
-        {
-          "id": "c1-p001",
-          "paragraph": "d02-p001",
-          "kind": "heading",
-          "element": "h1",
-          "level": 1,
-          "first_word": 0,
-          "last_word": 2,
-          "word_count": 3
-        },
-        {
-          "id": "c1-p002",
-          "paragraph": "d02-p002",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 3,
-          "last_word": 60,
-          "word_count": 58
-        },
-        {
-          "id": "c1-p003",
-          "paragraph": "d02-p003",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 61,
-          "last_word": 107,
-          "word_count": 47
-        },
-        {
-          "id": "c1-p004",
-          "paragraph": "d02-p004",
-          "kind": "image",
-          "element": "figure",
-          "after_word": 107,
-          "image_href": "images/gannet-rock.png",
-          "alt": "Line drawing of a striped lighthouse tower on a rock, with rays of light on both sides.",
-          "caption": "Figure 1. Gannet Rock light, seen from the landing stage."
-        },
-        {
-          "id": "c1-p005",
-          "paragraph": "d02-p005",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 108,
-          "last_word": 173,
-          "word_count": 66
-        },
-        {
-          "id": "c1-p006",
-          "paragraph": "d02-p006",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 174,
-          "last_word": 222,
-          "word_count": 49
-        },
-        {
-          "id": "c1-p007",
-          "paragraph": "d02-p007",
-          "kind": "heading",
-          "element": "h2",
-          "level": 2,
-          "first_word": 223,
-          "last_word": 225,
-          "word_count": 3
-        },
-        {
-          "id": "c1-p008",
-          "paragraph": "d02-p008",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 226,
-          "last_word": 308,
-          "word_count": 83
-        },
-        {
-          "id": "c1-p009",
-          "paragraph": "d02-p009",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 309,
-          "last_word": 360,
-          "word_count": 52
-        },
-        {
-          "id": "c1-p010",
-          "paragraph": "d02-p010",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 361,
-          "last_word": 416,
-          "word_count": 56
-        }
-      ],
-      "noterefs": [
-        {
-          "note": "fn1",
-          "mark": "1",
-          "block": "c1-p005",
-          "after_word": 173
-        }
-      ],
-      "inline_elements": [],
-      "footnotes": [
-        {
-          "id": "fn1",
-          "mark": "1",
-          "paragraphs": [
-            {
-              "id": "c1-n001",
-              "paragraph": "d02-n001",
-              "words": [
-                "Lenses",
-                "of",
-                "this",
-                "kind",
-                "were",
-                "first",
-                "built",
-                "in",
-                "the",
-                "1820s.",
-                "They",
-                "are",
-                "made",
-                "in",
-                "rings",
-                "so",
-                "that",
-                "the",
-                "glass",
-                "can",
-                "stay",
-                "thin",
-                "and",
-                "light."
-              ]
-            }
-          ]
-        }
-      ],
+      "word_count": 451,
       "words": [
         "The",
         "Lamp",
@@ -337,6 +223,16 @@
         "began",
         "to",
         "climb.",
+        "Figure",
+        "1.",
+        "Gannet",
+        "Rock",
+        "light,",
+        "seen",
+        "from",
+        "the",
+        "landing",
+        "stage.",
         "There",
         "were",
         "one",
@@ -645,8 +541,230 @@
         "lighthouse",
         "should",
         "look",
-        "like."
-      ]
+        "like.",
+        "Lenses",
+        "of",
+        "this",
+        "kind",
+        "were",
+        "first",
+        "built",
+        "in",
+        "the",
+        "1820s.",
+        "They",
+        "are",
+        "made",
+        "in",
+        "rings",
+        "so",
+        "that",
+        "the",
+        "glass",
+        "can",
+        "stay",
+        "thin",
+        "and",
+        "light."
+      ],
+      "flags": {
+        "PARA_END": [
+          [
+            2,
+            3
+          ],
+          [
+            60,
+            61
+          ],
+          [
+            107,
+            108
+          ],
+          [
+            117,
+            118
+          ],
+          [
+            183,
+            184
+          ],
+          [
+            232,
+            233
+          ],
+          [
+            235,
+            236
+          ],
+          [
+            318,
+            319
+          ],
+          [
+            370,
+            371
+          ],
+          [
+            426,
+            427
+          ],
+          [
+            450,
+            451
+          ]
+        ],
+        "LINE_END": [],
+        "NONPROSE": [],
+        "NOTEREF": [
+          [
+            183,
+            184
+          ]
+        ],
+        "HEADING": [
+          [
+            0,
+            3
+          ],
+          [
+            233,
+            236
+          ]
+        ],
+        "BYTE_SPLIT": []
+      },
+      "markers": [
+        {
+          "kind": "IMAGE",
+          "start": 108,
+          "end": 108
+        },
+        {
+          "kind": "NOTE",
+          "start": 427,
+          "end": 451
+        }
+      ],
+      "blocks": [
+        {
+          "paragraph": "d02-p001",
+          "id": "c1-p001",
+          "kind": "heading",
+          "element": "h1",
+          "first_word": 0,
+          "word_count": 3,
+          "level": 1
+        },
+        {
+          "paragraph": "d02-p002",
+          "id": "c1-p002",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 3,
+          "word_count": 58
+        },
+        {
+          "paragraph": "d02-p003",
+          "id": "c1-p003",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 61,
+          "word_count": 47
+        },
+        {
+          "paragraph": "d02-p004",
+          "id": "c1-p004",
+          "kind": "image",
+          "element": "figure",
+          "first_word": 108,
+          "word_count": 10,
+          "image_href": "images/gannet-rock.png",
+          "alt": "Line drawing of a striped lighthouse tower on a rock, with rays of light on both sides.",
+          "caption": "Figure 1. Gannet Rock light, seen from the landing stage."
+        },
+        {
+          "paragraph": "d02-p005",
+          "id": "c1-p005",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 118,
+          "word_count": 66
+        },
+        {
+          "paragraph": "d02-p006",
+          "id": "c1-p006",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 184,
+          "word_count": 49
+        },
+        {
+          "paragraph": "d02-p007",
+          "id": "c1-p007",
+          "kind": "heading",
+          "element": "h2",
+          "first_word": 233,
+          "word_count": 3,
+          "level": 2
+        },
+        {
+          "paragraph": "d02-p008",
+          "id": "c1-p008",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 236,
+          "word_count": 83
+        },
+        {
+          "paragraph": "d02-p009",
+          "id": "c1-p009",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 319,
+          "word_count": 52
+        },
+        {
+          "paragraph": "d02-p010",
+          "id": "c1-p010",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 371,
+          "word_count": 56
+        },
+        {
+          "paragraph": "d02-n001",
+          "id": "c1-n001",
+          "kind": "footnote",
+          "element": "p",
+          "first_word": 427,
+          "word_count": 24,
+          "note": "fn1"
+        }
+      ],
+      "noterefs": [
+        {
+          "note": "fn1",
+          "mark": "1",
+          "form": "noteref",
+          "href": "#fn1",
+          "block": "c1-p005",
+          "word": 183
+        }
+      ],
+      "footnotes": [
+        {
+          "id": "fn1",
+          "mark": "1",
+          "start": 427,
+          "end": 451,
+          "paragraphs": [
+            "d02-n001"
+          ]
+        }
+      ],
+      "inline_elements": [],
+      "page_breaks": []
     },
     {
       "spine_index": 3,
@@ -654,236 +772,7 @@
       "zip_path": "OEBPS/text/chapter-2.xhtml",
       "role": "chapter",
       "title": "The Fog Season",
-      "word_count": 550,
-      "blocks": [
-        {
-          "id": "c2-p001",
-          "paragraph": "d03-p001",
-          "kind": "heading",
-          "element": "h1",
-          "level": 1,
-          "first_word": 0,
-          "last_word": 2,
-          "word_count": 3
-        },
-        {
-          "id": "c2-p002",
-          "paragraph": "d03-p002",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 3,
-          "last_word": 50,
-          "word_count": 48
-        },
-        {
-          "id": "c2-p003",
-          "paragraph": "d03-p003",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 51,
-          "last_word": 101,
-          "word_count": 51
-        },
-        {
-          "id": "c2-p004",
-          "paragraph": "d03-p004",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 102,
-          "last_word": 160,
-          "word_count": 59
-        },
-        {
-          "id": "c2-p005",
-          "paragraph": "d03-p005",
-          "kind": "table",
-          "element": "table",
-          "after_word": 160,
-          "caption": "Lights and fog signals of the eastern coast",
-          "header": [
-            "Station",
-            "Light",
-            "Fog signal"
-          ],
-          "rows": [
-            [
-              "Gannet Rock",
-              "1 white flash every 10 s",
-              "2 blasts every 60 s"
-            ],
-            [
-              "Skerry Point",
-              "2 red flashes every 15 s",
-              "Bell every 20 s"
-            ],
-            [
-              "Harrow Head",
-              "Fixed white",
-              "None"
-            ]
-          ]
-        },
-        {
-          "id": "c2-p006",
-          "paragraph": "d03-p006",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 161,
-          "last_word": 203,
-          "word_count": 43
-        },
-        {
-          "id": "c2-p007",
-          "paragraph": "d03-p007",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 204,
-          "last_word": 254,
-          "word_count": 51
-        },
-        {
-          "id": "c2-p008",
-          "paragraph": "d03-p008",
-          "kind": "heading",
-          "element": "h2",
-          "level": 2,
-          "first_word": 255,
-          "last_word": 259,
-          "word_count": 5
-        },
-        {
-          "id": "c2-p009",
-          "paragraph": "d03-p009",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 260,
-          "last_word": 335,
-          "word_count": 76
-        },
-        {
-          "id": "c2-p010",
-          "paragraph": "d03-p010",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 336,
-          "last_word": 396,
-          "word_count": 61
-        },
-        {
-          "id": "c2-p011",
-          "paragraph": "d03-p011",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 397,
-          "last_word": 439,
-          "word_count": 43
-        },
-        {
-          "id": "c2-p012",
-          "paragraph": "d03-p012",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 440,
-          "last_word": 489,
-          "word_count": 50
-        },
-        {
-          "id": "c2-p013",
-          "paragraph": "d03-p013",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 490,
-          "last_word": 549,
-          "word_count": 60
-        }
-      ],
-      "noterefs": [
-        {
-          "note": "fn2",
-          "mark": "2",
-          "block": "c2-p010",
-          "after_word": 396
-        },
-        {
-          "note": "fn3",
-          "mark": "3",
-          "block": "c2-p013",
-          "after_word": 533
-        }
-      ],
-      "inline_elements": [
-        {
-          "element": "em",
-          "block": "c2-p011",
-          "text": "not",
-          "word_index": 406
-        },
-        {
-          "element": "strong",
-          "block": "c2-p013",
-          "text": "never",
-          "word_index": 522
-        }
-      ],
-      "footnotes": [
-        {
-          "id": "fn2",
-          "mark": "2",
-          "paragraphs": [
-            {
-              "id": "c2-n001",
-              "paragraph": "d03-n001",
-              "words": [
-                "Most",
-                "of",
-                "this",
-                "light",
-                "comes",
-                "from",
-                "single-celled",
-                "plankton",
-                "that",
-                "glow",
-                "when",
-                "they",
-                "are",
-                "shaken."
-              ]
-            }
-          ]
-        },
-        {
-          "id": "fn3",
-          "mark": "3",
-          "paragraphs": [
-            {
-              "id": "c2-n002",
-              "paragraph": "d03-n002",
-              "words": [
-                "Oars",
-                "weigh",
-                "little",
-                "and",
-                "never",
-                "run",
-                "out",
-                "of",
-                "fuel,",
-                "so",
-                "many",
-                "small",
-                "boats",
-                "carried",
-                "a",
-                "pair",
-                "as",
-                "a",
-                "spare."
-              ]
-            }
-          ]
-        }
-      ],
+      "word_count": 608,
       "words": [
         "The",
         "Fog",
@@ -1046,6 +935,48 @@
         "to",
         "the",
         "south.",
+        "Lights",
+        "and",
+        "fog",
+        "signals",
+        "of",
+        "the",
+        "eastern",
+        "coast",
+        "Station",
+        "Light",
+        "Fog",
+        "signal",
+        "Gannet",
+        "Rock",
+        "1",
+        "white",
+        "flash",
+        "every",
+        "10",
+        "s",
+        "2",
+        "blasts",
+        "every",
+        "60",
+        "s",
+        "Skerry",
+        "Point",
+        "2",
+        "red",
+        "flashes",
+        "every",
+        "15",
+        "s",
+        "Bell",
+        "every",
+        "20",
+        "s",
+        "Harrow",
+        "Head",
+        "Fixed",
+        "white",
+        "None",
         "Ione",
         "kept",
         "a",
@@ -1089,6 +1020,20 @@
         "station",
         "from",
         "another.",
+        "Under",
+        "the",
+        "list",
+        "she",
+        "had",
+        "written",
+        "two",
+        "lines:",
+        "Count",
+        "the",
+        "flashes.",
+        "Trust",
+        "the",
+        "pattern.",
         "Dr.",
         "Vane",
         "asked",
@@ -1187,14 +1132,16 @@
         "of",
         "the",
         "horn",
-        "alone—two",
+        "alone—",
+        "two",
         "blasts,",
         "then",
         "silence,",
         "then",
         "two",
         "blasts",
-        "again—until",
+        "again—",
+        "until",
         "his",
         "boat",
         "grounded",
@@ -1435,7 +1382,308 @@
         "out",
         "the",
         "lamp."
-      ]
+      ],
+      "flags": {
+        "PARA_END": [
+          [
+            2,
+            3
+          ],
+          [
+            50,
+            51
+          ],
+          [
+            101,
+            102
+          ],
+          [
+            160,
+            161
+          ],
+          [
+            168,
+            171
+          ],
+          [
+            172,
+            173
+          ],
+          [
+            174,
+            175
+          ],
+          [
+            180,
+            181
+          ],
+          [
+            185,
+            186
+          ],
+          [
+            187,
+            188
+          ],
+          [
+            193,
+            194
+          ],
+          [
+            197,
+            198
+          ],
+          [
+            199,
+            200
+          ],
+          [
+            201,
+            203
+          ],
+          [
+            259,
+            260
+          ],
+          [
+            310,
+            311
+          ],
+          [
+            315,
+            316
+          ],
+          [
+            393,
+            394
+          ],
+          [
+            454,
+            455
+          ],
+          [
+            497,
+            498
+          ],
+          [
+            547,
+            548
+          ],
+          [
+            607,
+            608
+          ]
+        ],
+        "LINE_END": [
+          [
+            253,
+            254
+          ],
+          [
+            256,
+            257
+          ]
+        ],
+        "NONPROSE": [
+          [
+            161,
+            203
+          ]
+        ],
+        "NOTEREF": [
+          [
+            454,
+            455
+          ],
+          [
+            591,
+            592
+          ]
+        ],
+        "HEADING": [
+          [
+            0,
+            3
+          ],
+          [
+            311,
+            316
+          ]
+        ],
+        "BYTE_SPLIT": []
+      },
+      "markers": [
+        {
+          "kind": "TABLE",
+          "start": 161,
+          "end": 203
+        }
+      ],
+      "blocks": [
+        {
+          "paragraph": "d03-p001",
+          "id": "c2-p001",
+          "kind": "heading",
+          "element": "h1",
+          "first_word": 0,
+          "word_count": 3,
+          "level": 1
+        },
+        {
+          "paragraph": "d03-p002",
+          "id": "c2-p002",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 3,
+          "word_count": 48
+        },
+        {
+          "paragraph": "d03-p003",
+          "id": "c2-p003",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 51,
+          "word_count": 51
+        },
+        {
+          "paragraph": "d03-p004",
+          "id": "c2-p004",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 102,
+          "word_count": 59
+        },
+        {
+          "paragraph": "d03-p005",
+          "id": "c2-p005",
+          "kind": "table",
+          "element": "table",
+          "first_word": 161,
+          "word_count": 42,
+          "caption": "Lights and fog signals of the eastern coast",
+          "header": [
+            "Station",
+            "Light",
+            "Fog signal"
+          ],
+          "rows": [
+            [
+              "Gannet Rock",
+              "1 white flash every 10 s",
+              "2 blasts every 60 s"
+            ],
+            [
+              "Skerry Point",
+              "2 red flashes every 15 s",
+              "Bell every 20 s"
+            ],
+            [
+              "Harrow Head",
+              "Fixed white",
+              "None"
+            ]
+          ]
+        },
+        {
+          "paragraph": "d03-p006",
+          "id": "c2-p006",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 203,
+          "word_count": 57
+        },
+        {
+          "paragraph": "d03-p007",
+          "id": "c2-p007",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 260,
+          "word_count": 51
+        },
+        {
+          "paragraph": "d03-p008",
+          "id": "c2-p008",
+          "kind": "heading",
+          "element": "h2",
+          "first_word": 311,
+          "word_count": 5,
+          "level": 2
+        },
+        {
+          "paragraph": "d03-p009",
+          "id": "c2-p009",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 316,
+          "word_count": 78
+        },
+        {
+          "paragraph": "d03-p010",
+          "id": "c2-p010",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 394,
+          "word_count": 61
+        },
+        {
+          "paragraph": "d03-p011",
+          "id": "c2-p011",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 455,
+          "word_count": 43
+        },
+        {
+          "paragraph": "d03-p012",
+          "id": "c2-p012",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 498,
+          "word_count": 50
+        },
+        {
+          "paragraph": "d03-p013",
+          "id": "c2-p013",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 548,
+          "word_count": 60
+        }
+      ],
+      "noterefs": [
+        {
+          "note": "fn2",
+          "mark": "2",
+          "form": "sup-link",
+          "href": "endnotes.xhtml#fn2",
+          "block": "c2-p010",
+          "word": 454
+        },
+        {
+          "note": "fn3",
+          "mark": "3",
+          "form": "link-sup",
+          "href": "endnotes.xhtml#fn3",
+          "block": "c2-p013",
+          "word": 591
+        }
+      ],
+      "footnotes": [],
+      "inline_elements": [
+        {
+          "element": "em",
+          "block": "c2-p011",
+          "text": "not",
+          "word": 464
+        },
+        {
+          "element": "strong",
+          "block": "c2-p013",
+          "text": "never",
+          "word": 580
+        }
+      ],
+      "page_breaks": []
     },
     {
       "spine_index": 4,
@@ -1443,91 +1691,7 @@
       "zip_path": "OEBPS/text/chapter-3.xhtml",
       "role": "chapter",
       "title": "The Keeper's Log",
-      "word_count": 294,
-      "blocks": [
-        {
-          "id": "c3-p001",
-          "paragraph": "d04-p001",
-          "kind": "heading",
-          "element": "h1",
-          "level": 1,
-          "first_word": 0,
-          "last_word": 2,
-          "word_count": 3
-        },
-        {
-          "id": "c3-p002",
-          "paragraph": "d04-p002",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 3,
-          "last_word": 73,
-          "word_count": 71
-        },
-        {
-          "id": "c3-p003",
-          "paragraph": "d04-p003",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 74,
-          "last_word": 113,
-          "word_count": 40
-        },
-        {
-          "id": "c3-p004",
-          "paragraph": "d04-p004",
-          "kind": "code",
-          "element": "pre",
-          "after_word": 113,
-          "lines": [
-            "fog_hours = 0",
-            "for line in open(\"log.txt\"):",
-            "    fields = line.strip().split(\",\")",
-            "    if len(fields) >= 3 and fields[2] == \"fog\":",
-            "        fog_hours += 1",
-            "print(\"hours of fog:\", fog_hours)"
-          ]
-        },
-        {
-          "id": "c3-p005",
-          "paragraph": "d04-p005",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 114,
-          "last_word": 160,
-          "word_count": 47
-        },
-        {
-          "id": "c3-p006",
-          "paragraph": "d04-p006",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 161,
-          "last_word": 213,
-          "word_count": 53
-        },
-        {
-          "id": "c3-p007",
-          "paragraph": "d04-p007",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 214,
-          "last_word": 253,
-          "word_count": 40
-        },
-        {
-          "id": "c3-p008",
-          "paragraph": "d04-p008",
-          "kind": "paragraph",
-          "element": "p",
-          "first_word": 254,
-          "last_word": 293,
-          "word_count": 40
-        }
-      ],
-      "noterefs": [],
-      "inline_elements": [],
-      "footnotes": [],
+      "word_count": 321,
       "words": [
         "The",
         "Keeper's",
@@ -1561,6 +1725,8 @@
         "for",
         "nineteen",
         "years,",
+        "1907–",
+        "1925,",
         "and",
         "its",
         "pages",
@@ -1643,6 +1809,31 @@
         "marked",
         "as",
         "fog.",
+        "fog_hours",
+        "=",
+        "0",
+        "for",
+        "line",
+        "in",
+        "open(\"log.txt\"):",
+        "fields",
+        "=",
+        "line.strip().split(\",\")",
+        "if",
+        "len(fields)",
+        ">=",
+        "3",
+        "and",
+        "fields[2]",
+        "==",
+        "\"fog\":",
+        "fog_hours",
+        "+=",
+        "1",
+        "print(\"hours",
+        "of",
+        "fog:\",",
+        "fog_hours)",
         "The",
         "answer",
         "surprised",
@@ -1823,7 +2014,280 @@
         "for",
         "nineteen",
         "years."
+      ],
+      "flags": {
+        "PARA_END": [
+          [
+            2,
+            3
+          ],
+          [
+            75,
+            76
+          ],
+          [
+            115,
+            116
+          ],
+          [
+            140,
+            141
+          ],
+          [
+            187,
+            188
+          ],
+          [
+            240,
+            241
+          ],
+          [
+            280,
+            281
+          ],
+          [
+            320,
+            321
+          ]
+        ],
+        "LINE_END": [],
+        "NONPROSE": [
+          [
+            116,
+            141
+          ]
+        ],
+        "NOTEREF": [],
+        "HEADING": [
+          [
+            0,
+            3
+          ]
+        ],
+        "BYTE_SPLIT": []
+      },
+      "markers": [
+        {
+          "kind": "CODE",
+          "start": 116,
+          "end": 141
+        }
+      ],
+      "blocks": [
+        {
+          "paragraph": "d04-p001",
+          "id": "c3-p001",
+          "kind": "heading",
+          "element": "h1",
+          "first_word": 0,
+          "word_count": 3,
+          "level": 1
+        },
+        {
+          "paragraph": "d04-p002",
+          "id": "c3-p002",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 3,
+          "word_count": 73
+        },
+        {
+          "paragraph": "d04-p003",
+          "id": "c3-p003",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 76,
+          "word_count": 40
+        },
+        {
+          "paragraph": "d04-p004",
+          "id": "c3-p004",
+          "kind": "code",
+          "element": "pre",
+          "first_word": 116,
+          "word_count": 25,
+          "lines": [
+            "fog_hours = 0",
+            "for line in open(\"log.txt\"):",
+            "    fields = line.strip().split(\",\")",
+            "    if len(fields) >= 3 and fields[2] == \"fog\":",
+            "        fog_hours += 1",
+            "print(\"hours of fog:\", fog_hours)"
+          ]
+        },
+        {
+          "paragraph": "d04-p005",
+          "id": "c3-p005",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 141,
+          "word_count": 47
+        },
+        {
+          "paragraph": "d04-p006",
+          "id": "c3-p006",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 188,
+          "word_count": 53
+        },
+        {
+          "paragraph": "d04-p007",
+          "id": "c3-p007",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 241,
+          "word_count": 40
+        },
+        {
+          "paragraph": "d04-p008",
+          "id": "c3-p008",
+          "kind": "paragraph",
+          "element": "p",
+          "first_word": 281,
+          "word_count": 40
+        }
+      ],
+      "noterefs": [],
+      "footnotes": [],
+      "inline_elements": [],
+      "page_breaks": [
+        {
+          "id": "page12",
+          "text": "12",
+          "block": "c3-p007",
+          "word": 248
+        }
       ]
+    },
+    {
+      "spine_index": 5,
+      "href": "text/endnotes.xhtml",
+      "zip_path": "OEBPS/text/endnotes.xhtml",
+      "role": "endnotes",
+      "title": "Notes",
+      "word_count": 34,
+      "words": [
+        "Notes",
+        "Most",
+        "of",
+        "this",
+        "light",
+        "comes",
+        "from",
+        "single-celled",
+        "plankton",
+        "that",
+        "glow",
+        "when",
+        "they",
+        "are",
+        "shaken.",
+        "Oars",
+        "weigh",
+        "little",
+        "and",
+        "never",
+        "run",
+        "out",
+        "of",
+        "fuel,",
+        "so",
+        "many",
+        "small",
+        "boats",
+        "carried",
+        "a",
+        "pair",
+        "as",
+        "a",
+        "spare."
+      ],
+      "flags": {
+        "PARA_END": [
+          [
+            0,
+            1
+          ],
+          [
+            14,
+            15
+          ],
+          [
+            33,
+            34
+          ]
+        ],
+        "LINE_END": [],
+        "NONPROSE": [],
+        "NOTEREF": [],
+        "HEADING": [
+          [
+            0,
+            1
+          ]
+        ],
+        "BYTE_SPLIT": []
+      },
+      "markers": [
+        {
+          "kind": "NOTE",
+          "start": 0,
+          "end": 34
+        }
+      ],
+      "blocks": [
+        {
+          "paragraph": "d05-n001",
+          "id": "en-n001",
+          "kind": "footnote",
+          "element": "h1",
+          "first_word": 0,
+          "word_count": 1,
+          "note": "endnotes"
+        },
+        {
+          "paragraph": "d05-n002",
+          "id": "en-n002",
+          "kind": "footnote",
+          "element": "p",
+          "first_word": 1,
+          "word_count": 14,
+          "note": "fn2"
+        },
+        {
+          "paragraph": "d05-n003",
+          "id": "en-n003",
+          "kind": "footnote",
+          "element": "p",
+          "first_word": 15,
+          "word_count": 19,
+          "note": "fn3"
+        }
+      ],
+      "noterefs": [],
+      "footnotes": [
+        {
+          "id": "fn2",
+          "mark": "2",
+          "start": 1,
+          "end": 15,
+          "paragraphs": [
+            "d05-n002"
+          ]
+        },
+        {
+          "id": "fn3",
+          "mark": "3",
+          "start": 15,
+          "end": 34,
+          "paragraphs": [
+            "d05-n003"
+          ]
+        }
+      ],
+      "inline_elements": [],
+      "page_breaks": []
     }
   ],
   "sections": [
@@ -1837,9 +2301,9 @@
       "last_block_id": "c1-p006",
       "start_anchor": "rsvp-s0001-start",
       "end_anchor": "rsvp-s0001-end",
-      "first_word": 0,
-      "last_word": 222,
-      "word_count": 223,
+      "start": 0,
+      "end": 233,
+      "word_count": 233,
       "first_word_text": "The",
       "last_word_text": "same.",
       "ends_chapter": false
@@ -1854,8 +2318,8 @@
       "last_block_id": "c1-p010",
       "start_anchor": "rsvp-s0002-start",
       "end_anchor": "rsvp-s0002-end",
-      "first_word": 223,
-      "last_word": 416,
+      "start": 233,
+      "end": 427,
       "word_count": 194,
       "first_word_text": "Winding",
       "last_word_text": "like.",
@@ -1871,9 +2335,9 @@
       "last_block_id": "c2-p007",
       "start_anchor": "rsvp-s0003-start",
       "end_anchor": "rsvp-s0003-end",
-      "first_word": 0,
-      "last_word": 254,
-      "word_count": 255,
+      "start": 0,
+      "end": 311,
+      "word_count": 311,
       "first_word_text": "The",
       "last_word_text": "safety.",
       "ends_chapter": false
@@ -1888,9 +2352,9 @@
       "last_block_id": "c2-p013",
       "start_anchor": "rsvp-s0004-start",
       "end_anchor": "rsvp-s0004-end",
-      "first_word": 255,
-      "last_word": 549,
-      "word_count": 295,
+      "start": 311,
+      "end": 608,
+      "word_count": 297,
       "first_word_text": "The",
       "last_word_text": "lamp.",
       "ends_chapter": true
@@ -1905,9 +2369,9 @@
       "last_block_id": "c3-p008",
       "start_anchor": "rsvp-s0005-start",
       "end_anchor": "rsvp-s0005-end",
-      "first_word": 0,
-      "last_word": 293,
-      "word_count": 294,
+      "start": 0,
+      "end": 321,
+      "word_count": 321,
       "first_word_text": "The",
       "last_word_text": "years.",
       "ends_chapter": true
@@ -1919,126 +2383,266 @@
       "href": "text/chapter-1.xhtml",
       "block": "c1-p002",
       "word_index": 12,
-      "word": "noon."
+      "word": "noon.",
+      "flags": []
     },
     {
-      "case": "Decimal number (the point is not a sentence end)",
+      "case": "Decimal number",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p002",
       "word_index": 19,
-      "word": "3.5"
+      "word": "3.5",
+      "flags": []
     },
     {
-      "case": "Abbreviation with a full stop (not a sentence end)",
+      "case": "Abbreviation with a full stop",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p002",
       "word_index": 32,
-      "word": "Dr."
+      "word": "Dr.",
+      "flags": []
+    },
+    {
+      "case": "No-break space U+00A0 (numeric reference) separates words: 'Dr.' and 'Vane' are two",
+      "href": "text/chapter-1.xhtml",
+      "block": "c1-p002",
+      "word_index": 33,
+      "word": "Vane",
+      "flags": []
     },
     {
       "case": "Sentence ending in a question mark",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p002",
       "word_index": 60,
-      "word": "winter?"
+      "word": "winter?",
+      "flags": [
+        "PARA_END"
+      ]
     },
     {
       "case": "Comma",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p003",
       "word_index": 62,
-      "word": "Hartwell,"
+      "word": "Hartwell,",
+      "flags": []
     },
     {
       "case": "Quoted sentence: opening ASCII double quote attached to the first word",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p003",
       "word_index": 87,
-      "word": "\"The"
+      "word": "\"The",
+      "flags": []
     },
     {
       "case": "Quoted sentence: closing double quote after the full stop",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p003",
       "word_index": 100,
-      "word": "weather.\""
+      "word": "weather.\"",
+      "flags": []
+    },
+    {
+      "case": "Figure caption: ordinary prose words after the IMAGE marker",
+      "href": "text/chapter-1.xhtml",
+      "block": "c1-p004",
+      "word_index": 108,
+      "word": "Figure",
+      "flags": []
+    },
+    {
+      "case": "Word followed by a footnote mark (epub:type noteref form)",
+      "href": "text/chapter-1.xhtml",
+      "block": "c1-p005",
+      "word_index": 183,
+      "word": "one.",
+      "flags": [
+        "NOTEREF",
+        "PARA_END"
+      ]
     },
     {
       "case": "Semicolon",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p006",
-      "word_index": 213,
-      "word": "seconds;"
+      "word_index": 223,
+      "word": "seconds;",
+      "flags": []
     },
     {
       "case": "Sentence ending in an exclamation mark",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p009",
-      "word_index": 348,
-      "word": "turns!"
+      "word_index": 358,
+      "word": "turns!",
+      "flags": []
     },
     {
       "case": "Apostrophe inside a word",
       "href": "text/chapter-1.xhtml",
       "block": "c1-p009",
-      "word_index": 353,
-      "word": "doctor's"
+      "word_index": 363,
+      "word": "doctor's",
+      "flags": []
+    },
+    {
+      "case": "Table cell: a word in the TABLE region",
+      "href": "text/chapter-2.xhtml",
+      "block": "c2-p005",
+      "word_index": 186,
+      "word": "Skerry",
+      "flags": [
+        "NONPROSE"
+      ]
+    },
+    {
+      "case": "Word before a `<br/>` line break",
+      "href": "text/chapter-2.xhtml",
+      "block": "c2-p006",
+      "word_index": 253,
+      "word": "lines:",
+      "flags": [
+        "LINE_END"
+      ]
+    },
+    {
+      "case": "Word before the second `<br/>`",
+      "href": "text/chapter-2.xhtml",
+      "block": "c2-p006",
+      "word_index": 256,
+      "word": "flashes.",
+      "flags": [
+        "LINE_END"
+      ]
     },
     {
       "case": "Hyphenated compound (one word)",
       "href": "text/chapter-2.xhtml",
       "block": "c2-p009",
-      "word_index": 279,
-      "word": "half-frozen"
+      "word_index": 335,
+      "word": "half-frozen",
+      "flags": []
     },
     {
-      "case": "Em dash U+2014 with no spaces: joins its neighbours into one word",
+      "case": "Em dash U+2014 with no spaces: a word ends after the dash",
       "href": "text/chapter-2.xhtml",
       "block": "c2-p009",
-      "word_index": 302,
-      "word": "alone—two"
+      "word_index": 358,
+      "word": "alone—",
+      "flags": []
+    },
+    {
+      "case": "Word after an unspaced em dash",
+      "href": "text/chapter-2.xhtml",
+      "block": "c2-p009",
+      "word_index": 359,
+      "word": "two",
+      "flags": []
     },
     {
       "case": "Em dash U+2014 with no spaces (second)",
       "href": "text/chapter-2.xhtml",
       "block": "c2-p009",
-      "word_index": 309,
-      "word": "again—until"
+      "word_index": 366,
+      "word": "again—",
+      "flags": []
     },
     {
-      "case": "Non-ASCII letter: precomposed e acute U+00E9",
+      "case": "Decomposed e + U+0301 is composed (NFC) to U+00E9",
       "href": "text/chapter-2.xhtml",
       "block": "c2-p009",
-      "word_index": 329,
-      "word": "café"
+      "word_index": 387,
+      "word": "café",
+      "flags": []
     },
     {
       "case": "Colon",
       "href": "text/chapter-2.xhtml",
       "block": "c2-p010",
-      "word_index": 383,
-      "word": "it:"
+      "word_index": 441,
+      "word": "it:",
+      "flags": []
     },
     {
-      "case": "Long word (15 letters) with trailing comma",
+      "case": "Soft hyphens U+00AD are removed and never split",
       "href": "text/chapter-2.xhtml",
       "block": "c2-p010",
-      "word_index": 384,
-      "word": "phosphorescence,"
+      "word_index": 442,
+      "word": "phosphorescence,",
+      "flags": []
+    },
+    {
+      "case": "Word followed by a footnote mark (sup > a href, no epub:type)",
+      "href": "text/chapter-2.xhtml",
+      "block": "c2-p010",
+      "word_index": 454,
+      "word": "disturbed.",
+      "flags": [
+        "NOTEREF",
+        "PARA_END"
+      ]
     },
     {
       "case": "Word inside an em element, comma outside it",
       "href": "text/chapter-2.xhtml",
       "block": "c2-p011",
-      "word_index": 406,
-      "word": "not,"
+      "word_index": 464,
+      "word": "not,",
+      "flags": []
     },
     {
       "case": "Word inside a strong element",
       "href": "text/chapter-2.xhtml",
       "block": "c2-p013",
-      "word_index": 522,
-      "word": "never"
+      "word_index": 580,
+      "word": "never",
+      "flags": []
+    },
+    {
+      "case": "Word followed by a footnote mark (a href > sup, no epub:type)",
+      "href": "text/chapter-2.xhtml",
+      "block": "c2-p013",
+      "word_index": 591,
+      "word": "engine.",
+      "flags": [
+        "NOTEREF"
+      ]
+    },
+    {
+      "case": "En dash U+2013 with no spaces: a word ends after the dash",
+      "href": "text/chapter-3.xhtml",
+      "block": "c3-p002",
+      "word_index": 32,
+      "word": "1907–",
+      "flags": []
+    },
+    {
+      "case": "Word after an unspaced en dash",
+      "href": "text/chapter-3.xhtml",
+      "block": "c3-p002",
+      "word_index": 33,
+      "word": "1925,",
+      "flags": []
+    },
+    {
+      "case": "Code in pre: a word in the CODE region",
+      "href": "text/chapter-3.xhtml",
+      "block": "c3-p004",
+      "word_index": 116,
+      "word": "fog_hours",
+      "flags": [
+        "NONPROSE"
+      ]
+    },
+    {
+      "case": "Page-break marker inside a word: its text is in no word and does not split it",
+      "href": "text/chapter-3.xhtml",
+      "block": "c3-p007",
+      "word_index": 248,
+      "word": "lighthouse",
+      "flags": []
     }
   ]
 }

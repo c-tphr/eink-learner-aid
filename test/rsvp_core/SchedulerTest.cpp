@@ -174,29 +174,39 @@ TEST(Scheduler, SectionEndWithoutCheckpointDoesNotStop) {
 }
 
 TEST(Scheduler, StopsAtANonProseMarkerAndAtTheChapterEnd) {
-  const auto tokens = rsvptest::chapterTokens(rsvptest::fixtureDocument("text/chapter-1.xhtml"));
+  const auto& document = rsvptest::fixtureDocument("text/chapter-1.xhtml");
+  const auto tokens = rsvptest::chapterTokens(document);
+  // Where chapter 1 stops, from the expected file: the figure's IMAGE marker, the end of s0001
+  // (which has a checkpoint) and the last word handed out (the footnote body after it is skipped).
+  size_t image = 0;
+  for (const auto& m : rsvptest::fixtureMarkers(document)) {
+    if (m.kind == "IMAGE") image = m.start;
+  }
+  ASSERT_GT(image, 0u);
+  const auto s0001End = static_cast<size_t>(rsvptest::requireIndex(rsvptest::fixtureSection("s0001"), "end", "s0001"));
+  ASSERT_GT(s0001End, image);
   Rig rig(tokens, 540);
   rig.scheduler.play();
 
   StepResult r = rsvptest::runUntilHalt(rig.scheduler, rig.clock);
   ASSERT_EQ(r.event, StepEvent::STOPPED);
-  EXPECT_EQ(r.stops, rsvp::STOP_NON_PROSE);  // the figure after word 107
-  EXPECT_EQ(rig.display.log.back().lastWordIndex, 107u);
-  EXPECT_EQ(rig.source.consumed(), 108u);
+  EXPECT_EQ(r.stops, rsvp::STOP_NON_PROSE);  // the figure: the word before its IMAGE marker
+  EXPECT_EQ(rig.display.log.back().lastWordIndex, image - 1);
+  EXPECT_EQ(rig.source.consumed(), rsvptest::tokenPosition(tokens, image - 1) + 1);
   rig.clock.advance(45000);  // viewing the image
   rig.scheduler.play();
 
   r = rsvptest::runUntilHalt(rig.scheduler, rig.clock);
   ASSERT_EQ(r.event, StepEvent::STOPPED);
   EXPECT_EQ(r.stops, rsvp::STOP_CHECKPOINT);  // end of s0001
-  EXPECT_EQ(rig.display.log.back().lastWordIndex, 222u);
-  EXPECT_EQ(rig.source.consumed(), 223u);
+  EXPECT_EQ(rig.display.log.back().lastWordIndex, s0001End - 1);
+  EXPECT_EQ(rig.source.consumed(), rsvptest::tokenPosition(tokens, s0001End - 1) + 1);
   rig.scheduler.play();
 
   r = rsvptest::runUntilHalt(rig.scheduler, rig.clock);
   ASSERT_EQ(r.event, StepEvent::STOPPED);
   EXPECT_EQ(r.stops, rsvp::STOP_CHAPTER_END);
-  EXPECT_EQ(rig.display.log.back().lastWordIndex, 416u);
+  EXPECT_EQ(rig.display.log.back().lastWordIndex, tokens.back().wordIndex);
   const size_t frames = rig.display.frames;
 
   // Playing again at the chapter end stops again without drawing or clearing.
@@ -208,7 +218,9 @@ TEST(Scheduler, StopsAtANonProseMarkerAndAtTheChapterEnd) {
   EXPECT_EQ(rig.display.frames, frames);
 
   EXPECT_TRUE(rig.scheduler.audit().inOrder());
-  EXPECT_EQ(rig.scheduler.audit().wordsDrawn(), 417u);
+  EXPECT_EQ(rig.scheduler.audit().wordsDrawn(), tokens.size());
+  // The caption follows the image directly and the footnote body comes after the last word drawn,
+  // so playback passes over no index.
   EXPECT_EQ(rig.scheduler.audit().skippedWords(), 0u);
 }
 
@@ -318,7 +330,7 @@ TEST(Scheduler, PausedAndCheckpointTimeAreExcludedFromTheMeter) {
   };
   const rsvp::MeterStats straight = run(false);
   const rsvp::MeterStats interrupted = run(true);
-  EXPECT_EQ(straight.wordsShown, 550u);
+  EXPECT_EQ(straight.wordsShown, tokens.size());  // chapter 2's prose words (the table and notes are not shown)
   EXPECT_EQ(interrupted.wordsShown, straight.wordsShown);
   EXPECT_EQ(interrupted.activeMs, straight.activeMs);
   EXPECT_EQ(interrupted.updates, straight.updates);

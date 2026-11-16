@@ -228,14 +228,14 @@ TEST(CheckpointTrigger, ChapterSectionsLoadFromTheFixtureBook) {
   ASSERT_TRUE(book.ok);
   ChapterSections c;
   book.loadChapter(c, 2);
-  EXPECT_EQ(c.wordCount(), 417u);
+  EXPECT_EQ(c.wordCount(), book.chapterWords(2));
   ASSERT_EQ(c.count(), 2);
   EXPECT_EQ(c.span(0).section, book.section("s0001"));
   EXPECT_EQ(c.span(0).checkpoint, book.checkpoint("c0001"));
   EXPECT_EQ(c.span(1).checkpoint, NO_INDEX);
   book.loadChapter(c, 3);
   ASSERT_EQ(c.count(), 2);
-  EXPECT_EQ(c.span(1).end, 550u);
+  EXPECT_EQ(c.span(1).end, book.range("s0004").end);
   EXPECT_EQ(c.span(1).checkpoint, book.checkpoint("c0002"));
   // A section whose anchors are missing is left out and counted.
   book.layout.sections.erase(book.section("s0004"));

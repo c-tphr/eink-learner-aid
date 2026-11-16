@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 #include "CheckpointTestSupport.h"
 
 namespace checkpoint_test {
@@ -59,52 +61,152 @@ class FakeLayout : public BookLayout {
   std::map<uint16_t, SectionRange> sections;
 };
 
+// Members of fixtures/books/fixture.expected.json the tests read. A missing
+// member or one of the wrong type is a test failure, never a silent zero.
+inline const JsonValue* requireJson(const JsonValue* object, const char* key, JsonValue::Type type,
+                                    const std::string& where) {
+  if (object == nullptr || object->type != JsonValue::Type::Object) {
+    ADD_FAILURE() << where << " is not an object (looking for '" << key << "')";
+    return nullptr;
+  }
+  const JsonValue* value = object->get(key);
+  if (value == nullptr) {
+    ADD_FAILURE() << where << " has no member '" << key << "'";
+    return nullptr;
+  }
+  if (value->type != type) {
+    ADD_FAILURE() << where << "." << key << " has the wrong type";
+    return nullptr;
+  }
+  return value;
+}
+
+// A non-negative integer member; false (after a test failure) otherwise.
+inline bool requireJsonIndex(const JsonValue* object, const char* key, const std::string& where, uint32_t& out) {
+  const JsonValue* value = requireJson(object, key, JsonValue::Type::Number, where);
+  if (value == nullptr) return false;
+  if (value->number < 0 || value->number > 4294967295.0 || value->number != static_cast<double>(static_cast<uint32_t>(value->number))) {
+    ADD_FAILURE() << where << "." << key << " is not a non-negative integer";
+    return false;
+  }
+  out = static_cast<uint32_t>(value->number);
+  return true;
+}
+
 // The synthetic book "The Lighthouse Keeper's Almanac": the checkpoint file
 // prep build writes for it (data/fixture-book-checkpoints.json) and the word
-// ranges of fixtures/books/fixture.expected.json. Reader chapters are its
-// spine indices: 1 title page, 2 to 4 chapters 1 to 3; spine 0 is the nav
-// document, with no words here. To regenerate the data file, run
-// `python3 -m tools.prep build fixtures/books/fixture.epub
-// fixtures/books/fixture.draft.json -o OUT.epub` and copy
-// OEBPS/rsvp/checkpoints.json out of OUT.epub.
+// model of fixtures/books/fixture.expected.json (version 2): a chapter's word
+// indexes count every word of the chapter, table, code and footnote-body words
+// included, and a section is [start, end) between its anchors. Reader chapters
+// are its spine indices: 1 title page, 2 to 4 chapters 1 to 3; reader chapter
+// 0 has no words here.
+//
+// To regenerate the data file:
+//   python3 -m tools.prep build fixtures/books/fixture.epub fixtures/books/fixture.draft.json -o OUT.epub
+//   unzip -p OUT.epub OEBPS/rsvp/checkpoints.json > test/checkpoint_core/data/fixture-book-checkpoints.json
 struct FixtureBook {
   std::vector<uint8_t> bytes;
   std::unique_ptr<MemoryCheckpointSource> source;
   std::unique_ptr<CheckpointIndex> index = std::make_unique<CheckpointIndex>();
   FakeLayout layout;
   std::map<std::string, uint16_t> chapterOfHref;  // href -> spine index
+  std::map<std::string, SectionRange> sectionById;  // from fixture.expected.json
+  std::string epubSha256;                         // fixture.expected.json's epub_sha256
   bool ok = false;
 
   FixtureBook() {
     bytes = readFile(testDataPath("fixture-book-checkpoints.json"));
     source = std::make_unique<MemoryCheckpointSource>(bytes.data(), bytes.size());
-    if (index->open(*source).verdict != Verdict::Valid) return;
+    if (index->open(*source).verdict != Verdict::Valid) {
+      ADD_FAILURE() << "data/fixture-book-checkpoints.json does not open";
+      return;
+    }
     const std::vector<uint8_t> expectedBytes = readFile(booksPath("fixture.expected.json"));
     const std::string text(expectedBytes.begin(), expectedBytes.end());
     JsonValue root;
     JsonReader reader(text);
-    if (!reader.parse(root)) return;
-    const JsonValue* documents = root.get("documents");
-    const JsonValue* sections = root.get("sections");
-    if (documents == nullptr || sections == nullptr) return;
-    layout.words.assign(1, 0);
-    for (const JsonValue& d : documents->items) {
-      const size_t spine = static_cast<size_t>(d.get("spine_index")->number);
-      if (layout.words.size() <= spine) layout.words.resize(spine + 1, 0);
-      layout.words[spine] = static_cast<int64_t>(d.get("word_count")->number);
-      chapterOfHref[d.str("href")] = static_cast<uint16_t>(spine);
+    if (!reader.parse(root)) {
+      ADD_FAILURE() << "fixture.expected.json does not parse";
+      return;
     }
-    for (const JsonValue& s : sections->items) {
-      const int section = index->findSection(s.str("id").c_str());
-      if (section < 0) return;
+    const std::string file = "fixture.expected.json";
+    uint32_t version = 0;
+    if (!requireJsonIndex(&root, "version", file, version)) return;
+    if (version != 2) {
+      ADD_FAILURE() << file << " has format version " << version << "; these helpers read version 2";
+      return;
+    }
+    const JsonValue* sha = requireJson(&root, "epub_sha256", JsonValue::Type::String, file);
+    const JsonValue* documents = requireJson(&root, "documents", JsonValue::Type::Array, file);
+    const JsonValue* sections = requireJson(&root, "sections", JsonValue::Type::Array, file);
+    if (sha == nullptr || documents == nullptr || sections == nullptr) return;
+    epubSha256 = sha->text;
+    layout.words.assign(1, 0);
+    for (size_t i = 0; i < documents->items.size(); ++i) {
+      const JsonValue& d = documents->items[i];
+      const std::string where = file + " documents[" + std::to_string(i) + "]";
+      uint32_t spine = 0;
+      uint32_t words = 0;
+      const JsonValue* href = requireJson(&d, "href", JsonValue::Type::String, where);
+      if (!requireJsonIndex(&d, "spine_index", where, spine) || !requireJsonIndex(&d, "word_count", where, words) ||
+          href == nullptr) {
+        return;
+      }
+      if (layout.words.size() <= spine) layout.words.resize(spine + 1, 0);
+      layout.words[spine] = static_cast<int64_t>(words);
+      chapterOfHref[href->text] = static_cast<uint16_t>(spine);
+    }
+    for (size_t i = 0; i < sections->items.size(); ++i) {
+      const JsonValue& s = sections->items[i];
+      const std::string where = file + " sections[" + std::to_string(i) + "]";
+      const JsonValue* id = requireJson(&s, "id", JsonValue::Type::String, where);
+      const JsonValue* href = requireJson(&s, "chapter_href", JsonValue::Type::String, where);
       SectionRange r;
+      if (id == nullptr || href == nullptr || !requireJsonIndex(&s, "start", where, r.start) ||
+          !requireJsonIndex(&s, "end", where, r.end)) {
+        return;
+      }
+      const int section = index->findSection(id->text.c_str());
+      if (section < 0 || chapterOfHref.count(href->text) == 0 || r.end <= r.start) {
+        ADD_FAILURE() << where << ": section " << id->text << " is not in the checkpoint file or has a bad range";
+        return;
+      }
       r.section = static_cast<uint16_t>(section);
-      r.chapter = chapterOfHref[s.str("chapter_href")];
-      r.start = static_cast<uint32_t>(s.get("first_word")->number);
-      r.end = static_cast<uint32_t>(s.get("last_word")->number) + 1;
+      r.chapter = chapterOfHref[href->text];
       layout.sections[r.section] = r;
+      sectionById[id->text] = r;
     }
     ok = true;
+  }
+
+  // The fixture's word range of section `id` (fails the test if unknown).
+  SectionRange range(const char* id) const {
+    const auto it = sectionById.find(id);
+    if (it == sectionById.end()) {
+      ADD_FAILURE() << "no section " << id << " in fixture.expected.json";
+      return SectionRange{};
+    }
+    return it->second;
+  }
+  // Words of reader chapter `chapter`.
+  uint32_t chapterWords(uint16_t chapter) const {
+    return chapter < layout.words.size() ? static_cast<uint32_t>(layout.words[chapter]) : 0;
+  }
+  // The section's first word and its last word (end - 1).
+  Position firstWordOf(const char* id) const {
+    const SectionRange r = range(id);
+    return Position{r.chapter, r.start};
+  }
+  Position lastWordOf(const char* id) const {
+    const SectionRange r = range(id);
+    return Position{r.chapter, r.end - 1};
+  }
+  // The first word after the section's break, from the fixture's own numbers:
+  // its end, or word 0 of the next chapter when the section ends its chapter.
+  Position resumeAfter(const char* id) const {
+    const SectionRange r = range(id);
+    if (r.end < chapterWords(r.chapter)) return Position{r.chapter, r.end};
+    return Position{nextChapter(r.chapter), 0};
   }
 
   uint16_t checkpoint(const char* id) const { return static_cast<uint16_t>(index->findCheckpoint(id)); }

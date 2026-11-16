@@ -21,9 +21,9 @@ const char* T1 = "2026-12-01T19:04:00";
 const char* T2 = "2026-12-02T08:00:00";
 const char* T3 = "2027-01-15T21:30:59";
 
-// Reads chapter 3 in RSVP from word 255 until c0002 fires.
+// Reads from the start of c0002's section (s0004) until c0002 fires.
 void fireC0002(ReaderSim& sim, ReadingMode mode = ReadingMode::Rsvp) {
-  sim.openAt(Place{Position{3, 255}, mode});
+  sim.openAt(Place{sim.book.firstWordOf("s0004"), mode});
   const Step s = mode == ReadingMode::Rsvp ? sim.play() : Step{};
   if (mode == ReadingMode::Page) {
     for (int i = 0; i < 20 && sim.reading(); ++i) sim.nextPage();
@@ -150,7 +150,7 @@ TEST(GradeRules, GradeRule4_LaterPassPresentsEveryPromptWithItsStoredFirstGrade)
   sim.handle(FlowEvent::Continue);
   ASSERT_EQ(sim.flow->state(), FlowState::Finished);
   // A later pass: jump back to the section start, read through it again.
-  sim.jump(Position{3, 255}, NavSource::TableOfContents);
+  sim.jump(book.firstWordOf("s0004"), NavSource::TableOfContents);
   fireC0002(sim);
   const Grade expected[] = {Grade::Correct, Grade::Ungraded, Grade::Incorrect};
   for (uint16_t p = 0; p < 3; ++p) {

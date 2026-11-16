@@ -24,10 +24,10 @@ from pathlib import Path
 from typing import Any
 
 from . import checkpoints as cp
-from .draft import Issue, PlannedSection, check_draft
+from .draft import ANCHOR_PLACEMENT, Issue, PlannedSection, check_draft
 from .epub import OPF_NS, Book, EpubError, all_text, load_book, load_book_bytes
-from .words import tokenize
-from .xmltree import Document
+from .words import WordStream, tokenize, word_stream
+from .xmltree import Document, XmlError
 
 CHECKPOINTS_HREF = "rsvp/checkpoints.json"
 CHECKPOINTS_ID = "rsvp-checkpoints"
@@ -194,6 +194,9 @@ def build_bytes(book: Book, draft_raw: bytes) -> BuildResult:
         if sd.zip_path in by_doc:
             assert sd.doc is not None
             replace[sd.zip_path] = splice(sd.doc.data, by_doc[sd.zip_path])
+    issues = anchors_inside_words(plan, replace)
+    if issues:
+        raise BuildError(issues)
     replace[book.opf_path] = add_manifest_item(book.opf)
 
     data = checkpoint_document(draft, plan)
@@ -208,6 +211,34 @@ def build_bytes(book: Book, draft_raw: bytes) -> BuildResult:
     return result
 
 
+def anchors_inside_words(plan: list[PlannedSection], replace: dict[str, bytes]) -> list[Issue]:
+    """``anchor-placement`` issues for anchors that the word pass finds strictly inside a word.
+
+    Anchors go at element boundaries of blocks; that is a word boundary
+    whenever the block element is one at which words split, which holds for
+    every block ``prep extract`` makes from ordinary markup. This catches the
+    rest (a block element that is not a word boundary, glued to a neighbour).
+    """
+    streams: dict[str, WordStream] = {}
+    issues = []
+    for section in plan:
+        zip_path = section.doc.zip_path
+        if zip_path not in streams:
+            try:
+                streams[zip_path] = word_stream(replace[zip_path], zip_path)
+            except XmlError as exc:  # pragma: no cover - splicing empty spans keeps a document well formed
+                raise AssertionError(f"{zip_path}: spliced document does not parse: {exc}") from exc
+        stream = streams[zip_path]
+        for side, anchor_id in (("start", section.start_anchor), ("end", section.end_anchor)):
+            anchor = stream.anchor(anchor_id)
+            if anchor is not None and anchor.inside_word:
+                text = stream.words[anchor.index - 1].text if anchor.index > 0 else ""
+                issues.append(Issue(ANCHOR_PLACEMENT, f"/sections/{section.index}",
+                                    f"the {side} anchor of section {section.id} would fall inside the word "
+                                    f"{text!r} in {section.doc.href}; the firmware splits words differently there"))
+    return issues
+
+
 def verify(original: Book, result: BuildResult, plan: list[PlannedSection]) -> None:
     """Re-read the prepared bytes and confirm the build changed nothing but the anchors.
 
@@ -218,19 +249,25 @@ def verify(original: Book, result: BuildResult, plan: list[PlannedSection]) -> N
         if not before.is_xhtml:
             continue
         assert before.doc is not None and after.doc is not None
-        if before.words != after.words:
-            raise AssertionError(f"{before.href}: reading-stream words changed")
+        assert before.stream is not None and after.stream is not None
+        if before.stream.words != after.stream.words:
+            raise AssertionError(f"{before.href}: words or word flags changed")
+        if (before.stream.markers, before.stream.noterefs) != (after.stream.markers, after.stream.noterefs):
+            raise AssertionError(f"{before.href}: markers or footnote marks changed")
         if tokenize(all_text(before.doc.root)) != tokenize(all_text(after.doc.root)):
             raise AssertionError(f"{before.href}: visible text changed")
-        if [(b.ref, b.kind, b.word_count) for b in before.blocks] != [(b.ref, b.kind, b.word_count)
-                                                                      for b in after.blocks]:
+        if [(b.ref, b.kind, b.start, b.end) for b in before.blocks + before.notes] != [
+                (b.ref, b.kind, b.start, b.end) for b in after.blocks + after.notes]:
             raise AssertionError(f"{before.href}: blocks changed")
     for section in plan:
         doc = prepared.doc_by_href(section.doc.href)
-        assert doc is not None and doc.doc is not None
-        for anchor in (section.start_anchor, section.end_anchor):
-            if anchor not in doc.doc.ids or anchor in doc.doc.duplicate_ids:
-                raise AssertionError(f"{section.doc.href}: anchor {anchor} missing or repeated")
+        assert doc is not None and doc.doc is not None and doc.stream is not None
+        for anchor_id, index in ((section.start_anchor, section.start), (section.end_anchor, section.end)):
+            if anchor_id not in doc.doc.ids or anchor_id in doc.doc.duplicate_ids:
+                raise AssertionError(f"{section.doc.href}: anchor {anchor_id} missing or repeated")
+            anchor = doc.stream.anchor(anchor_id)
+            if anchor is None or anchor.index != index or anchor.inside_word:
+                raise AssertionError(f"{section.doc.href}: anchor {anchor_id} is not at word {index}")
 
 
 def build_file(epub: str | Path, draft: str | Path, out: str | Path) -> BuildResult:

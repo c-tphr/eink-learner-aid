@@ -13,18 +13,12 @@ from pathlib import Path
 
 import pytest
 
+from tools.prep import build as build_module
 from tools.prep import checkpoints as cp
+from tools.prep import epub as epub_module
 from tools.prep import epubcheck, words
 from tools.prep.build import build_file
-from tools.prep.epub import (
-    Element,
-    is_footnote_container,
-    is_invisible,
-    is_noteref,
-    load_book,
-    load_book_bytes,
-    all_text,
-)
+from tools.prep.epub import load_book, load_book_bytes, all_text
 from tools.prep.epubzip import Archive
 from tools.prep.fixture import generate as gen
 from tools.prep.tests.bookmaker import make_draft, make_epub, xhtml
@@ -62,9 +56,12 @@ def workdir(tmp_path_factory) -> Path:
 # Shared word definition
 
 
-def test_one_tokenize_function():
-    assert gen.tokenize is words.tokenize
-    assert words.tokenize("a\u00a0b  c\td\u2014e\r\nf") == ["a\u00a0b", "c", "d\u2014e", "f"]
+def test_one_word_pass():
+    """extract, build and the generator's self-check all use tools/prep/words.py (the rules: test_words.py)."""
+    assert epub_module.word_stream is words.word_stream
+    assert build_module.word_stream is words.word_stream
+    assert gen.word_pass is words
+    assert words.tokenize("a\u00a0b  c\td\u2014e\r\nf") == ["a", "b", "c", "d\u2014", "e", "f"]
 
 
 # --------------------------------------------------------------------------
@@ -74,7 +71,7 @@ def test_one_tokenize_function():
 def test_extract_writes_the_work_folder(workdir):
     names = sorted(str(p.relative_to(workdir)) for p in workdir.rglob("*") if p.is_file())
     assert names == ["source.json", "structure.json", "text/d01-title.txt", "text/d02-chapter-1.txt",
-                     "text/d03-chapter-2.txt", "text/d04-chapter-3.txt"]
+                     "text/d03-chapter-2.txt", "text/d04-chapter-3.txt", "text/d05-endnotes.txt"]
     source = json.loads((workdir / "source.json").read_text(encoding="utf-8"))
     assert source["source_file"] == "fixture.epub"
     assert source["source_sha256"] == hashlib.sha256(FIXTURE.read_bytes()).hexdigest() == EXPECTED["epub_sha256"]
@@ -86,7 +83,13 @@ def test_extract_writes_the_work_folder(workdir):
         ("The Lamp Room", "text/chapter-1.xhtml", 1, "d02-p001"),
         ("The Fog Season", "text/chapter-2.xhtml", 1, "d03-p001"),
         ("The Keeper's Log", "text/chapter-3.xhtml", 1, "d04-p001"),
+        ("Notes", "text/endnotes.xhtml", 1, None),  # no reading-stream block to point at
     ]
+    endnotes = source["spine"][4]
+    assert (endnotes["blocks"], endnotes["first_paragraph"], endnotes["footnote_blocks"]) == (0, None, 3)
+    text = (workdir / "text" / "d05-endnotes.txt").read_text(encoding="utf-8")
+    assert "# No reading-stream blocks; 3 footnote blocks." in text
+    assert "[d05-n002] footnote, 14 words, note fn2, id en-n002\nMost of this light" in text
 
 
 def test_extract_is_deterministic(workdir, tmp_path):
@@ -103,18 +106,15 @@ def test_extract_is_deterministic(workdir, tmp_path):
 
 def test_extract_structure_matches_expected(workdir):
     structure = json.loads((workdir / "structure.json").read_text(encoding="utf-8"))
-    assert structure["source_sha256"] == EXPECTED["epub_sha256"]
+    assert (structure["version"], structure["source_sha256"]) == (2, EXPECTED["epub_sha256"])
     for doc in structure["documents"]:
         exp = EXPECTED_DOCS[doc["href"]]
         assert doc["word_count"] == exp["word_count"]
-        got = [(b["ref"], b["kind"], b["source_id"], b["word_count"], b.get("first_word", b.get("after_word")))
-               for b in doc["blocks"]]
-        want = [(b["paragraph"], b["kind"], b["id"], b.get("word_count", 0), b.get("first_word", b.get("after_word")))
-                for b in exp["blocks"]]
+        got = [(b["ref"], b["kind"], b["source_id"], b["first_word"], b["word_count"])
+               for b in doc["blocks"] + doc["footnotes"]]
+        want = [(b["paragraph"], b["kind"], b["id"], b["first_word"], b["word_count"]) for b in exp["blocks"]]
         assert got == want, doc["href"]
-        notes = [(n["ref"], n["kind"], n["source_id"], n["note_id"], n["word_count"]) for n in doc["footnotes"]]
-        assert notes == [(p["paragraph"], "footnote", p["id"], f["id"], len(p["words"]))
-                         for f in exp["footnotes"] for p in f["paragraphs"]]
+        assert [n["note_id"] for n in doc["footnotes"]] == [b["note"] for b in exp["blocks"] if b["kind"] == "footnote"]
         for b in doc["blocks"]:
             assert b["path"].startswith("/html[1]/body[1]/") and b["line"] > 0
             assert b["anchor_placement"] == ("inside" if b["kind"] in ("heading", "paragraph") else "around")
@@ -127,21 +127,25 @@ def test_extract_text_files_number_every_block(workdir):
         entries = [chunk.strip("\n").split("\n") for chunk in text.split("\n\n") if chunk.startswith("[")]
         assert all(len(e) == 2 for e in entries)
         main = [e for e in entries if "-p" in e[0].split("]")[0]]
-        assert [e[0].split("]")[0][1:] for e in main] == [b["paragraph"] for b in doc["blocks"]]
-        for (header, line), block in zip(main, doc["blocks"]):
+        blocks = [b for b in doc["blocks"] if b["kind"] != "footnote"]
+        assert [e[0].split("]")[0][1:] for e in main] == [b["paragraph"] for b in blocks]
+        for (header, line), block in zip(main, blocks):
             assert block["kind"] in header and f"id {block['id']}" in header
-            if "first_word" in block:
-                expected_words = doc["words"][block["first_word"] : block["last_word"] + 1]
+            assert f"{block['word_count']} words" in header
+            if block["kind"] in ("heading", "paragraph"):
+                expected_words = doc["words"][block["first_word"] : block["first_word"] + block["word_count"]]
                 shown = [w.split("[^")[0] for w in line.split(" ")]
                 assert shown == expected_words, block["paragraph"]
-                assert f"{block['word_count']} words" in header
             else:
                 assert line.startswith(f"[{ {'image': 'Image', 'table': 'Table', 'code': 'Code'}[block['kind']] }: ")
         notes = [e for e in entries if "-n" in e[0].split("]")[0]]
-        assert [n[1].split(" ") for n in notes] == [p["words"] for f in doc["footnotes"] for p in f["paragraphs"]]
+        assert [n[1].split(" ") for n in notes] == [doc["words"][b["first_word"] : b["first_word"] + b["word_count"]]
+                                                    for b in doc["blocks"] if b["kind"] == "footnote"]
     sample = (workdir / "text" / "d02-chapter-1.txt").read_text(encoding="utf-8")
-    assert "[d02-p004] image, id c1-p004\n[Image: <figure>; alt " in sample
+    assert "[d02-p004] image, 10 words, id c1-p004\n[Image: <figure>; alt " in sample
     assert "never stood beside one.[^1]\n" in sample
+    chapter_2 = (workdir / "text" / "d03-chapter-2.txt").read_text(encoding="utf-8")
+    assert " disturbed.[^2]\n" in chapter_2 and " engine.[^3] Then " in chapter_2
 
 
 def test_extract_refuses_a_foreign_folder(tmp_path):
@@ -194,55 +198,26 @@ def test_build_adds_every_anchor_once_in_order(prepared):
         assert original.doc_by_href(sd.href).doc.ids.keys() <= sd.doc.ids.keys()
 
 
-def _split_text(block_el: Element, anchor: Element) -> tuple[str, str]:
-    """Reading-stream text of a block before and after ``anchor`` (fixture blocks have no br or nested blocks)."""
-    before: list[str] = []
-    after: list[str] = []
-    target = [before]
-
-    def walk(node: Element) -> None:
-        for child in node.children:
-            if child is anchor:
-                target[0] = after
-            elif isinstance(child, str):
-                target[0].append(child)
-            elif not (is_noteref(child) or is_invisible(child) or is_footnote_container(child)):
-                walk(child)
-
-    walk(block_el)
-    return "".join(before), "".join(after)
-
-
 def test_anchors_land_on_the_expected_word_positions(prepared):
+    """The firmware's rule: an anchor's word index is the number of words started before it (section 5)."""
     book = load_book(prepared)
     for section in EXPECTED["sections"]:
         sd = book.doc_by_href(section["chapter_href"])
         assert sd.words == EXPECTED_DOCS[sd.href]["words"]
-        for anchor_id, expected_before in ((section["start_anchor"], section["first_word"]),
-                                           (section["end_anchor"], section["last_word"] + 1)):
-            anchor = sd.doc.ids[anchor_id]
-            assert anchor.local == "span" and anchor.children == [] and not anchor.attrib.keys() - {"id"}
-            count = 0
-            for block in sd.blocks:
-                if block.element.contains(anchor):
-                    before, after = _split_text(block.element, anchor)
-                    # The anchor sits between words, never inside one.
-                    assert words.tokenize(before) + words.tokenize(after) == block.words
-                    count += len(words.tokenize(before))
-                    break
-                if block.element.order > anchor.order:
-                    break
-                count += block.word_count
-            assert count == expected_before, anchor_id
-        start = sd.doc.ids[section["start_anchor"]]
-        end = sd.doc.ids[section["end_anchor"]]
-        assert start.order < end.order
+        for anchor_id, index in ((section["start_anchor"], section["start"]), (section["end_anchor"], section["end"])):
+            element = sd.doc.ids[anchor_id]
+            assert element.local == "span" and element.children == [] and not element.attrib.keys() - {"id"}
+            anchor = sd.stream.anchor(anchor_id)
+            assert (anchor.index, anchor.inside_word) == (index, False), anchor_id
+        assert section["word_count"] == section["end"] - section["start"]
+        assert sd.doc.ids[section["start_anchor"]].order < sd.doc.ids[section["end_anchor"]].order
 
 
 def test_word_sequences_are_unchanged(prepared):
     before, after = load_book(FIXTURE), load_book(prepared)
     for a, b in zip(before.spine, after.spine, strict=True):
         assert a.words == b.words == EXPECTED_DOCS[a.href]["words"]
+        assert a.stream.words == b.stream.words and a.stream.markers == b.stream.markers
         assert words.tokenize(all_text(a.doc.root)) == words.tokenize(all_text(b.doc.root))
         assert [(x.ref, x.kind, x.words) for x in a.blocks + a.notes] == [(x.ref, x.kind, x.words)
                                                                            for x in b.blocks + b.notes]
@@ -578,10 +553,10 @@ def test_segmentation_of_varied_markup(tmp_path):
     got = [(b.ref, b.kind, b.element.local, b.word_count, b.placement) for b in sd.blocks]
     assert got == [
         ("d01-p001", "heading", "h1", 2, "inside"),
-        ("d01-p002", "image", "figure", 0, "around"),
-        ("d01-p003", "paragraph", "p", 8, "inside"),
-        ("d01-p004", "table", "table", 0, "around"),
-        ("d01-p005", "code", "pre", 0, "around"),
+        ("d01-p002", "image", "figure", 3, "around"),
+        ("d01-p003", "paragraph", "p", 9, "inside"),
+        ("d01-p004", "table", "table", 4, "around"),
+        ("d01-p005", "code", "pre", 2, "around"),
         ("d01-p006", "list-item", "li", 3, "inside"),
         ("d01-p007", "list-item", "li", 3, "inside"),
         ("d01-p008", "blockquote", "p", 3, "inside"),
@@ -589,10 +564,15 @@ def test_segmentation_of_varied_markup(tmp_path):
         ("d01-p010", "paragraph", "p", 2, "inside"),
         ("d01-p011", "image", "figure", 0, "around"),
     ]
-    # &#160; joins words (U+00A0 is not a separator); <br/> separates them.
-    assert sd.blocks[2].words == ["Words", "after\u00a0the", "figure,", "with", "a", "line", "break", "inside."]
+    # &#160; (U+00A0) and <br/> separate words; captions, cells, code and the note body are words.
+    assert sd.blocks[1].words == ["A", "figure", "first."]
+    assert sd.blocks[2].words == ["Words", "after", "the", "figure,", "with", "a", "line", "break", "inside."]
+    assert sd.blocks[3].words == ["cell", "one", "cell", "two"] and sd.blocks[4].words == ["code", "line"]
     assert sd.blocks[9].words == ["Last", "words."]
     assert [(n.ref, n.kind, n.note_id, n.words) for n in sd.notes] == [("d01-n001", "footnote", "n1", ["The", "note."])]
+    assert sd.words == [w for b in sd.blocks + sd.notes for w in b.words]
+    assert [(m.kind, m.start, m.end) for m in sd.stream.markers] == [
+        ("IMAGE", 2, 2), ("TABLE", 14, 18), ("CODE", 18, 20), ("IMAGE", 35, 35), ("NOTE", 35, 37)]
     assert sd.blocks[1].placeholder == '[Image: <figure>; alt "A lighthouse"; caption "A figure first."]'
     assert sd.blocks[3].placeholder == "[Table: <table>; 1 rows x 2 columns]"
     assert sd.blocks[4].placeholder == "[Code: <pre>; 1 lines]"
@@ -608,8 +588,11 @@ def test_footnote_marks_and_text_in_no_word(tmp_path):
     )
     epub = make_epub(tmp_path / "book.epub", [("ch1.xhtml", chapter)])
     sd = load_book(epub).spine[0]
-    assert sd.words == ["One.", "Two.", "Threerd", "web4", "five", "six", "end."]
+    assert sd.blocks[0].words == ["One.", "Two.", "Threerd", "web4", "five", "six", "end."]
     assert [n.words for n in sd.notes] == [["Note", "one."], ["Note", "two."]]
+    assert sd.words == sd.blocks[0].words + ["Note", "one.", "Note", "two."]
+    assert [(m.kind, m.start, m.end) for m in sd.stream.markers] == [("NOTE", 7, 9), ("NOTE", 9, 11)]
+    assert [(r.mark, r.word) for r in sd.stream.noterefs] == [("1", 0), ("2", 1)]
     work = tmp_path / "work"
     assert run_prep("extract", epub, work).returncode == 0
     text = (work / "text" / "d01-ch1.txt").read_text(encoding="utf-8")
@@ -637,7 +620,7 @@ def test_anchors_around_non_prose_blocks_pass_epubcheck(tmp_path):
         assert a.words == b.words
         assert words.tokenize(all_text(a.doc.root)) == words.tokenize(all_text(b.doc.root))
     sections = json.loads(Archive(out.read_bytes()).read("OEBPS/rsvp/checkpoints.json"))["sections"]
-    assert [s["word_count"] for s in sections] == [10, 15, 13]
+    assert [s["word_count"] for s in sections] == [18, 17, 13]
     report = _epubcheck(out)
     assert report.errors == [], [str(m) for m in report.errors]
     assert report.warnings == [], [str(m) for m in report.warnings]
@@ -645,13 +628,14 @@ def test_anchors_around_non_prose_blocks_pass_epubcheck(tmp_path):
 
 def test_section_of_only_non_prose_is_refused(tmp_path):
     epub = make_epub(tmp_path / "book.epub", [("text/edge.xhtml", EDGE_CHAPTER)], with_image=True)
+    # The second figure has no caption: no words between its anchors. (The first one's caption is three words.)
     out, result = _build(tmp_path, epub, [
         ("s0001", "text/edge.xhtml", "d01-p001", "d01-p001"),
-        ("s0002", "text/edge.xhtml", "d01-p002", "d01-p002"),
-        ("s0003", "text/edge.xhtml", "d01-p003", "d01-p011"),
+        ("s0002", "text/edge.xhtml", "d01-p002", "d01-p010"),
+        ("s0003", "text/edge.xhtml", "d01-p011", "d01-p011"),
     ])
     assert result.returncode == 1
-    assert "empty-section at /sections/1: section s0002 has no words" in result.stderr
+    assert "empty-section at /sections/2: section s0003 has no words" in result.stderr
 
 
 def test_existing_anchor_id_is_refused(tmp_path):
@@ -693,7 +677,7 @@ def test_named_entities_from_an_external_dtd(tmp_path):
     )
     epub = make_epub(tmp_path / "book.epub", [("ch1.xhtml", chapter)])
     book = load_book(epub)
-    assert book.spine[0].words == ["caf\u00e9\u00a0au", "lait", "&", "more"]
+    assert book.spine[0].words == ["caf\u00e9", "au", "lait", "&", "more"]
     out, result = _build(tmp_path, epub, [("s0001", "ch1.xhtml", "d01-p001", "d01-p001")])
     assert result.returncode == 0, result.stderr
     data = Archive(out.read_bytes()).read("OEBPS/ch1.xhtml")
@@ -721,3 +705,20 @@ def test_central_directory_offsets_point_at_local_headers(prepared):
     for e in archive.entries:
         sig, *_rest, name_len, _extra = struct.unpack_from("<IHHHHHIIIHH", data, e.local_offset)
         assert sig == 0x04034B50 and data[e.local_offset + 30 : e.local_offset + 30 + name_len] == e.name.encode()
+
+
+def test_anchor_inside_a_word_is_refused(tmp_path):
+    """Two canvas blocks with no boundary between them make one word, so no anchor fits between them."""
+    chapter = xhtml("<p>Intro words.</p>\n<div><canvas>A</canvas><canvas>B</canvas></div>\n<p>More words.</p>")
+    epub = make_epub(tmp_path / "book.epub", [("ch1.xhtml", chapter)])
+    sd = load_book(epub).spine[0]
+    assert sd.words == ["Intro", "words.", "AB", "More", "words."]
+    assert [(b.ref, b.kind, b.placement) for b in sd.blocks] == [
+        ("d01-p001", "paragraph", "inside"), ("d01-p002", "media", "around"), ("d01-p003", "media", "around"),
+        ("d01-p004", "paragraph", "inside")]
+    out, result = _build(tmp_path, epub, [("s0001", "ch1.xhtml", "d01-p001", "d01-p002"),
+                                          ("s0002", "ch1.xhtml", "d01-p003", "d01-p004")])
+    assert result.returncode == 1 and not out.exists()
+    assert "anchor-placement at /sections/0: the end anchor of section s0001 would fall inside the word" \
+        in result.stderr
+    assert "anchor-placement at /sections/1: the start anchor of section s0002" in result.stderr

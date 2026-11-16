@@ -16,12 +16,13 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .epub import Block, Book, EpubError, SpineDoc, load_book, prose_text
-from .words import tokenize
+from .epub import Block, Book, EpubError, SpineDoc, load_book
 
 SOURCE_FORMAT = "rsvp-prep-source"
 STRUCTURE_FORMAT = "rsvp-prep-structure"
-VERSION = 1
+SOURCE_VERSION = 1
+# 2: words follow the firmware's definition; every block has first_word and word_count (P6, issue #49).
+STRUCTURE_VERSION = 2
 OUTPUT_FILES = ("source.json", "structure.json")
 
 
@@ -35,24 +36,28 @@ def text_file_name(sd: SpineDoc) -> str:
     return f"text/{sd.prefix}-{stem}.txt"
 
 
-def display_text(block: Block) -> str:
+def display_text(sd: SpineDoc, block: Block) -> str:
     """The block's words joined by single spaces, with footnote marks shown as ``[^mark]``.
 
-    A mark is not a word: it is glued to the word before it, so the line has
-    exactly ``block.word_count`` space-separated words when every mark
-    follows a word (as in well-formed books).
+    A mark is not a word: it is glued to the word that carries its NOTEREF
+    flag, so the line has exactly ``block.word_count`` space-separated words.
+    A non-prose block shows its placeholder instead.
     """
     if block.placeholder is not None:
         return block.placeholder
-    return " ".join(tokenize(prose_text(block.element, show_noterefs=True)))
+    assert sd.stream is not None
+    shown = list(block.words)
+    for ref in sd.stream.noterefs:
+        if block.start <= ref.word < block.end:
+            shown[ref.word - block.start] += f"[^{' '.join(ref.mark.split()) or '*'}]"
+    return " ".join(shown)
 
 
 def _block_header(block: Block) -> str:
     bits = [block.kind]
     if block.kind == "heading":
         bits[0] += f" {block.element.local}"
-    if block.placeholder is None:
-        bits.append(f"{block.word_count} word{'s' if block.word_count != 1 else ''}")
+    bits.append(f"{block.word_count} word{'s' if block.word_count != 1 else ''}")
     if block.note_id:
         bits.append(f"note {block.note_id}")
     if block.source_id:
@@ -74,23 +79,24 @@ def render_text(sd: SpineDoc, spine_count: int) -> str:
         lines.append(f"# No reading-stream blocks{f'; {notes}' if sd.notes else ''}.")
     lines += [
         "# Each block: [reference] kind, word count, source id; then its text. A draft cites these references.",
-        "# [^N] is a footnote mark (not a word). [Image: ...], [Table: ...], [Code: ...] stand for non-prose blocks,",
-        "# which count no words.",
+        "# [^N] is a footnote mark (not a word). [Image: ...], [Table: ...], [Code: ...] stand for non-prose blocks;",
+        "# their caption, cell and code words count in the word stream (RSVP pauses at them).",
         "",
     ]
     for block in sd.blocks:
-        lines += [_block_header(block), display_text(block), ""]
+        lines += [_block_header(block), display_text(sd, block), ""]
     if sd.notes:
-        lines += ["# Footnote bodies: outside the reading stream. They cannot be cited in ranges or as support.", ""]
+        lines += ["# Footnote bodies: their words are in the word stream (RSVP passes over them), but they cannot be",
+                  "# cited in ranges or as support.", ""]
         for block in sd.notes:
-            lines += [_block_header(block), display_text(block), ""]
+            lines += [_block_header(block), display_text(sd, block), ""]
     return "\n".join(lines)
 
 
 def source_document(book: Book) -> dict[str, Any]:
     return {
         "format": SOURCE_FORMAT,
-        "version": VERSION,
+        "version": SOURCE_VERSION,
         "source_file": book.source_name,
         "source_sha256": book.sha256,
         "title": book.title,
@@ -125,7 +131,7 @@ def source_document(book: Book) -> dict[str, Any]:
 def structure_document(book: Book) -> dict[str, Any]:
     return {
         "format": STRUCTURE_FORMAT,
-        "version": VERSION,
+        "version": STRUCTURE_VERSION,
         "source_sha256": book.sha256,
         "opf_path": book.opf_path,
         "documents": [
