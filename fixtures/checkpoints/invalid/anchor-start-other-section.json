@@ -1,0 +1,52 @@
+{
+  "format": "rsvp-checkpoints",
+  "version": 1,
+  "book": {
+    "title": "Sample Book",
+    "language": "en",
+    "source_sha256": "1e874b76a5df7dff6e3ea423c297d1a8565e2ebf5c98c9e67ac248598f597fdd",
+    "instructions_version": "1.0"
+  },
+  "sections": [
+    {
+      "id": "s0001",
+      "chapter_href": "text/ch1.xhtml",
+      "start_anchor": "rsvp-s0002-start",
+      "end_anchor": "rsvp-s0001-end",
+      "label": "First section",
+      "word_count": 120
+    },
+    {
+      "id": "s0002",
+      "chapter_href": "text/ch2.xhtml",
+      "start_anchor": "rsvp-s0002-start",
+      "end_anchor": "rsvp-s0002-end",
+      "label": "Second section",
+      "word_count": 95
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0001",
+      "section": "s0001",
+      "prompts": [
+        {
+          "id": "c0001-p1",
+          "prompt": "What does the first section claim?",
+          "answer": "That recall beats rereading."
+        }
+      ]
+    },
+    {
+      "id": "c0002",
+      "section": "s0002",
+      "prompts": [
+        {
+          "id": "c0002-p1",
+          "prompt": "What does the second section add?",
+          "answer": "Spacing the recall attempts."
+        }
+      ]
+    }
+  ]
+}

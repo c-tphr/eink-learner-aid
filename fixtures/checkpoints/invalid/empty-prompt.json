@@ -1,0 +1,33 @@
+{
+  "format": "rsvp-checkpoints",
+  "version": 1,
+  "book": {
+    "title": "Sample Book",
+    "language": "en",
+    "source_sha256": "1e874b76a5df7dff6e3ea423c297d1a8565e2ebf5c98c9e67ac248598f597fdd",
+    "instructions_version": "1.0"
+  },
+  "sections": [
+    {
+      "id": "s0001",
+      "chapter_href": "text/ch1.xhtml",
+      "start_anchor": "rsvp-s0001-start",
+      "end_anchor": "rsvp-s0001-end",
+      "label": "First section",
+      "word_count": 120
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0001",
+      "section": "s0001",
+      "prompts": [
+        {
+          "id": "c0001-p1",
+          "prompt": "",
+          "answer": "The main idea."
+        }
+      ]
+    }
+  ]
+}

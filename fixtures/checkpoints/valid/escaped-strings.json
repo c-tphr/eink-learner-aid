@@ -1,0 +1,33 @@
+{
+  "format": "rsvp-checkpoints",
+  "version": 1,
+  "book": {
+    "title": "Escaped \u00e9 \"quotes\" \\ and \/ slash",
+    "language": "en",
+    "source_sha256": "1e874b76a5df7dff6e3ea423c297d1a8565e2ebf5c98c9e67ac248598f597fdd",
+    "instructions_version": "1.0"
+  },
+  "sections": [
+    {
+      "id": "s0001",
+      "chapter_href": "text\/ch1.xhtml",
+      "start_anchor": "rsvp-s0001-start",
+      "end_anchor": "rsvp-\u0073\u0030\u0030\u0030\u0031-end",
+      "label": "Caf\u00E9",
+      "word_count": 120
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0001",
+      "section": "s0001",
+      "prompts": [
+        {
+          "id": "c0001-p1",
+          "prompt": "Line one\nLine two \ud83d\ude00",
+          "answer": "Escaped pair \uD83E\uDDE0 and \u65e5"
+        }
+      ]
+    }
+  ]
+}
