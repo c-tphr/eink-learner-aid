@@ -6,12 +6,21 @@ add_executable(RsvpCoreTest
   SentenceStepTest.cpp
   FixtureBookTest.cpp
   ProseSampleTest.cpp
+  ClearingPolicyTest.cpp
+  DeliveredWpmMeterTest.cpp
+  WordOrderAuditTest.cpp
+  SchedulerTest.cpp
+  PlaybackSweepTest.cpp
   ${REPO_ROOT}/lib/RsvpCore/RsvpText.cpp
   ${REPO_ROOT}/lib/RsvpCore/WordClassifier.cpp
   ${REPO_ROOT}/lib/RsvpCore/FocusLetter.cpp
   ${REPO_ROOT}/lib/RsvpCore/Pacing.cpp
   ${REPO_ROOT}/lib/RsvpCore/FrameBuilder.cpp
   ${REPO_ROOT}/lib/RsvpCore/SentenceStep.cpp
+  ${REPO_ROOT}/lib/RsvpCore/ClearingPolicy.cpp
+  ${REPO_ROOT}/lib/RsvpCore/DeliveredWpmMeter.cpp
+  ${REPO_ROOT}/lib/RsvpCore/WordOrderAudit.cpp
+  ${REPO_ROOT}/lib/RsvpCore/Scheduler.cpp
 )
 
 target_compile_definitions(RsvpCoreTest PRIVATE
@@ -27,6 +36,10 @@ set_source_files_properties(
   ${REPO_ROOT}/lib/RsvpCore/Pacing.cpp
   ${REPO_ROOT}/lib/RsvpCore/FrameBuilder.cpp
   ${REPO_ROOT}/lib/RsvpCore/SentenceStep.cpp
+  ${REPO_ROOT}/lib/RsvpCore/ClearingPolicy.cpp
+  ${REPO_ROOT}/lib/RsvpCore/DeliveredWpmMeter.cpp
+  ${REPO_ROOT}/lib/RsvpCore/WordOrderAudit.cpp
+  ${REPO_ROOT}/lib/RsvpCore/Scheduler.cpp
   PROPERTIES COMPILE_OPTIONS "-fno-exceptions;-fno-rtti;-Werror"
 )
 

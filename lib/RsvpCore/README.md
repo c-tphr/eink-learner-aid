@@ -1,11 +1,9 @@
 # RsvpCore
 
 Portable RSVP logic for the reader: which words each display update shows, where the focus
-letter is, and how long each update should ideally be held. No Arduino, ESP-IDF, font or display
-code; host-tested in `test/rsvp_core` (plan section 4 and 6).
-
-This part (task R1) is everything before the clock. Task R2 adds the scheduler that plays frames
-against a clock and a display, and the delivered-WPM meter.
+letter is, how long each update should ideally be held, and the scheduler that plays them against
+a clock and a display, with the delivered-WPM meter. No Arduino, ESP-IDF, font or display code;
+host-tested in `test/rsvp_core` with a fake clock and a fake display (plan sections 4 and 6).
 
 | File | What it holds |
 | --- | --- |
@@ -15,6 +13,12 @@ against a clock and a display, and the delivered-WPM meter.
 | `Pacing.h/.cpp` | `PACING` (the weight table and normalisation constant), `rawWeight`, `Pacer` |
 | `FrameBuilder.h/.cpp` | `FrameBuilder`, `Frame`, `StopReason`, the width callback `FitsFn` |
 | `SentenceStep.h/.cpp` | `sentenceStart`, `previousSentenceStart`, `nextSentenceStart` |
+| `Clock.h` | `Clock` (injected millisecond time), wrap-safe `timeBefore`, `timeLater`, `timeEarlier` |
+| `DisplaySink.h` | `DisplaySink`: show a frame, run a clearing refresh (both blocking) |
+| `Scheduler.h/.cpp` | `Scheduler`, `StepResult`, `StepEvent`, `PlaybackState`, `DEFAULT_MIN_DWELL_MS` |
+| `ClearingPolicy.h/.cpp` | `ClearingPolicy`, `ClearingLimits` (60/120 by default) |
+| `DeliveredWpmMeter.h/.cpp` | `DeliveredWpmMeter`, `MeterStats` |
+| `WordOrderAudit.h/.cpp` | `WordOrderAudit`: every drawn word index once and in order |
 | `RsvpText.h/.cpp` | UTF-8 decoding and character classes (internal) |
 
 Everything is in namespace `rsvp`. English only (plan section 1).
@@ -22,9 +26,10 @@ Everything is in namespace `rsvp`. English only (plan section 1).
 ## Data flow
 
 ```
-WordSource (WordIndex adapter) --peek/advance--> FrameBuilder --Frame--> scheduler (R2) --> UI
-                                                  |  classifyWord, focusLetter, Pacer
-                                                  '- FitsFn (UI measures the text)
+WordSource (WordIndex adapter) --peek/advance--> FrameBuilder --Frame--> Scheduler --> DisplaySink
+                                                  |  classifyWord,          |  Clock, ClearingPolicy,
+                                                  |  focusLetter, Pacer     |  DeliveredWpmMeter, WordOrderAudit
+                                                  '- FitsFn (UI measures)   '- StepResult --> activity loop
 ```
 
 ## Word input
@@ -58,8 +63,9 @@ What the source must do:
 - Words inside a table or code block are not prose: the source flags the last prose word before
   them with `TOKEN_NON_PROSE_FOLLOWS` and does not hand them out as RSVP words. A non-prose block
   before the chapter's first word cannot be flagged; the activity handles that case.
-- After a jump, reposition itself and call `FrameBuilder::reset()`. The builder keeps no word state
-  between frames, so the next `next()` starts from wherever the source now is.
+- After a jump, reposition itself; the owner then calls `Scheduler::reposition()` (or
+  `FrameBuilder::reset()` when using a builder alone). The builder keeps no word state between
+  frames, so the next `next()` starts from wherever the source now is.
 
 ## Classification
 
@@ -199,20 +205,176 @@ window is too small to decide (load a larger window and retry) or there is no su
 A common back-step: go to `sentenceStart` if the position is past it, otherwise to
 `previousSentenceStart`.
 
-## What the scheduler (R2) is expected to do
+## Playback scheduler
 
-- Own one `FrameBuilder` per playback stream; call `next()` for each update.
-- Draw the frame and use `holdMs` as the paced interval to the next update: start the next update
-  at the later of the paced deadline and the end of the minimum dwell after the refresh, with no
-  catch-up bursts (plan section 6).
-- Act on `stops` after showing the frame: stop for a checkpoint, stop for a non-prose item, stop
-  at the chapter end. A frame never extends past any of these.
-- Use `lastWord.endsBlock()` and the section flags for the clearing-refresh policy.
-- Count delivered words with `wordCount` for the delivered-WPM meter.
-- Call `setWpm()` and `setWordsPerFrame()` only while paused.
+`Scheduler` owns one `FrameBuilder` over the caller's `WordSource` and uses an injected `Clock` and
+`DisplaySink`. It implements plan section 6, "Scheduler":
+
+1. **Draw.** Build the next frame from the source and call `DisplaySink::showFrame()`, which
+   returns when the panel reports the refresh finished. The clock is read just before (`start`)
+   and just after (`end`) the call.
+2. **Dwell.** The frame stays on screen at least `minDwellMs` after `end` (`DEFAULT_MIN_DWELL_MS`,
+   60 ms; `setMinDwellMs()`).
+3. **Next update** at `max(start + frame.holdMs, end + dwell)`. The deadline counts from this
+   update's actual start, never from an absolute timetable, so a late update (slow refresh, a
+   stall, a late call) is never repaid by shortening later frames: no catch-up bursts.
+4. **Stops.** A frame never extends past a checkpoint section end, a non-prose marker or the
+   chapter end (`FrameBuilder` ends the group there and only peeks the next token). When such a
+   frame has had its full slot, the next `step()` reports `STOPPED` with the frame's `stops` bits,
+   without building or consuming anything further: the last word before the break is on screen
+   and the next word is still unconsumed in the source. The caller handles the stop (checkpoint,
+   image in page view, next chapter); `play()` (or `resolveStop()` then `play()`) continues with
+   the next word. Several bits can be set at once (a checkpoint section that ends the chapter):
+   handle `STOP_CHECKPOINT` first.
+
+Nothing sleeps. The scheduler is a state machine: `PAUSED` (initially, after a pause, after
+`resolveStop()` or `reposition()`), `PLAYING` and `STOPPED`. `step()` does at most one blocking
+display call and returns a `StepResult`: what it did (`NONE`, `SHOWED_FRAME`, `CLEARED`, `PAUSED`,
+or `STOPPED` with the stop bits), and, while playing, the clock time at which it wants to be called
+again (`wake`, `wakeAtMs`). It never builds a frame ahead, so a pause, a settings change or a seek
+never strands a word that was taken from the source but not shown.
+
+### Calling contract
+
+- Call `step()` from one task: the task that may call the display (on the device the RSVP
+  activity's render task; S2, section 5). `play()`, `reposition()`, the setters and the accessors
+  belong to that task too, or are serialised with it (for example under the render lock).
+- `requestPause()` is the one call that is safe from any task at any time (an atomic flag). It takes
+  effect at the next `step()`, before any further frame is drawn. A request that arrives during a
+  blocking `showFrame()` lets that frame finish, and `step()` then returns `wakeAtMs` = now so the
+  next `step()` pauses at once. If the frame on screen ends at a stop, the stop is reported instead
+  of the pause (the reader has reached the break).
+- When `wake` is true, call `step()` again at `wakeAtMs` (calling earlier is harmless: it returns
+  `NONE` with the same wake time). When `wake` is false, playback is paused or stopped: wait for
+  input.
+- `setWpm()` and `setWordsPerFrame()` may be called at any time; they take effect at the next
+  `play()`, from the next unshown word. The pacing remainder is cleared only if the WPM changed.
+- `reposition()` after moving the source (sentence step, reread, return from page view, next
+  chapter): it pauses, drops a pending stop, clears the pacing remainder and the deadline, and
+  opens a new audit segment. The next `play()` starts at once, waiting only for the rest of the
+  dwell if the last refresh ended less than the dwell ago.
+- **Pause and clearing: the caller clears.** On `PAUSED` the activity draws the pause screen, and
+  on a trial profile that must be a clearing refresh (plan section 6, "Safety limits"). The
+  scheduler does not run it because (a) whether a clear is needed depends on the display profile,
+  which the scheduler does not know; (b) on the device the refresh that removes residue can be the
+  one that draws the pause screen, one slow refresh instead of two; (c) it happens after the pause,
+  outside active time, so the meter is the same either way. After any clearing refresh it runs
+  itself (on pause, on entering RSVP, around a checkpoint or page view), the caller calls
+  `noteClearingRefresh()` so the clearing count restarts.
+
+```cpp
+// RsvpActivity, on the render task. waitForInputUntil() returns early on a key or touch.
+scheduler.play();
+while (open) {
+  const rsvp::StepResult r = scheduler.step();
+  switch (r.event) {
+    case rsvp::StepEvent::PAUSED:
+      profile.clear();  // draws the pause screen with a clearing refresh (trial profiles: always)
+      scheduler.noteClearingRefresh();
+      drawPauseScreen(scheduler.wpm(), scheduler.meter().deliveredWpmTenths());
+      break;
+    case rsvp::StepEvent::STOPPED:
+      handleStop(r.stops);  // checkpoint UI, image in page view, or next chapter + reposition()
+      break;
+    default:
+      break;
+  }
+  if (r.wake) {
+    waitForInputUntil(r.wakeAtMs);
+  } else {
+    waitForInput();
+  }
+  handleInput();  // may call requestPause(), play(), setWpm(), reposition() ...
+}
+```
+
+The main task's input handler may instead call `scheduler.requestPause()` while the render task is
+blocked in a refresh, then notify the render task so its wait ends.
+
+### Display sink
+
+`DisplaySink` (`DisplaySink.h`) is what `DisplayProfile` implements for RSVP:
+
+- `showFrame(frame)`: draw the frame in the word band with the profile's word-update waveform and
+  return when the panel reports the refresh finished (the BUSY wait inside `displayBuffer()` has
+  ended). The full frame may be transferred; only the band changes.
+- `clearingRefresh()`: run a clearing refresh (absolute HALF or FULL, trial LUT released) with the
+  word band empty and the guides kept, and return when it finished.
+
+Both are called only from inside `step()`, on the task that calls `step()`. The scheduler times
+them with its own clock.
+
+### Clearing policy
+
+`ClearingPolicy` counts word updates since the last clearing refresh (plan section 6, "Clearing").
+Before each update the scheduler asks `clearDue()`:
+
+- due once at least `softLimit` updates have passed and the last update ended a block
+  (`lastWord.endsBlock()`: a paragraph, section, non-prose or chapter end);
+- due in any case once at least `hardLimit` updates have passed.
+
+Defaults 60 and 120 (`DEFAULT_CLEAR_SOFT_LIMIT`, `DEFAULT_CLEAR_HARD_LIMIT`); trial profiles pass
+lower ones with `setClearingLimits()` (45/90, 30/60). A limit of 0 turns that rule off. At most
+`hardLimit` word updates run between two clears.
+
+The clear runs when the next update is due: the paragraph-end frame keeps its full slot, the
+clearing refresh runs, and the next frame follows as soon as it returns (no dwell: nothing is on
+screen to read). Its time is display delay and counts as active time. No clear runs at a stop or at
+the chapter end; if one is due when playback resumes, it runs before the first frame.
+
+### Delivered-WPM meter
+
+`DeliveredWpmMeter` gives the session's words shown divided by its active time. A session runs from
+`resetSession()` (the activity calls it when RSVP opens); pauses, stops and seeks do not end it.
+
+**Active time** is made of spans. Each span starts at the first display operation (a frame or a
+clearing refresh) after a `play()` and runs without a break until playback stops being active:
+
+- included: every refresh, dwell and hold, clearing refreshes, and any lateness while playing (a
+  slow refresh, a stall, a late `step()` call);
+- excluded: time before the first play; time from `play()` to the first display operation (the
+  activity drawing its guides); paused time; time stopped at a checkpoint, a non-prose item or the
+  chapter end; time after `reposition()` until the next play;
+- **the last frame before a pause** counts its words, and its time up to the pause but never past
+  the moment its successor was due (`max(start + hold, end + dwell)`). A pause mid-hold counts only
+  what was on screen; a pause noticed late counts no idle time. The last frame before a **stop**
+  always counts its full slot, because the stop is reported only when that slot ends.
+
+So at an ideal display (refresh 0) each frame counts its ideal hold (or the dwell, if longer), and
+a long run of prose reports the target WPM: the tests measure 240.1 on the prose sample at a
+target of 240 and 600.1 at 600. With a refresh time `R`, a frame's slot is `max(hold, R + dwell)`,
+plus clearing time: about 99 WPM at `R` = 540 ms, single words.
+
+`deliveredWpmTenths()` is `round(words * 600,000 / activeMs)` in integers (2405 is 240.5 WPM), and
+0 before any active time. `stats()` holds what a results file records: words shown, active ms,
+word updates, clearing refreshes, total and maximum update time (`meanUpdateMs()`), total and
+maximum clearing time. Active time is added as each display operation starts and when playback
+stops, so during playback it lags by the frame on screen.
+
+### Word-order audit
+
+`WordOrderAudit` receives every frame the scheduler draws (`recordFrame(first, last, count)`) and
+records whether each word index was drawn exactly once and in order since `reset()`:
+`wordsDrawn()`, `inOrder()`, `violations()`, `gaps()`, `repeats()`, and the first violation's
+expected and drawn index. A frame whose index range does not hold exactly its word count is itself
+a violation.
+
+- **Seeks** open a new segment: `reposition()` calls `beginSegment()`, and the next index is
+  accepted whatever it is. Within a segment each index must be the previous plus 1. `segments()`
+  counts them; a chapter played straight through, stops included, is one segment.
+- **Non-prose items:** after a `STOP_NON_PROSE` stop, the next `play()` allows one forward jump
+  (`allowForwardSkip()`), because a source may keep word indexes for a table's or code block's
+  words without handing them out (S1, section 5). The jump is counted in `skippedWords()`. A
+  repeat is never allowed.
+- `resetSession()` resets it together with the meter.
 
 ## Constraints
 
-C++20, no exceptions, RTTI, iostream, locale, regex or filesystem. No heap allocation: a `Frame`
-is a fixed ~300-byte struct, and classification, focus and pacing work on views and stack values.
-The fit callback is a function pointer and context, not `std::function`.
+C++20, no exceptions, RTTI, iostream, locale, regex, threads, sleeping or filesystem. No heap
+allocation: a `Frame` is a fixed ~300-byte struct, classification, focus and pacing work on views
+and stack values, and the scheduler holds one `Frame` and a few counters. The fit callback is a
+function pointer and context, not `std::function`. `requestPause()` uses `std::atomic<bool>`.
+
+Time is `uint32_t` milliseconds from the injected `Clock`, as `millis()` returns them. It wraps
+every 49.7 days; every comparison is wrap-safe (`timeBefore`), which holds while the compared times
+are less than 24.8 days apart. Accumulated active and update times are `uint64_t`.
