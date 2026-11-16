@@ -2,6 +2,15 @@
 
 Nov 16, 2026 · @Christopher
 
+## Change log
+
+**2026-11-17.** The findings of spikes S1, S2 and S3 were written back into this plan, with the lead's corrections. Section 1 is unchanged.
+
+- Sections 4, 5, 7, 8 and 13: WordIndex is its own pass over the chapter XHTML and maps words to pages through CrossPoint's visible-text offsets, so no page table is written; anchors are empty `<span>` elements; footnote and endnote bodies are a note region. Source: `docs/spikes/S1-word-stream.md`.
+- Sections 2, 6, 10, 11 and 13: the Picco has four known panels; trial tables load at run time through the SDK's `setCustomLUT()`; Trials A to C run only on the three SSD1677 panels and Trial D on any recognised panel; pace predictions include the SPI transfer. Source: `docs/spikes/S2-waveforms.md`.
+- Sections 3, 10 and 13: the two-slot table with its offsets and size budget, `boot_app0.bin` at 0x15000, updates shown only on a two-slot table with the Wi-Fi updater pointed at this repo's releases, and new identify checks and an update-path step for the device session. Source: `docs/spikes/S3-two-slot.md`.
+- Sections 2, 3 and 11: corrections learned during the project (upload hazard confirmed, the repo's starting state, where this plan lives, the base-import merge exception, and the live issue map in `docs/STATUS.md`).
+
 ## 1. Summary and confirmed decisions
 
 The reader is built as a public fork of mainline CrossPoint: RSVP works on any EPUB, and checkpoints come from prepared EPUBs that carry their own prompt data. This plan turns the v1 PRD into work that a Fable 5.2 orchestrator can split into GitHub issues for Opus 5.5 implementers. Everything is developed and verified in a simulator, then proven on the physical Picco in one final hands-on session.
@@ -37,10 +46,10 @@ The Picco is an ESP32-S3 reader with an 800x480 SSD1677-class panel, and mainlin
 | Area | Finding | Source |
 | --- | --- | --- |
 | Processor and memory | ESP32-S3, 16 MB flash, 8 MB octal PSRAM | [FreeInk SDK device table](https://github.com/Free-Ink/freeink-sdk) |
-| Panel | 3.97" 800x480 black and white, portrait; controller SSD1677 or SSD2677, detected at boot | [FreeInk SDK](https://github.com/Free-Ink/freeink-sdk) |
+| Panel | 3.97" 800x480 black and white, portrait; one of four panels, identified at boot from the panel's user ID (CMD 0x2E) and, failing that, CMD 0x70: YRD0426, DEPG0397 or OPM040B3 on the SSD1677 driver, or SE0400NQW47 on the stock "SSD2677" driver. Each has its own stock waveforms (spike S2). | [FreeInk SDK](https://github.com/Free-Ink/freeink-sdk) |
 | Touch, light, inputs | Parade TMA525C touch, two-channel warm/cool I2C frontlight, slide switch, power button; nav-button roles are marked provisional | [FreeInk SDK](https://github.com/Free-Ink/freeink-sdk) |
 | Stock partition layout | One app slot at 0xE0000 beside a vendor `safeboot` recovery app. On this layout, updates from the reader are impossible | [CrossPoint PR #3947](https://github.com/crosspoint-reader/crosspoint-reader/pull/3947), [crossplay PR #320](https://github.com/ma-r-s/crossplay/pull/320) |
-| Upload hazard | Upstream `pio run -e picco -t upload` also writes a bootloader at 0x0, a partition table, and `boot_app0` into the stock NVS area | [CrossPoint issue #4248](https://github.com/crosspoint-reader/crosspoint-reader/issues/4248) |
+| Upload hazard | Upstream `pio run -e picco -t upload` also writes a bootloader at 0x0, a partition table, and `boot_app0` into the stock NVS area. Confirmed by reading the build scripts at the pinned commit, although upstream's `platformio.ini` comment claims an app-only upload; see `docs/BASE.md`. | [CrossPoint issue #4248](https://github.com/crosspoint-reader/crosspoint-reader/issues/4248) |
 | Two-slot move | A full flash writes the Arduino bootloader, a two-slot table, otadata and the app. NVS keeps its offset. Onyx's bootloader and safeboot come back only from a backup | [KatiePoint 2.0.0-rc3 release notes](https://github.com/InsiderPhD/crosspoint-reader/releases/tag/2.0.0-rc3) |
 | Stock firmware | Not downloadable anywhere; Boox has reportedly denied warranty claims on flashed units | [KatiePoint release notes](https://github.com/InsiderPhD/crosspoint-reader/releases/tag/2.0.0-rc3) |
 | Simulator | CrossPoint's SDL2 simulator has a Picco profile: 800x480, touch by mouse, slide switch, frontlight state, scripted input and screenshots | [crosspoint-simulator](https://github.com/crosspoint-reader/crosspoint-simulator) |
@@ -51,7 +60,7 @@ One early report said the Picco had 8 MB flash and no PSRAM ([readme.club](https
 
 ### Open questions the device session must answer
 
-- [ ] Which controller this unit carries (SSD1677 or SSD2677). The SDK drives SSD2677 with the panel's built-in waveforms on another device, so custom waveforms may not load on it.
+- [ ] Which panel this unit carries (YRD0426, DEPG0397, OPM040B3 or SE0400NQW47; logged at boot as `[EPD] Picco panel ...`). On the SE0400NQW47 the SDK uploads an undocumented 535-byte waveform on every refresh, so trial tables A to C cannot be designed for it.
 - [ ] Actual partial and full refresh times for a word-sized region and for the full screen.
 - [ ] Whether any shortened waveform leaves text readable after 30 to 60 consecutive updates.
 - [ ] Flash size and PSRAM as reported by the chip.
@@ -75,15 +84,15 @@ Start from mainline CrossPoint ([crosspoint-reader/crosspoint-reader](https://gi
 1. **Pin, don't track.** Record the upstream commit and the FreeInk SDK commit in `docs/BASE.md`. No upstream syncs during v1 unless the orchestrator opens a dedicated issue for one.
 2. **Add, don't rewrite.** New code lives in new directories (section 4). Edits to upstream files are limited to registration points: activity routing, reader menu entries, settings, build environments.
 3. **Follow upstream conventions.** Read `AGENTS.md`, `CLAUDE.md` and `docs/contributing/` first and keep `clang-format` and `pio check` clean, so the fork stays easy to rebase later.
-4. **Check the existing repo first.** As of 16 Nov 2026, c-tphr/eink-learner-aid holds one initial commit with only a README on its main branch. Task F1 merges the pinned mainline commit, with its history, into main, keeps the project's own README and moves upstream's under docs/. If the repo holds anything else by then, the orchestrator stops and asks the owner before continuing.
+4. **Check the existing repo first.** As of 16 Nov 2026, c-tphr/eink-learner-aid holds one initial commit with only a README on its main branch. Task F1 merges the pinned mainline commit, with its history, into main, keeps the project's own README and moves upstream's under docs/. If the repo holds anything else by then, the orchestrator stops and asks the owner before continuing. (On 16 Nov 2026 the repo also held the PRD and this plan; the owner confirmed that starting state.)
 
 ### Two-slot layout
 
 Mainline targets the stock single-slot table and hides reader-side updates on the Picco. The owner chose the two-slot layout, so this project adds its own table and build target.
 
-- Add `partitions_picco_2slot.csv` and a `picco_2slot` environment. NVS stays at its stock offset so settings survive, as in the KatiePoint precedent.
-- 16 MB of flash split into two app slots leaves roughly 7.5 to 7.9 MB per slot. A CI gate fails any build whose image exceeds the slot size minus a 10% margin.
-- Re-enable SD and Wi-Fi updates only when the running table has two app slots; keep them hidden otherwise.
+- Add `partitions_picco_2slot.csv` and a `picco_2slot` environment. NVS (0x9000, 48 KiB) and otadata (0x15000, 8 KiB) keep their stock offsets and sizes, so the move never writes the stock NVS area, as in the KatiePoint precedent. CrossPoint's own settings live on the SD card. `boot_app0.bin` is written at the otadata offset 0x15000, never at the framework default 0xE000, which lies inside the stock NVS. Table and reasoning: `docs/spikes/S3-two-slot.md`.
+- Two app slots of 0x7E0000 bytes (8,257,536; 7.875 MiB) at 0x20000 and 0x800000; safeboot and spiffs are dropped, coredump stays (0xFF0000). A CI gate fails any build whose `firmware.bin` exceeds the slot minus 10%, 7,431,782 bytes. Upstream's 2.0.0 Picco image is 5,386,144 bytes.
+- Re-enable SD updates only when the running table has exactly two app slots and the next slot is not the running one; keep them hidden otherwise. As built, the Wi-Fi updater fetches upstream's Picco image (`src/network/OtaUpdater.cpp:22`), which would replace this firmware. Task D4 points it at this repo's releases under the feature flag, the release workflow publishes the asset under the name the updater expects, and Wi-Fi update is shown under the same two-slot condition.
 - Never use the upstream `upload` target on the Picco ([issue #4248](https://github.com/crosspoint-reader/crosspoint-reader/issues/4248)). The project ships its own flashing scripts, which print every offset they will write and refuse anything unexpected (section 10).
 
 ## 4. Firmware architecture
@@ -105,9 +114,10 @@ The logic lives in two portable C++ libraries with no hardware dependencies, so 
 
 A reading position is a chapter index plus a word index within that chapter. Both reading modes, checkpoint triggers, rereads and saved state all use this one form.
 
-- WordIndex is built once per chapter, on first open, by a pass over the same parsed content the page renderer uses. It is stored in the book's existing cache folder and can always be rebuilt.
-- Page view needs a table from page number to first word index, written when a chapter is laid out. How to obtain this from CrossPoint's layout cache is the first spike (task S1), because it decides how invasive the integration is.
-- Elements whose id starts with `rsvp-` become anchors in the stream (section 5). Images, tables and code blocks become non-prose markers that pause RSVP.
+- WordIndex is built once per chapter, on first use, by its own light pass over the chapter XHTML the page renderer parses. Each word records where it sits in CrossPoint's existing content coordinate: the count of visible codepoints in the chapter body. The page renderer records the same count for every page, and reading progress already uses it. WordIndex does not depend on font or layout settings, is stored in the book's existing cache folder and can always be rebuilt (spike S1, `docs/spikes/S1-word-stream.md`).
+- Page view maps pages and words through that coordinate: the section cache already stores each page's start offset, so a page's first word is a binary search in WordIndex, and a word's page is CrossPoint's existing offset-to-page lookup. No page table is written and no layout code is changed. A font or margin change re-lays out pages without changing any word index.
+- Elements whose id starts with `rsvp-` become anchors in the stream (section 5). Images, tables (`<table>`) and code blocks (`<pre>`) become non-prose markers that pause RSVP. Footnote reference marks are left out of the word text. The exact word rules are in `docs/spikes/S1-word-stream.md`, section 5, and the preparation tool follows them.
+- Words inside footnote or endnote bodies are flagged as a note region. RSVP passes over them without pausing; page view shows them as usual.
 
 ### Constraints
 
@@ -122,7 +132,7 @@ A reading position is a chapter index plus a word index within that chapter. Bot
 | --- | --- | --- |
 | Global RSVP defaults (WPM, words per update, display profile) | CrossPoint's settings file | Yes |
 | Per-book overrides, position, grades, in-progress checkpoint or reread | `<book file name>.rsvp-state.json` beside the book | Yes |
-| WordIndex and page-to-word tables | The book's folder under `/.crosspoint/` | No, rebuilt on demand |
+| WordIndex (words, anchors, non-prose markers per chapter) | `rsvp/` in the book's folder under `/.crosspoint/` | No, rebuilt on demand. Pages map to words through the section cache CrossPoint already keeps |
 | Benchmark and acceptance results | `/rsvp-bench/` on the SD card | Yes |
 
 ## 5. Prepared book format
@@ -133,7 +143,7 @@ A prepared book is a copy of the original EPUB with two additions: invisible anc
 
 - File name: `<title>.prepared.epub`. The original EPUB is never modified; its SHA-256 is recorded in the prepared file and checked by the validator.
 - Checkpoint data: `rsvp/checkpoints.json` next to the package (OPF) file, declared in the package manifest with id `rsvp-checkpoints` and media type `application/json`. The firmware treats a book as prepared when that manifest item exists.
-- Anchors: empty inline elements inserted into the chapter XHTML, with ids `rsvp-<section id>-start` and `rsvp-<section id>-end`. They render as nothing.
+- Anchors: empty `<span>` elements, for example `<span id="rsvp-s0007-end"></span>`, inserted between words (never inside a word), with ids `rsvp-<section id>-start` and `rsvp-<section id>-end`. They render as nothing, and CrossPoint's own anchor map ignores ids on `<span>`.
 - No other change to the book's text or markup. The validator proves this by comparing the word sequence of the original and the prepared copy.
 
 Anchors in the markup, not word counts, define the boundaries. The Python preparation tool and the C++ firmware split words independently, and an anchor sits at the same place in the text for both.
@@ -191,7 +201,7 @@ The validation report is delivered beside the prepared file as `<title>.validati
 
 ## 6. RSVP engine and display strategy
 
-Playback never drops or reorders a word: when the panel cannot keep up, each update simply takes as long as it takes, and the pause screen reports the pace actually delivered. If the Picco's panel behaves like the Xteink X4's, the 240 WPM single-word default will deliver roughly 100 to 111 WPM on the stock refresh. Reaching 240 with one word per update needs a refresh near 160 ms, which only the fastest trial waveform could provide.
+Playback never drops or reorders a word: when the panel cannot keep up, each update simply takes as long as it takes, and the pause screen reports the pace actually delivered. From the SDK's waveform tables (spike S2), the 240 WPM single-word default is predicted to deliver roughly 125 WPM on the stock refresh of the DEPG0397 panel, and roughly 100 to 111 WPM if the panel behaves like the Xteink X4's. Reaching 240 with one word per update needs a complete update, transfer included, of about 190 ms; Trial C is predicted to fall just short (about 232 WPM), and only Trial D on some panels might get there.
 
 ### Pacing
 
@@ -221,17 +231,17 @@ A display profile is a named refresh strategy: which waveform is used for word u
 
 | Profile | Word update | Predicted delivered pace, one word per update | Status |
 | --- | --- | --- | --- |
-| Stock | CrossPoint's existing fast refresh on the word band | About 100 to 111 WPM if timings match the X4 (about 540 ms per update) | Default |
-| Trial A | Shortened waveform, about 300 ms drive | About 167 WPM | Experimental |
-| Trial B | Shortened waveform, about 220 ms drive | About 214 WPM | Experimental |
-| Trial C | Shortened waveform, about 160 ms drive | About 273 WPM | Experimental |
-| Trial D | The controller's built-in non-flashing waveform, if the driver exposes it for this panel | Unknown until measured | Experimental |
+| Stock | CrossPoint's fast refresh of the full frame (only the word band changes), using the panel's reading waveform | DEPG0397: about 380 ms waveform plus at least 38 ms transfer, about 125 WPM; other panels unknown until measured | Default |
+| Trial A | Shortened waveform, about 300 ms drive | About 151 WPM | Experimental |
+| Trial B | Shortened waveform, about 220 ms drive | About 188 WPM | Experimental |
+| Trial C | Shortened waveform, about 160 ms drive | About 232 WPM | Experimental |
+| Trial D | The panel's stock non-flashing UI waveform (BOOX mode 3); 160 ms on DEPG0397, about 80 ms on YRD0426/OPM040B3, unknown on SE0400NQW47 | Unknown until measured | Experimental |
 
-Predictions assume the 60 ms dwell and are arithmetic, not measurements. Two words per update on the stock profile would deliver about 200 to 222 WPM, which is the dependable route to the owner's target range if no trial waveform is clean.
+Predictions assume the 60 ms dwell and are arithmetic, not measurements. Predictions include the at least 38 ms needed to send two 48 KB planes at 20 MHz. Two words per update on the stock profile would deliver about 200 to 222 WPM at X4 timings, and the full 240 if the DEPG0397 prediction holds, which makes it the dependable route to the owner's target range if no trial waveform is clean.
 
-- **How trial waveforms are supplied.** The FreeInk SDK injects waveforms through its SSD1677 configuration struct, selected at build time. Trial profiles add alternative tables through that same mechanism and switch between them at run time; the SDK itself is not forked unless spike S2 shows no other way.
+- **How trial waveforms are supplied.** The SDK's `Ssd1677Config` is chosen once from the panel ID and cannot change at run time. Trial tables are loaded per update through the SDK's public `setCustomLUT()`, exposed by one pass-through in `HalDisplay`. The SDK is not forked.
 - **Clearing.** Every profile runs a clearing refresh at paragraph and section ends once at least 60 word updates have passed, and unconditionally after 120. Trial profiles may use lower limits.
-- **Safety limits.** Trial profiles are off by default, are disabled automatically if the unit reports an SSD2677 controller, and are always followed by a clearing refresh when playback pauses. Shortened waveforms can leave faint residue and, with long uninterrupted use, may stress the panel; the limits above bound that exposure.
+- **Safety limits.** Trial profiles are off by default and are always followed by a clearing refresh when playback pauses. Trials A to C run only on the three SSD1677 panels. Trial D runs on any recognised panel because it uses only stock waveforms. All trials are disabled on an unrecognised panel and while the screen is inverted. Trial tables keep the panel's stock voltages, and tables A to C leave unchanged pixels undriven. Shortened waveforms can leave faint residue and, with long uninterrupted use, may stress the panel; the limits above bound that exposure.
 - **Outcome.** At the end of the device session the owner picks which profile to keep on the device itself. A trial profile rated clean becomes a selectable setting; otherwise only Stock remains visible.
 
 ## 7. Checkpoint flow, rereading and saved state
@@ -247,7 +257,7 @@ Only the first grade given to a prompt is stored, so the loop through a reread c
 - A checkpoint is armed while the reading position is inside its section and fires when ordinary forward reading crosses the section's end anchor. "Ordinary forward reading" means RSVP playback or a next-page action.
 - Table-of-contents jumps, go-to-percent, bookmarks, progress sync and sentence stepping carry a navigation source that never fires checkpoints, even when they pass several.
 - In RSVP, playback stops with the last word of the section on screen; nothing beyond the break is drawn.
-- In page view, the checkpoint appears when the reader advances from the page holding the end anchor. Text after the break on that same page will already have been visible, which page layout makes unavoidable.
+- In page view, the checkpoint appears when the reader advances from the page that shows the last character of the section's last word. Text after the break on that same page will already have been visible, which page layout makes unavoidable.
 - Reading through the section again later fires the checkpoint again and presents all its prompts, with saved first grades shown as already recorded.
 - During a reread, the linked section's own checkpoint is suppressed. Reaching the end anchor, or choosing Return early, goes back to the prompt.
 
@@ -309,6 +319,7 @@ Preparation is one Claude Code command, `/prep-book <path to EPUB>`, that runs a
 
 - The checkpoint file matches the schema, and every id is unique.
 - Every checkpoint names one existing section; every section's anchors exist in the named chapter, in order, without overlap.
+- Every anchor sits at a word boundary as the firmware splits words, and no anchor is inside a table or code block.
 - No section spans chapters. Sections cover the book's body, with any excluded front or back matter listed explicitly.
 - The word sequence of the prepared copy equals that of the original, and the original's hash is unchanged.
 - Prompt and answer length limits, plain-text only, non-empty.
@@ -402,7 +413,7 @@ The orchestrator publishes a GitHub release containing everything the session ne
 
 | Item | Purpose |
 | --- | --- |
-| `picco-2slot-<version>.zip` | Bootloader, two-slot partition table, boot data and app images, plus `flash-plan.json` listing every offset and SHA-256 |
+| `picco-2slot-<version>.zip` | Bootloader (0x0), two-slot partition table (0x8000), boot data `boot_app0.bin` (0x15000) and app (0x20000), never the merged `firmware.factory.bin`, plus `flash-plan.json` listing every offset and SHA-256 |
 | `session.ps1` | One entry point: identify, back up, flash, monitor, restore. Sets up Python and `esptool` in a private folder on first run |
 | `DEVICE_SESSION.md` | The checklist below, with expected screens and stop conditions |
 | `sd-card/` | Fixture book, prepared real book, and one ordinary EPUB |
@@ -411,15 +422,16 @@ The orchestrator publishes a GitHub release containing everything the session ne
 ### Session steps
 
 1. **Prepare.** Charge the Picco. Leave it on its Home screen, not in USB drive mode, and connect it by USB. Note the stock firmware version shown in its settings.
-2. **Identify (read-only).** `session.ps1 identify` records chip type, flash size, PSRAM and the partition table. It stops unless it finds an ESP32-S3 with 16 MB flash and the stock layout containing `safeboot`.
+2. **Identify (read-only).** `session.ps1 identify` records chip type, flash size, PSRAM and the partition table. It stops unless it finds an ESP32-S3 with 16 MB flash and the stock layout containing `safeboot`. It also reads the security eFuses and stops if Secure Boot or flash encryption is enabled, if download mode is restricted, or if the flash is octal. It saves the stock bootloader header and stops unless the partition table matches `partitions_picco.csv` exactly.
 3. **Back up (read-only).** `session.ps1 backup` reads the full flash twice and continues only if both SHA-256 hashes match. The owner copies the backup file to a second location before going on.
 4. **Confirm.** The script prints the flash plan and asks the owner to type a confirmation phrase. This is the point of no return for Onyx's bootloader.
 5. **Flash.** `session.ps1 flash` writes only the offsets in the plan, verifies each, and refuses any image whose hash differs from the plan.
 6. **First boot.** `session.ps1 monitor` starts logging serial output to a file. The owner confirms the home screen appears and copies the `sd-card/` files across by Wi-Fi transfer or card reader.
-7. **Display benchmark.** From the Device test menu, run the sweep (below) for the stock profile and each trial profile, rating each when asked.
-8. **Guided acceptance.** Run the on-device walk-through of the PRD criteria, tapping pass or fail at each step.
-9. **Choose a profile.** Pick the display profile to keep.
-10. **Return evidence.** Attach the files from `/rsvp-bench/` and the serial log to the GitHub issue titled "Device session results".
+7. **Prove the update path (optional).** With the cable still attached, install `update.bin` from the SD card through Settings and confirm the device reboots into it (it now runs from the second slot). Record the serial log.
+8. **Display benchmark.** From the Device test menu, run the sweep (below) for the stock profile and each trial profile, rating each when asked.
+9. **Guided acceptance.** Run the on-device walk-through of the PRD criteria, tapping pass or fail at each step.
+10. **Choose a profile.** Pick the display profile to keep.
+11. **Return evidence.** Attach the files from `/rsvp-bench/` and the serial log to the GitHub issue titled "Device session results".
 
 Steps 2 and 3 change nothing on the device. The owner may run them earlier, at no risk, to shorten the final session and give the agents confirmed hardware facts sooner.
 
@@ -434,7 +446,7 @@ Steps 2 and 3 change nothing on the device. The owner may run them earlier, at n
 | RSVP playback, grouped | The same passage at 240 WPM with 2 and with 3 words per update | Delivered WPM, owner rating |
 | Endurance | 300 consecutive updates under the profile's clearing policy | Owner rating, whether residue was visible |
 
-Ratings are Clean, Tolerable or Unreadable. Each results file also records the controller model, firmware build, profile identifiers, battery level and the room temperature the owner enters. The same figures are printed to the serial log, so a failed SD write does not lose the session.
+Ratings are Clean, Tolerable or Unreadable. Each results file also records the panel name and controller model, firmware build, profile identifiers, battery level and the room temperature the owner enters. The same figures are printed to the serial log, so a failed SD write does not lose the session.
 
 ### The PRD's on-device criterion
 
@@ -445,6 +457,7 @@ The guided acceptance plays the passage at the 240 WPM default and at a 600 WPM 
 | If | Then |
 | --- | --- |
 | Identify finds a different chip, flash size or layout | Stop. Nothing has changed. Report the output in the issue. |
+| Identify finds Secure Boot, flash encryption, restricted download mode, octal flash, or a partition table that differs from `partitions_picco.csv` | Stop. Nothing has changed. Report the output in the issue. |
 | The two backup hashes differ | Repeat the backup with another cable or port. Do not flash. |
 | Flashing fails part-way or the device does not boot | `session.ps1 restore <backup file>` writes the backup from offset 0 and returns the device to stock. |
 | The home screen appears but touch or keys are wrong | Continue with whichever input works; note it. Bindings are fixed by an SD-card update afterwards. |
@@ -461,7 +474,7 @@ Fable 5.2 (effort: high) leads: it turns this plan into GitHub issues, assigns e
 - [x] Supply the repo's owner/name: c-tphr/eink-learner-aid (public; push access from cloud sessions confirmed).
 - [ ] Attach the repo and the read-only repos in section 12 to the Claude Code cloud environment, and enter the allowlist.
 - [ ] In the repo settings, enable GitHub Actions and "Automatically delete head branches".
-- [ ] Commit this plan to the repo as `docs/PLAN.md` (Markdown export of this doc), so every session reads the same text.
+- [x] Commit this plan to the repo as `docs/PLAN.md` (done; the plan was first committed at the repo root and moved in pull request #41).
 
 ### Operating rules
 
@@ -470,7 +483,7 @@ Fable 5.2 (effort: high) leads: it turns this plan into GitHub issues, assigns e
 3. **Implementer's definition of done.** All acceptance checks pass locally; CI is green; tests were added with the change; the pull request lists what was run and attaches outputs or screenshots; no unrelated edits.
 4. **Independent validation.** The orchestrator checks out the branch in its own session, runs the acceptance commands again, reads the diff against the plan, and for user-facing work opens the simulator screenshots. It does not rely on the implementer's report.
 5. **Rework.** A failed validation gets a comment listing each failed check with its output, the label `needs-rework`, and reassignment. The same issue stays open until it passes.
-6. **Merging.** The orchestrator squash-merges validated pull requests into `main` without waiting for the owner.
+6. **Merging.** The orchestrator squash-merges validated pull requests into `main` without waiting for the owner. The one exception is the base import (F1, pull request #42), merged with a merge commit to keep upstream history.
 7. **Escalation.** The orchestrator stops and asks the owner only for: a decision this plan fixes as owner-decided, a blocked network host, anything that changes scope, or two consecutive failed reworks on one issue.
 8. **Plan changes.** Findings from spikes that change the design are written back to `docs/PLAN.md` by pull request, with the reason, before dependent issues start.
 
@@ -506,7 +519,7 @@ M1 and M2 run in parallel after M0. M3 can run alongside M4. M5 needs M3 and M4.
 
 ### Starting task list
 
-The orchestrator splits these further where a task would exceed one focused pull request.
+The orchestrator splits these further where a task would exceed one focused pull request. The live breakdown, with the further splits and added tasks, is the issue map in `docs/STATUS.md`.
 
 | ID | Task | Key acceptance check |
 | --- | --- | --- |
@@ -537,9 +550,9 @@ The orchestrator splits these further where a task would exceed one focused pull
 | C4 | Reread in either mode and return | Scenario for PRD criterion 2 |
 | C5 | State file, atomic save, restore on open | Kill-and-restart scenarios for prompt and reread |
 | D1 | DisplayProfile on device: stock profile, clearing policy, timing capture | Builds; simulator backend unchanged |
-| D2 | Trial profiles A to D with safety limits | Disabled on SSD2677 path; off by default; unit test on limits |
+| D2 | Trial profiles A to D with safety limits | Trials A to C disabled on SSD2677 path; off by default; unit test on limits |
 | D3 | DeviceTestActivity: sweep, ratings, guided acceptance, results files | Full sweep runs in the simulator and writes valid results |
-| D4 | `picco_2slot` target, size gate, updates enabled on two-slot only | Image under budget; update menu hidden on single-slot table |
+| D4 | `picco_2slot` target, size gate, updates enabled on two-slot only | Image under budget; update menu hidden on single-slot table; Wi-Fi updater points at this repo's releases |
 | D5 | `session.ps1`, flash plan, offset guard, dry run, restore | Guard tests pass; dry run prints only planned offsets |
 | D6 | `DEVICE_SESSION.md` and the results-issue template | Checklist reviewed against section 10 step by step |
 | A1 | Full acceptance run in the simulator and release of the device kit | Report maps each PRD criterion to passing evidence |
@@ -608,10 +621,11 @@ The largest risk is the combination the owner chose knowingly: one device sessio
 | Risk | Likelihood | Consequence | Mitigation |
 | --- | --- | --- | --- |
 | Flash goes wrong in the only session | Low to medium | Device unusable until restored | Two matching backups before any write; offset guard; dry run; `restore` command; optional early read-only backup |
-| Stock refresh is far slower than 240 WPM needs | High | Default pace delivers about 100 to 111 WPM single-word | Expected and handled by the PRD's slowdown; two words per update offered; trial profiles |
-| No trial waveform is clean, or the unit has an SSD2677 | Medium | No fast setting in v1 | Stock stays default; outcome recorded; no further waveform work in v1 |
+| The generic Arduino bootloader does not boot this unit (security eFuses, flash type or voltage) | Low | Device does not boot until restored | Identify-step eFuse and header checks; same bootloader already runs upstream's other ESP32-S3 octal-PSRAM boards; restore from backup over ROM download mode |
+| Stock refresh is far slower than 240 WPM needs | High | Default pace delivers about 100 to 125 WPM single-word | Expected and handled by the PRD's slowdown; two words per update offered; trial profiles |
+| No trial waveform is clean, or the unit has the SE0400NQW47 panel (only Stock and Trial D available) | Medium | No fast setting in v1 | Stock stays default; outcome recorded; no further waveform work in v1 |
 | Shortened waveforms stress the panel | Low | Residue or long-term wear | Off by default; bounded runs; clearing refreshes; owner chooses whether to keep one |
-| Word and page mapping in CrossPoint's engine is harder than assumed | Medium | Delays M4 and M5 | Spike S1 runs first; fallback is a separate, simpler word pass with approximate page mapping at paragraph level |
+| Word and page mapping in CrossPoint's engine is harder than assumed | Low (spike S1) | Delays M4 and M5 | Spike S1 found an exact mapping through CrossPoint's visible-text offsets with no layout changes, so the paragraph-level fallback is not needed. The remaining risk is the word pass counting offsets differently from the renderer, guarded by a host parity test (R3). |
 | Simulator differs from the device (button roles, touch, memory) | Medium | Input or layout surprises in the session | Single remappable control table; both input paths for every action; fixes shipped by SD update |
 | Two-slot image outgrows its slot | Low | Build cannot be flashed | CI size gate with 10% margin from the first build |
 | Cloud network blocks a build dependency | Medium | Agents cannot build | Task F2 smoke test before any feature work; owner adds hosts |
