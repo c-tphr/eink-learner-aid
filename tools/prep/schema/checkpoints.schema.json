@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/c-tphr/eink-learner-aid/tools/prep/schema/checkpoints.schema.json",
   "title": "RSVP checkpoint file, version 1",
-  "description": "rsvp/checkpoints.json inside a prepared EPUB (docs/PLAN.md section 5). This schema is one layer of validation; cross-reference rules (unique ids, section references, anchor names, plain text) are applied by tools/prep/checkpoints.py and listed in tools/prep/README.md. Unknown members are allowed at every level and must be ignored by readers; a change a version 1 reader cannot safely ignore needs a new version number.",
+  "description": "rsvp/checkpoints.json inside a prepared EPUB (docs/PLAN.md section 5). This schema is one layer of validation; cross-reference rules (unique ids, section references, anchor names, plain text) are applied by tools/prep/checkpoints.py and listed in tools/prep/README.md. The maxItems and maxLength values mirror the firmware limits in lib/CheckpointCore/CheckpointLimits.h; limits a schema cannot express (file size, total prompts, distinct chapters, string pool, JSON structure) are checked by tools/prep/limits.py. Unknown members are allowed at every level and must be ignored by readers; a change a version 1 reader cannot safely ignore needs a new version number.",
   "$comment": "Every pattern ends in $(?!\\n): Python's re.search lets $ match before a trailing newline, the lookahead closes that gap and is a no-op in ECMA-262. 'Characters' in minLength/maxLength are Unicode code points. 'integer' means a JSON number written without fraction or exponent; the Python validator enforces this with a strict type checker (stock validators would accept 1.0).",
   "type": "object",
   "required": ["format", "version", "book", "sections", "checkpoints"],
@@ -15,13 +15,16 @@
     },
     "book": { "$ref": "#/$defs/book" },
     "sections": {
+      "description": "At most 512 (firmware MAX_SECTIONS).",
       "type": "array",
       "minItems": 1,
+      "maxItems": 512,
       "items": { "$ref": "#/$defs/section" }
     },
     "checkpoints": {
-      "description": "May be empty. Order is not significant.",
+      "description": "May be empty. Order is not significant. At most 512 (firmware MAX_CHECKPOINTS).",
       "type": "array",
+      "maxItems": 512,
       "items": { "$ref": "#/$defs/checkpoint" }
     }
   },
@@ -46,10 +49,10 @@
       "type": "object",
       "required": ["title", "language", "source_sha256", "instructions_version"],
       "properties": {
-        "title": { "$ref": "#/$defs/nonEmptyString" },
-        "language": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString", "maxLength": 300 },
+        "language": { "$ref": "#/$defs/nonEmptyString", "maxLength": 35 },
         "source_sha256": { "$ref": "#/$defs/sha256" },
-        "instructions_version": { "$ref": "#/$defs/nonEmptyString" }
+        "instructions_version": { "$ref": "#/$defs/nonEmptyString", "maxLength": 32 }
       }
     },
     "section": {
@@ -57,7 +60,7 @@
       "required": ["id", "chapter_href", "start_anchor", "end_anchor", "label", "word_count"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
-        "chapter_href": { "$ref": "#/$defs/nonEmptyString" },
+        "chapter_href": { "$ref": "#/$defs/nonEmptyString", "maxLength": 255 },
         "start_anchor": {
           "description": "Must equal 'rsvp-' + id + '-start' (cross-reference rule 'anchor-name').",
           "$ref": "#/$defs/nonEmptyString"
@@ -66,7 +69,7 @@
           "description": "Must equal 'rsvp-' + id + '-end' (cross-reference rule 'anchor-name').",
           "$ref": "#/$defs/nonEmptyString"
         },
-        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "label": { "$ref": "#/$defs/nonEmptyString", "maxLength": 200 },
         "word_count": {
           "type": "integer",
           "minimum": 1,
@@ -84,9 +87,10 @@
           "$ref": "#/$defs/id"
         },
         "prompts": {
-          "description": "Kept in file order.",
+          "description": "Kept in file order. At most 32 (firmware MAX_PROMPTS_PER_CHECKPOINT).",
           "type": "array",
           "minItems": 1,
+          "maxItems": 32,
           "items": { "$ref": "#/$defs/prompt" }
         }
       }
