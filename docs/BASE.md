@@ -55,6 +55,12 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `src/main.cpp` | **Modified, two lines added**: `#include "reading/RsvpLinkCheck.h"` and `runRsvpLinkCheck();` in `setup()`, after the "Starting CrossPoint version" log line | Temporary start-up check that links RsvpCore and CheckpointCore; an empty inline function without the flag (task F4). Task C2 replaces it with ReadingSession |
 | `src/RsvpFeature.h`, `src/reading/`, `src/activities/rsvp/`, `src/activities/checkpoint/`, `src/display/`, `src/activities/devicetest/`, `docs/ARCHITECTURE-RSVP.md` | Added | Feature flag header and the module skeletons, compiled only with the flag (task F4) |
 | `.gitignore` | Two negation lines after `.claude/*` so `.claude/commands/` and `.claude/agents/` are tracked | The `/prep-book` command and the checker subagent live there (P4) |
+| `.github/workflows/project-ci.yml`, `.github/scripts/check-format.sh`, `sim-smoke.sh`, `firmware-size.sh`, `no_skips.py`, `device_session_fixture.py`, `docs/CI.md` | Added | This project's CI (task F3); `docs/CI.md` describes it |
+| `.github/workflows/ci.yml` ("CI (build)") | **Modified**: every job (`clang-format`, `cppcheck`, `build`, `unit-tests`, `test-status`) gets `if: github.repository == 'crosspoint-reader/crosspoint-reader'` (`test-status`: `always() &&` that) and a one-line comment | On every pull request it built eight devices, including the `custom_sdkconfig` ones, ran clang-format over every upstream file and duplicated the host tests; `project-ci.yml` covers this project's checks, with one other device (`x4pro`) as the compile guard (task F3) |
+| `.github/workflows/pr-formatting-check.yml` ("PR Formatting") | **Modified**: `if:` as above on its one job | Requires Conventional Commits titles (`feat: ...`); this project's titles are `<task id>: <title>` (`docs/PLAN.md` section 11), so it failed on every pull request. It runs on `pull_request_target`, which uses the base branch's copy, so it stops only once this is on `main` (task F3) |
+| `.github/workflows/pr-firmware-links.yml` | **Modified**: `&& github.repository == ...` added to its job's `if:` | Comments on pull requests (needs `pull-requests: write`) with links to "CI (build)" artifacts and upstream's flash tool; nothing to link here, and no writes from CI in this project (task F3) |
+| `.github/workflows/release.yml` | **Modified**: `if:` as above on both jobs | Builds and attaches upstream's eight-device release assets on a published release, with upstream's `FREEINK_LCP_RELEASE_KEY` secret and `contents: write`; this project's release workflow is task A0 (task F3) |
+| `.github/workflows/release-fonts.yml` | **Modified**: `if:` as above on its job | Manual only, but needs the `FONTS_REPO_TOKEN` secret and publishes to `crosspoint-reader/crosspoint-fonts`; cannot work here (task F3) |
 
 Upstream's own `docs/` files are merged into `docs/` unchanged; no file names collided. Files that later tasks add in their own directories (for example `tools/prep/`) are new files, not changes to upstream files; `git diff --diff-filter=MD` (step 3 below) lists only upstream files that were modified or deleted.
 
@@ -117,7 +123,8 @@ git merge-base --is-ancestor 490813ff4541e74e654f54f66ece9efc908361a0 HEAD && ec
 git submodule status
 
 # 3. Outside docs/ and README.md, the only upstream files modified are platformio.ini (four lines),
-#    test/CMakeLists.txt (two lines) and src/main.cpp (two lines), all in the table above;
+#    test/CMakeLists.txt (three lines), src/main.cpp (two lines), .gitignore (two lines) and five
+#    .github/workflows files (job conditions), all in the table above;
 #    everything else listed is an added file from the table above
 git diff --stat --diff-filter=MD 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 git diff --stat 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'

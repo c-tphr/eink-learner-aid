@@ -12,6 +12,8 @@ permissions:
 
 jobs:
   build-release:
+    # eink-learner-aid: upstream-only (docs/BASE.md, "What differs from the pinned commit").
+    if: github.repository == 'crosspoint-reader/crosspoint-reader'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -143,6 +145,8 @@ jobs:
 
   publish-release:
     needs: build-release
+    # eink-learner-aid: upstream-only (docs/BASE.md, "What differs from the pinned commit").
+    if: github.repository == 'crosspoint-reader/crosspoint-reader'
     runs-on: ubuntu-latest
     permissions:
       contents: write
