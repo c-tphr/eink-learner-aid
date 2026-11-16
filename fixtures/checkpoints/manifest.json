@@ -1,0 +1,1210 @@
+{
+  "description": "Every checkpoint sample with its expected result. See tools/prep/README.md for the format rules, issue codes and how parsers consume this file.",
+  "manifest_version": 1,
+  "samples": [
+    {
+      "file": "valid/plan-example.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "The version 1 example from docs/PLAN.md section 5 with a real SHA-256 substituted."
+    },
+    {
+      "file": "valid/minimal.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Smallest legal file: one section, empty checkpoints array."
+    },
+    {
+      "file": "valid/base.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Two sections with one single-prompt checkpoint each; the base most invalid samples mutate."
+    },
+    {
+      "file": "valid/section-without-checkpoint.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "A front-matter section with no checkpoint beside sections that have one (rule 3)."
+    },
+    {
+      "file": "valid/multi-prompt.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "One checkpoint with three prompts; readers must keep file order (rule 3)."
+    },
+    {
+      "file": "valid/checkpoints-out-of-section-order.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Checkpoint array order does not have to follow section order."
+    },
+    {
+      "file": "valid/separate-id-namespaces.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Section, checkpoint and prompt ids are separate namespaces: one id 'a1' used once in each is valid."
+    },
+    {
+      "file": "valid/boundary-ascii.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Prompt of exactly 300 and answer of exactly 600 ASCII code points (the limits are inclusive)."
+    },
+    {
+      "file": "valid/boundary-two-byte.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Prompt of 300 and answer of 600 code points U+00E9 (600 and 1200 UTF-8 bytes): limits count code points, not bytes."
+    },
+    {
+      "file": "valid/boundary-three-byte.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Prompt of 300 and answer of 600 code points U+65E5 (900 and 1800 UTF-8 bytes)."
+    },
+    {
+      "file": "valid/boundary-four-byte.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Prompt of 300 and answer of 600 code points U+1F600 (1200/2400 UTF-8 bytes, 600/1200 UTF-16 units): count code points, not UTF-16 units."
+    },
+    {
+      "file": "valid/non-ascii-text.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Raw (unescaped) non-ASCII UTF-8 in title, label, prompt and answer, including a combining accent and an emoji."
+    },
+    {
+      "file": "valid/escaped-strings.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "JSON escapes must be decoded before any rule: \\u00e9, \\\", \\\\, \\/, \\n, upper- and lower-case surrogate pairs, an anchor and href spelled with escapes."
+    },
+    {
+      "file": "valid/unknown-members.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Unknown members at every level are allowed and ignored, including markup in an unknown string member."
+    },
+    {
+      "file": "valid/plain-text-lookalikes.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Text that looks like markup but is not under the plain-text definition ('<' not followed by a letter, '/', '!' or '?'; '&' without a complete reference), plus newlines."
+    },
+    {
+      "file": "valid/boundary-id-and-word-count.json",
+      "verdict": "valid",
+      "layer": null,
+      "issues": [],
+      "reason": "Section id of exactly 64 characters and word_count 2147483647 (both limits inclusive)."
+    },
+    {
+      "file": "invalid/parse-malformed.json",
+      "verdict": "invalid",
+      "layer": "parse",
+      "issues": [
+        {
+          "code": "parse",
+          "path": ""
+        }
+      ],
+      "reason": "Trailing comma after the last member: not JSON."
+    },
+    {
+      "file": "invalid/parse-empty.json",
+      "verdict": "invalid",
+      "layer": "parse",
+      "issues": [
+        {
+          "code": "parse",
+          "path": ""
+        }
+      ],
+      "reason": "Empty file."
+    },
+    {
+      "file": "invalid/parse-not-utf8.json",
+      "verdict": "invalid",
+      "layer": "parse",
+      "issues": [
+        {
+          "code": "parse",
+          "path": ""
+        }
+      ],
+      "reason": "Title contains byte 0xE9 (Latin-1), which is not valid UTF-8."
+    },
+    {
+      "file": "invalid/parse-bom.json",
+      "verdict": "invalid",
+      "layer": "parse",
+      "issues": [
+        {
+          "code": "parse",
+          "path": ""
+        }
+      ],
+      "reason": "File starts with a UTF-8 byte order mark."
+    },
+    {
+      "file": "invalid/parse-nan.json",
+      "verdict": "invalid",
+      "layer": "parse",
+      "issues": [
+        {
+          "code": "parse",
+          "path": ""
+        }
+      ],
+      "reason": "NaN is not a JSON literal."
+    },
+    {
+      "file": "invalid/parse-lone-surrogate.json",
+      "verdict": "invalid",
+      "layer": "parse",
+      "issues": [
+        {
+          "code": "parse",
+          "path": "/sections/0/label"
+        }
+      ],
+      "reason": "A \\ud800 escape without its low surrogate does not decode to a Unicode scalar value."
+    },
+    {
+      "file": "invalid/parse-duplicate-key.json",
+      "verdict": "invalid",
+      "layer": "parse",
+      "issues": [
+        {
+          "code": "duplicate-key",
+          "path": ""
+        }
+      ],
+      "reason": "An object has the member 'label' twice; JSON libraries disagree on which wins, so it is rejected."
+    },
+    {
+      "file": "invalid/version-2.json",
+      "verdict": "unsupported-version",
+      "layer": "version",
+      "issues": [
+        {
+          "code": "unsupported-version",
+          "path": "/version"
+        }
+      ],
+      "reason": "Otherwise valid file with version 2: unsupported, open as an ordinary EPUB."
+    },
+    {
+      "file": "invalid/version-2-other-structure.json",
+      "verdict": "unsupported-version",
+      "layer": "version",
+      "issues": [
+        {
+          "code": "unsupported-version",
+          "path": "/version"
+        }
+      ],
+      "reason": "Version 2 with a structure version 1 does not know: still unsupported-version, not a schema error."
+    },
+    {
+      "file": "invalid/version-0.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/version"
+        }
+      ],
+      "reason": "version 0 is not a supported or future version."
+    },
+    {
+      "file": "invalid/version-string.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/version"
+        }
+      ],
+      "reason": "version is the string \"1\", not a number."
+    },
+    {
+      "file": "invalid/version-float.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/version"
+        }
+      ],
+      "reason": "version written as 1.0: integers must have no fraction or exponent."
+    },
+    {
+      "file": "invalid/version-true.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/version"
+        }
+      ],
+      "reason": "version is the boolean true, not the integer 1."
+    },
+    {
+      "file": "invalid/missing-version.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": ""
+        }
+      ],
+      "reason": "Top-level member 'version' is missing."
+    },
+    {
+      "file": "invalid/wrong-format.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/format"
+        }
+      ],
+      "reason": "format is 'rsvp-checkpoint', not 'rsvp-checkpoints'."
+    },
+    {
+      "file": "invalid/missing-format.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": ""
+        }
+      ],
+      "reason": "Top-level member 'format' is missing."
+    },
+    {
+      "file": "invalid/missing-book.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": ""
+        }
+      ],
+      "reason": "Top-level member 'book' is missing."
+    },
+    {
+      "file": "invalid/missing-sections.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": ""
+        }
+      ],
+      "reason": "Top-level member 'sections' is missing."
+    },
+    {
+      "file": "invalid/missing-checkpoints.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": ""
+        }
+      ],
+      "reason": "Top-level member 'checkpoints' is missing (it may be empty but must be present)."
+    },
+    {
+      "file": "invalid/top-level-array.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": ""
+        }
+      ],
+      "reason": "The top-level value is an array, not an object."
+    },
+    {
+      "file": "invalid/empty-sections-array.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections"
+        }
+      ],
+      "reason": "sections is empty; a file needs at least one section."
+    },
+    {
+      "file": "invalid/sections-not-array.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections"
+        }
+      ],
+      "reason": "sections is an object, not an array."
+    },
+    {
+      "file": "invalid/book-not-object.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book"
+        }
+      ],
+      "reason": "book is a string, not an object."
+    },
+    {
+      "file": "invalid/missing-book-title.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book"
+        }
+      ],
+      "reason": "book.title is missing."
+    },
+    {
+      "file": "invalid/missing-book-language.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book"
+        }
+      ],
+      "reason": "book.language is missing."
+    },
+    {
+      "file": "invalid/missing-book-source-sha256.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book"
+        }
+      ],
+      "reason": "book.source_sha256 is missing."
+    },
+    {
+      "file": "invalid/missing-book-instructions-version.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book"
+        }
+      ],
+      "reason": "book.instructions_version is missing."
+    },
+    {
+      "file": "invalid/empty-book-title.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book/title"
+        }
+      ],
+      "reason": "book.title is an empty string."
+    },
+    {
+      "file": "invalid/sha-63-hex.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book/source_sha256"
+        }
+      ],
+      "reason": "source_sha256 has 63 hex digits."
+    },
+    {
+      "file": "invalid/sha-65-hex.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book/source_sha256"
+        }
+      ],
+      "reason": "source_sha256 has 65 hex digits."
+    },
+    {
+      "file": "invalid/sha-uppercase.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book/source_sha256"
+        }
+      ],
+      "reason": "source_sha256 uses upper-case hex; only lower case is accepted."
+    },
+    {
+      "file": "invalid/sha-non-hex.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book/source_sha256"
+        }
+      ],
+      "reason": "source_sha256 contains 'g', not a hex digit."
+    },
+    {
+      "file": "invalid/sha-trailing-newline.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/book/source_sha256"
+        }
+      ],
+      "reason": "source_sha256 is 64 hex digits followed by a newline."
+    },
+    {
+      "file": "invalid/missing-section-id.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0"
+        }
+      ],
+      "reason": "A section has no id."
+    },
+    {
+      "file": "invalid/missing-section-chapter-href.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0"
+        }
+      ],
+      "reason": "A section has no chapter_href."
+    },
+    {
+      "file": "invalid/missing-section-start-anchor.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0"
+        }
+      ],
+      "reason": "A section has no start_anchor."
+    },
+    {
+      "file": "invalid/missing-section-end-anchor.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0"
+        }
+      ],
+      "reason": "A section has no end_anchor."
+    },
+    {
+      "file": "invalid/missing-section-label.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0"
+        }
+      ],
+      "reason": "A section has no label."
+    },
+    {
+      "file": "invalid/missing-section-word-count.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0"
+        }
+      ],
+      "reason": "A section has no word_count."
+    },
+    {
+      "file": "invalid/empty-section-label.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/label"
+        }
+      ],
+      "reason": "label is an empty string."
+    },
+    {
+      "file": "invalid/label-null.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/label"
+        }
+      ],
+      "reason": "label is null, not a string."
+    },
+    {
+      "file": "invalid/word-count-string.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/word_count"
+        }
+      ],
+      "reason": "word_count is the string \"120\"."
+    },
+    {
+      "file": "invalid/word-count-float.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/word_count"
+        }
+      ],
+      "reason": "word_count written as 120.0: integers must have no fraction or exponent."
+    },
+    {
+      "file": "invalid/word-count-zero.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/word_count"
+        }
+      ],
+      "reason": "word_count is 0; a section has at least one word."
+    },
+    {
+      "file": "invalid/word-count-too-large.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/word_count"
+        }
+      ],
+      "reason": "word_count is 2147483648, above the int32 maximum 2147483647."
+    },
+    {
+      "file": "invalid/id-space.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/id"
+        }
+      ],
+      "reason": "Section id contains a space."
+    },
+    {
+      "file": "invalid/id-leading-hyphen.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/id"
+        }
+      ],
+      "reason": "Section id starts with '-'."
+    },
+    {
+      "file": "invalid/id-non-ascii.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/id"
+        }
+      ],
+      "reason": "Section id contains a non-ASCII letter."
+    },
+    {
+      "file": "invalid/id-trailing-newline.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/id"
+        }
+      ],
+      "reason": "Section id ends with a newline."
+    },
+    {
+      "file": "invalid/id-too-long.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/id"
+        }
+      ],
+      "reason": "Section id has 65 characters; the limit is 64."
+    },
+    {
+      "file": "invalid/id-empty.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/sections/0/id"
+        }
+      ],
+      "reason": "Section id is empty."
+    },
+    {
+      "file": "invalid/missing-checkpoint-id.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0"
+        }
+      ],
+      "reason": "A checkpoint has no id."
+    },
+    {
+      "file": "invalid/missing-checkpoint-section.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0"
+        }
+      ],
+      "reason": "A checkpoint does not name a section."
+    },
+    {
+      "file": "invalid/missing-checkpoint-prompts.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0"
+        }
+      ],
+      "reason": "A checkpoint has no prompts member."
+    },
+    {
+      "file": "invalid/checkpoint-section-array.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/section"
+        }
+      ],
+      "reason": "A checkpoint names its section as an array; exactly one section id string is required (rule 2)."
+    },
+    {
+      "file": "invalid/empty-prompts-array.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts"
+        }
+      ],
+      "reason": "A checkpoint has an empty prompts array; at least one prompt is required."
+    },
+    {
+      "file": "invalid/missing-prompt-id.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0"
+        }
+      ],
+      "reason": "A prompt has no id."
+    },
+    {
+      "file": "invalid/missing-prompt-prompt.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0"
+        }
+      ],
+      "reason": "A prompt has no prompt text."
+    },
+    {
+      "file": "invalid/missing-prompt-answer.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0"
+        }
+      ],
+      "reason": "A prompt has no answer."
+    },
+    {
+      "file": "invalid/prompt-not-string.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt is the number 42, not a string."
+    },
+    {
+      "file": "invalid/empty-prompt.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt is an empty string."
+    },
+    {
+      "file": "invalid/empty-answer.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer is an empty string."
+    },
+    {
+      "file": "invalid/prompt-301-ascii.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt has 301 ASCII code points (limit 300)."
+    },
+    {
+      "file": "invalid/answer-601-ascii.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer has 601 ASCII code points (limit 600)."
+    },
+    {
+      "file": "invalid/prompt-301-two-byte.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt has 301 code points U+00E9 (602 bytes)."
+    },
+    {
+      "file": "invalid/answer-601-four-byte.json",
+      "verdict": "invalid",
+      "layer": "schema",
+      "issues": [
+        {
+          "code": "schema",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer has 601 code points U+1F600 (2404 bytes, 1202 UTF-16 units)."
+    },
+    {
+      "file": "invalid/duplicate-section-id.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "duplicate-id",
+          "path": "/sections/1/id"
+        }
+      ],
+      "reason": "Two sections have id 's0001'."
+    },
+    {
+      "file": "invalid/duplicate-checkpoint-id.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "duplicate-id",
+          "path": "/checkpoints/1/id"
+        }
+      ],
+      "reason": "Two checkpoints have id 'c0001' (on different sections)."
+    },
+    {
+      "file": "invalid/duplicate-prompt-id-same-checkpoint.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "duplicate-id",
+          "path": "/checkpoints/0/prompts/1/id"
+        }
+      ],
+      "reason": "Two prompts in one checkpoint have id 'c0001-p1'."
+    },
+    {
+      "file": "invalid/duplicate-prompt-id-across-checkpoints.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "duplicate-id",
+          "path": "/checkpoints/1/prompts/0/id"
+        }
+      ],
+      "reason": "Prompts in two different checkpoints share id 'c0001-p1'; prompt ids are unique across the file."
+    },
+    {
+      "file": "invalid/unknown-section.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "unknown-section",
+          "path": "/checkpoints/1/section"
+        }
+      ],
+      "reason": "A checkpoint names section 's0003', which does not exist."
+    },
+    {
+      "file": "invalid/two-checkpoints-one-section.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "multiple-checkpoints-for-section",
+          "path": "/checkpoints/1/section"
+        }
+      ],
+      "reason": "Two checkpoints name section 's0001'; a section has at most one checkpoint (rule 2)."
+    },
+    {
+      "file": "invalid/anchor-start-other-section.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "anchor-name",
+          "path": "/sections/0/start_anchor"
+        }
+      ],
+      "reason": "Section s0001's start_anchor names s0002."
+    },
+    {
+      "file": "invalid/anchor-end-wrong-suffix.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "anchor-name",
+          "path": "/sections/0/end_anchor"
+        }
+      ],
+      "reason": "end_anchor ends in '-stop' instead of '-end'."
+    },
+    {
+      "file": "invalid/anchor-missing-prefix.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "anchor-name",
+          "path": "/sections/0/start_anchor"
+        }
+      ],
+      "reason": "start_anchor lacks the 'rsvp-' prefix."
+    },
+    {
+      "file": "invalid/anchor-wrong-case.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "anchor-name",
+          "path": "/sections/0/start_anchor"
+        }
+      ],
+      "reason": "start_anchor differs from the section id in letter case; the comparison is exact."
+    },
+    {
+      "file": "invalid/anchor-trailing-space.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "anchor-name",
+          "path": "/sections/0/end_anchor"
+        }
+      ],
+      "reason": "end_anchor has a trailing space."
+    },
+    {
+      "file": "invalid/markup-tag.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt contains an HTML tag."
+    },
+    {
+      "file": "invalid/markup-closing-tag.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer contains a closing tag."
+    },
+    {
+      "file": "invalid/markup-comment.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer contains an HTML comment."
+    },
+    {
+      "file": "invalid/markup-named-entity.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer contains the character reference &amp;."
+    },
+    {
+      "file": "invalid/markup-decimal-entity.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt contains the character reference &#8212;."
+    },
+    {
+      "file": "invalid/markup-hex-entity.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer contains the character reference &#x2014;."
+    },
+    {
+      "file": "invalid/control-tab.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer contains a tab (U+0009)."
+    },
+    {
+      "file": "invalid/control-carriage-return.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt uses CR LF; only LF (U+000A) is allowed."
+    },
+    {
+      "file": "invalid/control-nul.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer contains NUL (U+0000), written as the escape \\u0000."
+    },
+    {
+      "file": "invalid/control-escape.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt contains ESC (U+001B)."
+    },
+    {
+      "file": "invalid/control-del.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer contains DEL (U+007F)."
+    },
+    {
+      "file": "invalid/control-c1.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "not-plain-text",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt contains the C1 control NEL (U+0085)."
+    },
+    {
+      "file": "invalid/blank-prompt.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "blank-text",
+          "path": "/checkpoints/0/prompts/0/prompt"
+        }
+      ],
+      "reason": "prompt contains only spaces and a newline."
+    },
+    {
+      "file": "invalid/blank-answer.json",
+      "verdict": "invalid",
+      "layer": "cross-reference",
+      "issues": [
+        {
+          "code": "blank-text",
+          "path": "/checkpoints/0/prompts/0/answer"
+        }
+      ],
+      "reason": "answer contains only Unicode white space (U+00A0, U+3000, U+2003)."
+    }
+  ]
+}

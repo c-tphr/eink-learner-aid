@@ -1,0 +1,33 @@
+{
+  "format": "rsvp-checkpoints",
+  "version": 1,
+  "book": {
+    "title": "Example Title",
+    "language": "en",
+    "source_sha256": "1e874b76a5df7dff6e3ea423c297d1a8565e2ebf5c98c9e67ac248598f597fdd",
+    "instructions_version": "1.0"
+  },
+  "sections": [
+    {
+      "id": "s0007",
+      "chapter_href": "text/chapter-3.xhtml",
+      "start_anchor": "rsvp-s0007-start",
+      "end_anchor": "rsvp-s0007-end",
+      "label": "Why spacing works",
+      "word_count": 1180
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0007",
+      "section": "s0007",
+      "prompts": [
+        {
+          "id": "c0007-p1",
+          "prompt": "What two effects does the author say spacing has?",
+          "answer": "It forces effortful recall, and it exposes what was forgotten."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "format": "rsvp-checkpoints",
+  "version": 2,
+  "parts": [
+    {
+      "name": "unknown future layout"
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/c-tphr/eink-learner-aid/tools/prep/schema/checkpoints.schema.json",
+  "title": "RSVP checkpoint file, version 1",
+  "description": "rsvp/checkpoints.json inside a prepared EPUB (docs/PLAN.md section 5). This schema is one layer of validation; cross-reference rules (unique ids, section references, anchor names, plain text) are applied by tools/prep/checkpoints.py and listed in tools/prep/README.md. Unknown members are allowed at every level and must be ignored by readers; a change a version 1 reader cannot safely ignore needs a new version number.",
+  "$comment": "Every pattern ends in $(?!\\n): Python's re.search lets $ match before a trailing newline, the lookahead closes that gap and is a no-op in ECMA-262. 'Characters' in minLength/maxLength are Unicode code points. 'integer' means a JSON number written without fraction or exponent; the Python validator enforces this with a strict type checker (stock validators would accept 1.0).",
+  "type": "object",
+  "required": ["format", "version", "book", "sections", "checkpoints"],
+  "properties": {
+    "format": { "const": "rsvp-checkpoints" },
+    "version": {
+      "description": "Only 1 is defined. The Python validator reports an integer above 1 as 'unsupported-version' before this schema is applied.",
+      "type": "integer",
+      "const": 1
+    },
+    "book": { "$ref": "#/$defs/book" },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "checkpoints": {
+      "description": "May be empty. Order is not significant.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/checkpoint" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "description": "ASCII letters, digits, '_' and '-', starting with a letter or digit, at most 64 characters. Used inside XHTML ids and as keys in the state file.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$(?!\\n)"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "description": "SHA-256 of the original EPUB as 64 lowercase hexadecimal digits.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$(?!\\n)"
+    },
+    "book": {
+      "type": "object",
+      "required": ["title", "language", "source_sha256", "instructions_version"],
+      "properties": {
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "language": { "$ref": "#/$defs/nonEmptyString" },
+        "source_sha256": { "$ref": "#/$defs/sha256" },
+        "instructions_version": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["id", "chapter_href", "start_anchor", "end_anchor", "label", "word_count"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "chapter_href": { "$ref": "#/$defs/nonEmptyString" },
+        "start_anchor": {
+          "description": "Must equal 'rsvp-' + id + '-start' (cross-reference rule 'anchor-name').",
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "end_anchor": {
+          "description": "Must equal 'rsvp-' + id + '-end' (cross-reference rule 'anchor-name').",
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "word_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "required": ["id", "section", "prompts"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "section": {
+          "description": "Id of an existing section (cross-reference rule 'unknown-section'); at most one checkpoint per section.",
+          "$ref": "#/$defs/id"
+        },
+        "prompts": {
+          "description": "Kept in file order.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/prompt" }
+        }
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "required": ["id", "prompt", "answer"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "prompt": {
+          "description": "Plain text (cross-reference rules 'not-plain-text', 'blank-text'), 1 to 300 code points.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "answer": {
+          "description": "Plain text (cross-reference rules 'not-plain-text', 'blank-text'), 1 to 600 code points.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        }
+      }
+    }
+  }
+}
