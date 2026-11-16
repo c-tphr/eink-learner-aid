@@ -1,0 +1,542 @@
+{
+  "format": "rsvp-draft",
+  "version": 1,
+  "book": {
+    "title": "Essays",
+    "language": "en-US",
+    "source_sha256": "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561",
+    "instructions_version": "1.0"
+  },
+  "excluded": [
+    { "chapter_href": "text/titlepage.xhtml", "first_paragraph": "d01-p001", "last_paragraph": "d01-p001", "reason": "Front matter: title page (an image only)." },
+    { "chapter_href": "text/imprint.xhtml", "first_paragraph": "d02-p001", "last_paragraph": "d02-p006", "reason": "Front matter: the publisher's imprint." },
+    { "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p001", "last_paragraph": "d09-p005", "reason": "Front matter of this essay: its title heading followed by the Editor's Introduction (publication history written by the edition's editor, not by the author); the author's own text begins at the Author's Inscription (d09-p006)." },
+    { "chapter_href": "text/colophon.xhtml", "first_paragraph": "d11-p001", "last_paragraph": "d11-p007", "reason": "Back matter: the publisher's colophon." },
+    { "chapter_href": "text/uncopyright.xhtml", "first_paragraph": "d12-p001", "last_paragraph": "d12-p005", "reason": "Back matter: the publisher's licence statement (Uncopyright)." }
+  ],
+  "sections": [
+    { "id": "s0001", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p001", "last_paragraph": "d03-p010", "label": "Common Sense: Introduction" },
+    { "id": "s0002", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p011", "last_paragraph": "d03-p018", "label": "Of the Origin and Design of Government in General" },
+    { "id": "s0003", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p019", "last_paragraph": "d03-p037", "label": "Concise Remarks on the English Constitution" },
+    { "id": "s0004", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p038", "last_paragraph": "d03-p047", "label": "Of Monarchy and Hereditary Succession: kings and scripture" },
+    { "id": "s0005", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p048", "last_paragraph": "d03-p053", "label": "The folly of hereditary right" },
+    { "id": "s0006", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p054", "last_paragraph": "d03-p062", "label": "The evils of hereditary succession, and the business of a king" },
+    { "id": "s0007", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p063", "last_paragraph": "d03-p069", "label": "Thoughts on the Present State of American Affairs: from argument to arms" },
+    { "id": "s0008", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p070", "last_paragraph": "d03-p077", "label": "Answering the arguments for the connection with Britain" },
+    { "id": "s0009", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p078", "last_paragraph": "d03-p083", "label": "No advantage, and many injuries" },
+    { "id": "s0010", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p084", "last_paragraph": "d03-p091", "label": "Reconciliation tried by the feelings of nature" },
+    { "id": "s0011", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p092", "last_paragraph": "d03-p096", "label": "Why Britain cannot govern the continent" },
+    { "id": "s0012", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p097", "last_paragraph": "d03-p105", "label": "What a reconciliation would bring" },
+    { "id": "s0013", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p106", "last_paragraph": "d03-p113", "label": "Hints for a continental government" },
+    { "id": "s0014", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p114", "last_paragraph": "d03-p117", "label": "A government of our own" },
+    { "id": "s0015", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p118", "last_paragraph": "d03-p129", "label": "Of the Present Ability of America: strength, debt and the cost of a navy" },
+    { "id": "s0016", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p130", "last_paragraph": "d03-p136", "label": "Why America should build a fleet" },
+    { "id": "s0017", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p137", "last_paragraph": "d03-p141", "label": "Why the present time is the right time" },
+    { "id": "s0018", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p142", "last_paragraph": "d03-p146", "label": "Religion, the charter and representation" },
+    { "id": "s0019", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p147", "last_paragraph": "d03-p153", "label": "Reasons for an open declaration of independence" },
+    { "id": "s0020", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p154", "last_paragraph": "d03-p160", "label": "Appendix: the King's Speech" },
+    { "id": "s0021", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p161", "last_paragraph": "d03-p167", "label": "The interest of America to be separated" },
+    { "id": "s0022", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p168", "last_paragraph": "d03-p174", "label": "Independence the more practicable plan" },
+    { "id": "s0023", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p175", "last_paragraph": "d03-p178", "label": "Concluding hints" },
+    { "id": "s0024", "chapter_href": "text/the-republican-proclamation.xhtml", "first_paragraph": "d04-p001", "last_paragraph": "d04-p012", "label": "The Republican Proclamation" },
+    { "id": "s0025", "chapter_href": "text/anti-monarchal-essay.xhtml", "first_paragraph": "d05-p001", "last_paragraph": "d05-p015", "label": "Anti-Monarchal Essay: Royalty" },
+    { "id": "s0026", "chapter_href": "text/anti-monarchal-essay.xhtml", "first_paragraph": "d05-p016", "last_paragraph": "d05-p027", "label": "Anti-Monarchal Essay: hereditary succession" },
+    { "id": "s0027", "chapter_href": "text/anti-monarchal-essay.xhtml", "first_paragraph": "d05-p028", "last_paragraph": "d05-p039", "label": "Anti-Monarchal Essay: the royalist arguments answered" },
+    { "id": "s0028", "chapter_href": "text/declaration-of-rights.xhtml", "first_paragraph": "d06-p001", "last_paragraph": "d06-p038", "label": "Declaration of Rights" },
+    { "id": "s0029", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p001", "last_paragraph": "d07-p013", "label": "Dissertation on First Principles of Government: the two primary divisions" },
+    { "id": "s0030", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p014", "last_paragraph": "d07-p023", "label": "Hereditary government has no right to exist" },
+    { "id": "s0031", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p024", "last_paragraph": "d07-p030", "label": "No generation can bind the next" },
+    { "id": "s0032", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p031", "last_paragraph": "d07-p045", "label": "A nation cannot establish a hereditary family" },
+    { "id": "s0033", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p046", "last_paragraph": "d07-p052", "label": "Representative government and equality of rights" },
+    { "id": "s0034", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p053", "last_paragraph": "d07-p062", "label": "Property and the right of voting" },
+    { "id": "s0035", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p063", "last_paragraph": "d07-p068", "label": "Titles and aristocracy" },
+    { "id": "s0036", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p069", "last_paragraph": "d07-p072", "label": "The origin of rights" },
+    { "id": "s0037", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p073", "last_paragraph": "d07-p081", "label": "Principle and opinion; the legislature and the executive" },
+    { "id": "s0038", "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p082", "last_paragraph": "d07-p088", "label": "Preserving liberty" },
+    { "id": "s0039", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p001", "last_paragraph": "d08-p010", "label": "The Decline and Fall of the English System of Finance: paper money and the funding system" },
+    { "id": "s0040", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p011", "last_paragraph": "d08-p031", "label": "The ratio of the expense of wars" },
+    { "id": "s0041", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p032", "last_paragraph": "d08-p040", "label": "Why the ratio exists" },
+    { "id": "s0042", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p041", "last_paragraph": "d08-p047", "label": "Paper, gold and silver" },
+    { "id": "s0043", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p048", "last_paragraph": "d08-p053", "label": "The cash in the bank" },
+    { "id": "s0044", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p054", "last_paragraph": "d08-p061", "label": "Credit, resources and insolvency" },
+    { "id": "s0045", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p062", "last_paragraph": "d08-p071", "label": "How bank notes get into circulation" },
+    { "id": "s0046", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p072", "last_paragraph": "d08-p079", "label": "The quantity of bank notes and a second generation of creditors" },
+    { "id": "s0047", "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p080", "last_paragraph": "d08-p087", "label": "Five-pound notes, and conclusion" },
+    { "id": "s0048", "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p006", "last_paragraph": "d09-p018", "label": "Agrarian Justice: Author's Inscription" },
+    { "id": "s0049", "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p019", "last_paragraph": "d09-p024", "label": "Author's English Preface" },
+    { "id": "s0050", "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p025", "last_paragraph": "d09-p041", "label": "Agrarian Justice: civilization and natural inheritance" },
+    { "id": "s0051", "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p042", "last_paragraph": "d09-p051", "label": "Means by Which the Fund Is to Be Created" },
+    { "id": "s0052", "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p052", "last_paragraph": "d09-p063", "label": "The amount of the fund and its uses" },
+    { "id": "s0053", "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p064", "last_paragraph": "d09-p072", "label": "Justice, not charity" },
+    { "id": "s0054", "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p073", "last_paragraph": "d09-p080", "label": "Property, security and a revolution in civilization" },
+    { "id": "s0055", "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p081", "last_paragraph": "d09-p090", "label": "Means for Carrying the Proposed Plan Into Execution" }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0001",
+      "section": "s0001",
+      "prompts": [
+        { "id": "c0001-p1", "prompt": "Why does the author expect his ideas to meet resistance at first, and why does he think that resistance will not last?", "answer": "A long habit of not thinking something wrong makes it look right, so new ideas at first raise an outcry in defense of custom. But the outcry soon dies down, because time makes more converts than reason.", "supporting_paragraphs": ["d03-p003"] },
+        { "id": "c0001-p2", "prompt": "Why does the author say the cause of America concerns more than America itself?", "answer": "Because it is in great measure the cause of all mankind: the circumstances it raises are universal, not local. Laying a country waste with fire and sword and making war on the natural rights of mankind is the concern of everyone who has the power of feeling.", "supporting_paragraphs": ["d03-p006"] }
+      ]
+    },
+    {
+      "id": "c0002",
+      "section": "s0002",
+      "prompts": [
+        { "id": "c0002-p1", "prompt": "How does the author distinguish society from government, and why does he call government a necessary evil?", "answer": "Society is produced by our wants and promotes happiness positively by uniting our affections; government is produced by our wickedness and works negatively by restraining our vices. Society is always a blessing, but government is at best a necessary evil: because conscience is not clear and obeyed by everyone, people must give up part of their property to protect the rest, choosing the lesser of two evils.", "supporting_paragraphs": ["d03-p012", "d03-p013"] },
+        { "id": "c0002-p2", "prompt": "In the author's imagined story of a few settlers in a remote place, what first brings them together, and what later makes government necessary?", "answer": "Necessity first draws them into society, because one person alone cannot meet his own wants: he cannot build a dwelling alone, and illness or misfortune would ruin him. Later, once the first hardships are overcome, they grow slack in their duty and attachment to one another, and that failure of moral virtue makes some form of government necessary.", "supporting_paragraphs": ["d03-p014", "d03-p015"] },
+        { "id": "c0002-p3", "prompt": "As the imagined colony grows, how does the author say its government should change, and why should elections be frequent?", "answer": "When the colony is too large for everyone to meet, lawmaking is left to representatives chosen from the whole body, and as it grows further it is divided into parts that each send their proper number. Elections should be frequent so that the elected soon return and mix again with the electors, keep a common interest with them and never form an interest of their own.", "supporting_paragraphs": ["d03-p017"] }
+      ]
+    },
+    {
+      "id": "c0003",
+      "section": "s0003",
+      "prompts": [
+        { "id": "c0003-p1", "prompt": "What principle does the author use to judge forms of government, and why does it count against the English constitution?", "answer": "That the simpler a thing is, the less likely it is to go wrong and the easier it is to repair. The English constitution is so complex that the nation can suffer for years without finding which part is at fault, whereas under a simple absolute government the people at least know where their suffering comes from and what the remedy is.", "supporting_paragraphs": ["d03-p019", "d03-p020"] },
+        { "id": "c0003-p2", "prompt": "What does the author say the English constitution is made of, and which of its parts does he think add nothing to the nation's freedom?", "answer": "It is made of the remains of two ancient tyrannies, the monarchical one in the King and the aristocratic one in the Peers, mixed with new republican material in the Commons. The King and the Peers add nothing to freedom, because being hereditary they are independent of the people.", "supporting_paragraphs": ["d03-p021", "d03-p022", "d03-p023", "d03-p024", "d03-p025"] },
+        { "id": "c0003-p3", "prompt": "Why does the author call it absurd to say that the King and the Commons check each other?", "answer": "Giving the Commons a check on the King assumes the King cannot be trusted and the Commons are wiser than the crown. Yet the same constitution lets the King check the Commons by rejecting their bills, which assumes the King is wiser than those it has already assumed to be wiser than him. The two assumptions contradict each other.", "supporting_paragraphs": ["d03-p027", "d03-p028", "d03-p029", "d03-p030"] },
+        { "id": "c0003-p4", "prompt": "Which part of the English constitution does the author say really governs, and where does its power come from?", "answer": "The crown. As in a machine, the heaviest power finally has its way however much the others slow it. The crown's weight comes from being the giver of places and pensions, so that the English have locked the door against absolute monarchy but given the crown the key.", "supporting_paragraphs": ["d03-p033", "d03-p034"] }
+      ]
+    },
+    {
+      "id": "c0004",
+      "section": "s0004",
+      "prompts": [
+        { "id": "c0004-p1", "prompt": "Which distinction between people does the author say has no natural or religious justification, and how does it differ from other distinctions?", "answer": "The distinction of men into kings and subjects. Male and female are distinctions of nature and good and bad are distinctions of heaven, and rich and poor can be explained without blaming oppression, but nothing natural or religious explains how one race of men came to be raised above the rest like a new species.", "supporting_paragraphs": ["d03-p039", "d03-p040"] },
+        { "id": "c0004-p2", "prompt": "What does the author say kings have done to peace, and where does he say government by kings came from?", "answer": "In the earliest ages there were no kings and therefore no wars; it is the pride of kings that throws mankind into confusion, and Holland without a king has had more peace than the monarchies of Europe. Government by kings was first introduced by the heathens, who paid divine honors to their dead kings, and the children of Israel copied it; it served idolatry.", "supporting_paragraphs": ["d03-p041", "d03-p042"] },
+        { "id": "c0004-p3", "prompt": "How does the author use the stories of Gideon and of Samuel to argue that scripture condemns monarchy?", "answer": "When the people, elated by Gideon's victory, offered him a hereditary crown, he refused and said the Lord should rule over them, denying their right to make a king at all. Later, when the people asked Samuel for a king to be like other nations, God said it was God, not Samuel, they had rejected; Samuel warned that a king would take their sons, daughters and best fields, and after thunder and rain the people confessed that asking for a king was a sin.", "supporting_paragraphs": ["d03-p046", "d03-p047"] }
+      ]
+    },
+    {
+      "id": "c0005",
+      "section": "s0005",
+      "prompts": [
+        { "id": "c0005-p1", "prompt": "Why does the author say hereditary succession wrongs later generations, even if the first king deserved his honors?", "answer": "All men are born equal, so no one has a right to set his family above all others forever, and his descendants may be quite unworthy. Those who chose the first king could honor him, but had no power to give away their children's rights; such a compact might put later generations under a rogue or a fool.", "supporting_paragraphs": ["d03-p048", "d03-p049"] },
+        { "id": "c0005-p2", "prompt": "According to the author, how did the first kings probably arise, and how did hereditary right come to be claimed?", "answer": "The first king was probably no better than the chief ruffian of a gang of plunderers who made the peaceful pay for their safety. His followers never meant to make his rule hereditary; that came later, helped by superstitious tales and by fear of disorder when a new leader had to be chosen, so that what was first accepted as a convenience was afterwards claimed as a right.", "supporting_paragraphs": ["d03-p050"] },
+        { "id": "c0005-p3", "prompt": "What are the three ways the author says a first king could have come to the throne, and why does none of them support hereditary succession?", "answer": "By lot, by election or by usurpation. A king chosen by lot or by election sets a precedent for choosing the next one the same way, which rules out inheritance; to say the first electors bound all future generations has no parallel except original sin. Usurpation nobody will defend.", "supporting_paragraphs": ["d03-p052", "d03-p053"] }
+      ]
+    },
+    {
+      "id": "c0006",
+      "section": "s0006",
+      "prompts": [
+        { "id": "c0006-p1", "prompt": "What harm does the author say hereditary succession does through the kind of rulers it puts on the throne?", "answer": "Men raised to believe they were born to reign grow insolent and live apart from the real world, so when they succeed they are often the most ignorant and unfit people in the realm. The throne can also pass to a child or to a king worn out by age, leaving the public prey to regents and schemers who exploit that weakness.", "supporting_paragraphs": ["d03-p054", "d03-p055"] },
+        { "id": "c0006-p2", "prompt": "What is the most plausible argument made for hereditary succession, and how does the author answer it?", "answer": "That it saves a nation from civil wars. He calls this false: England's own history since the Conquest is full of civil wars and rebellions, such as the long, bloody contest between the houses of York and Lancaster, so hereditary succession works against peace rather than for it.", "supporting_paragraphs": ["d03-p056", "d03-p057"] },
+        { "id": "c0006-p3", "prompt": "What does the author say a king of England actually does, and why does he think the English government is nearly as monarchical as that of France?", "answer": "He does little more than make war and give away places, which impoverishes the nation and sets people quarrelling, and he is paid hugely for it. Because the crown has all the places at its disposal, its corrupt influence has swallowed the power and eaten out the virtue of the House of Commons, the republican part of the constitution.", "supporting_paragraphs": ["d03-p061", "d03-p062"] }
+      ]
+    },
+    {
+      "id": "c0007",
+      "section": "s0007",
+      "prompts": [
+        { "id": "c0007-p1", "prompt": "Why does the author say that all earlier plans and arguments about the quarrel with Britain are now out of date?", "answer": "Because the contest has passed from argument to arms: the King chose to appeal to force and the continent accepted the challenge. All earlier proposals aimed at union with Great Britain and differed only in whether to secure it by force or by friendship, so since fighting began they are like last year's almanacs, and a new way of thinking has begun.", "supporting_paragraphs": ["d03-p065", "d03-p068"] },
+        { "id": "c0007-p2", "prompt": "Why does the author say that what is done now matters so much for the future?", "answer": "The cause concerns a whole continent and posterity, not a city or a single age. This is the seed time of continental union, so even a small fracture now will grow with time, like a name cut into the bark of a young oak that widens as the tree grows.", "supporting_paragraphs": ["d03-p067"] }
+      ]
+    },
+    {
+      "id": "c0008",
+      "section": "s0008",
+      "prompts": [
+        { "id": "c0008-p1", "prompt": "How does the author answer the claim that because America flourished under Britain, it needs the connection to flourish in future?", "answer": "He calls the reasoning fallacious, like saying a child raised on milk must never eat meat. He adds that America would have flourished as much or more with no European power involved, because it trades in necessities of life that Europe will always buy.", "supporting_paragraphs": ["d03-p070"] },
+        { "id": "c0008-p2", "prompt": "Why does the author say Britain's protection of America is no reason for gratitude?", "answer": "Britain protected America for her own interest, for trade and dominion, not out of attachment, and at America's expense. She defended America against her own enemies, who had no quarrel with Americans except as British subjects; without the connection America would be at peace with France and Spain.", "supporting_paragraphs": ["d03-p071", "d03-p072", "d03-p073"] },
+        { "id": "c0008-p3", "prompt": "Why does the author reject calling Britain the parent or mother country of America?", "answer": "If it were true it would only shame Britain, since even brutes do not devour their young. But it is false: Europe, not England, is America's parent country, because America has been a refuge for the persecuted from every part of Europe, and fewer than a third even of his province are of English descent. Just as an Englishman abroad comes to treat men from other towns and counties as countrymen, all Europeans meeting in America are countrymen.", "supporting_paragraphs": ["d03-p074", "d03-p076"] }
+      ]
+    },
+    {
+      "id": "c0009",
+      "section": "s0009",
+      "prompts": [
+        { "id": "c0009-p1", "prompt": "What harm does the author say the connection with Britain does to American trade and peace?", "answer": "It drags America into Europe's wars and quarrels and makes enemies of nations that would otherwise seek its friendship; whenever Britain goes to war, American trade is ruined. A neutral America devoted to commerce, a free port that all Europe has an interest in, would keep the peace and friendship of all Europe.", "supporting_paragraphs": ["d03-p079", "d03-p081", "d03-p082"] },
+        { "id": "c0009-p2", "prompt": "What signs in nature and history does the author say show that Britain was never meant to rule America?", "answer": "The great distance at which the Almighty placed the two countries; the time of America's discovery, before the Reformation, as if to open a sanctuary for the persecuted; and the way the continent was peopled. Besides, British authority must end sooner or later, so it cannot secure anything for posterity.", "supporting_paragraphs": ["d03-p082", "d03-p083"] }
+      ]
+    },
+    {
+      "id": "c0010",
+      "section": "s0010",
+      "prompts": [
+        { "id": "c0010-p1", "prompt": "Into what kinds of people does the author sort those who favor reconciliation, and which kind does he think does the most harm?", "answer": "Interested men who cannot be trusted, weak men who cannot see, prejudiced men who will not see, and moderate men who think better of Europe than it deserves. The moderate men, by their ill-judged deliberation, will cause more calamities than the other three together.", "supporting_paragraphs": ["d03-p085"] },
+        { "id": "c0010-p2", "prompt": "What test does the author ask those who hope to be friends with Britain again to apply, and what does he conclude?", "answer": "To try reconciliation by natural feeling: could they still love, honour and faithfully serve the power that brought fire and sword into their land? If not, a renewed connection would be forced and unnatural and soon relapse into something worse; and anyone who has suffered such losses and still shakes hands with the murderers has the heart of a coward.", "supporting_paragraphs": ["d03-p087"] },
+        { "id": "c0010-p3", "prompt": "Why does the author say peaceful methods and hopes of reconciliation have failed, and what does he urge instead?", "answer": "Every quiet method has failed: petitions were rejected with disdain, and repeated petitioning only feeds the vanity and obstinacy of kings. Reconciliation is now a fallacious dream, since nature has deserted the connection and no plan short of separation can promise even a year's security. So he urges a final separation now, rather than leave the next generation to fight.", "supporting_paragraphs": ["d03-p089", "d03-p090"] }
+      ]
+    },
+    {
+      "id": "c0011",
+      "section": "s0011",
+      "prompts": [
+        { "id": "c0011-p1", "prompt": "What practical reasons does the author give for saying Britain cannot govern America?", "answer": "Britain is too distant from America and too ignorant of it to manage its growing, complicated business: crossing three or four thousand miles with a petition and waiting months for an answer will soon look foolish. And it is absurd for an island to govern a continent; nature never makes a satellite larger than its planet, so England belongs to Europe and America to itself.", "supporting_paragraphs": ["d03-p092", "d03-p093"] },
+        { "id": "c0011-p2", "prompt": "Why does the author say it would not be worth fighting merely to get the British acts repealed?", "answer": "Because what is fought for should bear a just proportion to its cost. With the whole continent in arms and millions spent, the repeal of the acts or the removal of a ministry is too small a prize. And since independence was bound to come sooner or later, fighting was only worthwhile if they meant to be in earnest.", "supporting_paragraphs": ["d03-p096"] }
+      ]
+    },
+    {
+      "id": "c0012",
+      "section": "s0012",
+      "prompts": [
+        { "id": "c0012-p1", "prompt": "If the quarrel were patched up and the King kept his present powers, what does the author say would happen to lawmaking in America, and why?", "answer": "The King, an enemy of liberty who is jealous of America's growth, would keep a veto over all its laws and allow only those that suit him, keeping the continent as low as possible. That veto is far more dangerous in America than in England: England is his home and he would never refuse it a law for its defence, but he would refuse America one. He might even repeal the acts now only to regain by craft what he cannot win by force.", "supporting_paragraphs": ["d03-p098", "d03-p099", "d03-p100"] },
+        { "id": "c0012-p2", "prompt": "Why does the author think even the best terms of reconciliation would leave the colonies unsettled?", "answer": "They could only be a temporary expedient, a kind of guardianship lasting until the colonies come of age, so the government would hang by a thread. Emigrants with property would not come to such a country, and many present inhabitants would sell their effects and leave.", "supporting_paragraphs": ["d03-p101"] },
+        { "id": "c0012-p3", "prompt": "How does the author answer the fear that independence would lead to civil wars among the colonies?", "answer": "He argues the reverse: a reconciliation is more likely to be followed by a revolt, because those already ruined by Britain will not submit, and Britain's power would be only on paper. The colonies have shown good order under continental government, and where there are no distinctions there is no temptation to seek superiority; republics stay at peace, while monarchies are never long at rest.", "supporting_paragraphs": ["d03-p102", "d03-p103", "d03-p104", "d03-p105"] }
+      ]
+    },
+    {
+      "id": "c0013",
+      "section": "s0013",
+      "prompts": [
+        { "id": "c0013-p1", "prompt": "What form of government does the author suggest for the united colonies?", "answer": "Annual assemblies in each colony, with only a president, dealing with domestic business under the authority of a Continental Congress. Each colony would be divided into districts sending delegates to Congress; the president of Congress would be chosen in rotation from a colony drawn by lot, and a law would need three fifths of the Congress to pass.", "supporting_paragraphs": ["d03-p107", "d03-p108"] },
+        { "id": "c0013-p2", "prompt": "Who does the author say should draw up the continental charter, and what should the charter do?", "answer": "A Continental Conference standing between Congress and the people, made up of members of Congress, members of each colony's assembly or convention, and representatives chosen by the people, so that knowledge and power are united. It would frame a charter fixing how members of Congress and the assemblies are chosen and what each may do, securing freedom and property to all and above all freedom of religion, and then dissolve.", "supporting_paragraphs": ["d03-p109", "d03-p110", "d03-p111"] },
+        { "id": "c0013-p3", "prompt": "When asked where the King of America is, what does the author reply, and what ceremony does he propose?", "answer": "He reigns above, in heaven. On earth, a day should be set apart to proclaim the charter, placed on the word of God with a crown on it, so the world knows that in America the law is king; afterwards the crown should be broken up and scattered among the people, whose right it is.", "supporting_paragraphs": ["d03-p113"] }
+      ]
+    },
+    {
+      "id": "c0014",
+      "section": "s0014",
+      "prompts": [
+        { "id": "c0014-p1", "prompt": "Why does the author urge Americans to form their own government now rather than leave it to time and chance?", "answer": "A government of their own is their natural right, and it is wiser and safer to frame a constitution calmly while they can. If they wait, some popular adventurer may gather the desperate and discontented, seize power and sweep away their liberties; and if America returned to British rule, its unsettled state would tempt such a man, with Britain too far away to help.", "supporting_paragraphs": ["d03-p114"] },
+        { "id": "c0014-p2", "prompt": "Why does the author say Britain and America can never truly be reconciled?", "answer": "There are injuries nature cannot forgive. Reason forbids trust, the remaining ties of kinship wear thinner every day while the causes of quarrel grow, and the continent can no more forgive Britain's murders than a lover can forgive the ravisher of his mistress. Such feelings were implanted for good purposes: without them the guilty would escape and justice would vanish.", "supporting_paragraphs": ["d03-p115", "d03-p116"] }
+      ]
+    },
+    {
+      "id": "c0015",
+      "section": "s0015",
+      "prompts": [
+        { "id": "c0015-p1", "prompt": "What does the author say about the colonies' present numbers and strength, as they bear on independence?", "answer": "Their great strength lies in unity rather than numbers, yet their numbers already suffice: they have the largest body of armed and disciplined men of any power, and are at the point where no single colony can stand alone but all united can succeed. They are not so crowded that they would have more seaports to defend and lose, and their numbers fit their needs so that no one need be idle.", "supporting_paragraphs": ["d03-p121", "d03-p122"] },
+        { "id": "c0015-p2", "prompt": "Why does the author say Americans should not fear running into debt for independence?", "answer": "A debt that leaves posterity a settled, independent government is cheap at any price, while spending millions only to get some acts repealed would leave posterity the work still to do and a debt besides. A national debt is a national bond and no grievance if it bears no interest; Britain's huge debt has bought her a navy, and for a twentieth of that debt America could have a navy as large again.", "supporting_paragraphs": ["d03-p123", "d03-p124"] }
+      ]
+    },
+    {
+      "id": "c0016",
+      "section": "s0016",
+      "prompts": [
+        { "id": "c0016-p1", "prompt": "Why does the author say America is especially well placed to build a navy, and why does he call a fleet a good investment?", "answer": "America produces tar, timber, iron and cordage itself and needs nothing from abroad, and shipbuilding is its natural manufacture and greatest pride. A fleet is a branch of commerce that unites trade and protection and is worth more than it costs: ships not needed can be sold for gold and silver.", "supporting_paragraphs": ["d03-p130", "d03-p131"] },
+        { "id": "c0016-p2", "prompt": "Why does the author reject relying on Britain for naval protection after a reconciliation?", "answer": "The power that has tried to subdue America is the least fit to defend it, and conquest can come under the pretence of friendship. Unless British warships were kept in American harbours, a navy three or four thousand miles away would be of little use in an emergency; if America must protect itself, it should do so for itself, not for another.", "supporting_paragraphs": ["d03-p133"] },
+        { "id": "c0016-p3", "prompt": "Why does the author think a much smaller American navy could stand up to Britain's?", "answer": "Only a small part of Britain's listed ships are fit for service, and those are spread over many distant stations. America claims no foreign dominion, so its whole force would stay on its own coast, with a two-to-one advantage over ships that must sail thousands of miles to attack and back to refit; and Britain's West Indies trade lies at America's mercy.", "supporting_paragraphs": ["d03-p134"] }
+      ]
+    },
+    {
+      "id": "c0017",
+      "section": "s0017",
+      "prompts": [
+        { "id": "c0017-p1", "prompt": "Why does the author treat the colonies' youth as an argument for independence now rather than later?", "answer": "As a country grows in people and trade, men become absorbed in commerce and afraid to lose what they have, so their patriotic and military spirit declines; and a growing variety of interests would make it hard to unite the colonies later. Now they are young and their union has been strengthened by shared distress, so the present is the time to establish it.", "supporting_paragraphs": ["d03-p138", "d03-p139"] },
+        { "id": "c0017-p2", "prompt": "What opportunity does the author say comes to a nation only once, and what lesson does he draw from other nations?", "answer": "The chance to form itself into a government. Most nations let it slip and had to take laws from conquerors, getting a king first and a form of government afterwards. America should frame its charter first and then delegate men to carry it out, or some fortunate ruffian may seize power, as William the Conqueror did in England.", "supporting_paragraphs": ["d03-p140", "d03-p141"] }
+      ]
+    },
+    {
+      "id": "c0018",
+      "section": "s0018",
+      "prompts": [
+        { "id": "c0018-p1", "prompt": "What role does the author give government in religion, and why does he welcome many religious denominations?", "answer": "Government's only business with religion is to protect everyone who practises it conscientiously. He believes diversity of religious opinion is the will of the Almighty because it gives a wider field for Christian kindness, and he sees the denominations as children of one family differing only in their Christian names.", "supporting_paragraphs": ["d03-p142"] },
+        { "id": "c0018-p2", "prompt": "Why does the author insist on a large and equal representation, and what doubt does he raise about how members of Congress are chosen?", "answer": "Too few electors or too few representatives are dangerous, and unequal representation more so: in Pennsylvania two counties could have governed the whole province. Choosing Congress through the colonial assemblies was proper in an emergency, but expedience and right differ, and he asks whether the powers of representation and of election are too great for one body to hold.", "supporting_paragraphs": ["d03-p144", "d03-p145"] }
+      ]
+    },
+    {
+      "id": "c0019",
+      "section": "s0019",
+      "prompts": [
+        { "id": "c0019-p1", "prompt": "What reasons does the author give for an open and determined declaration of independence?", "answer": "While America calls itself Britain's subject, no other power can offer to mediate; France and Spain will not help merely to repair the connection with Britain; and foreign nations must regard Americans as rebels. A manifesto to foreign courts setting out their grievances and offering peace and trade would do more good than any petitions to Britain, and only by independence can they be received abroad and take rank with other nations.", "supporting_paragraphs": ["d03-p148", "d03-p149", "d03-p150", "d03-p151", "d03-p152"] }
+      ]
+    },
+    {
+      "id": "c0020",
+      "section": "s0020",
+      "prompts": [
+        { "id": "c0020-p1", "prompt": "What effect does the author say the King's Speech had on its readers, and how does he judge the Speech?", "answer": "Instead of frightening people it prepared the way for independence, because they read it in a spirit of revenge. He calls it a wilful libel against truth, the common good and mankind, whose one good quality is that it cannot deceive: its brutality and tyranny are plain on its face.", "supporting_paragraphs": ["d03-p155", "d03-p156"] },
+        { "id": "c0020-p2", "prompt": "Why does the author say it now matters little what the King of England says or does?", "answer": "The King has broken every moral and human obligation and earned universal hatred, so it is now America's interest to provide for herself: to look after her own large, young family rather than give away her property to support such a power.", "supporting_paragraphs": ["d03-p158"] }
+      ]
+    },
+    {
+      "id": "c0021",
+      "section": "s0021",
+      "prompts": [
+        { "id": "c0021-p1", "prompt": "Why does the author say America cannot become great while it depends on Britain?", "answer": "No nation that depends on a foreign power, with its commerce limited and its lawmaking cramped, can reach any real eminence; America's progress so far is only childhood compared with what it could reach with lawmaking in its own hands. England benefits from America's commerce, not its conquest, and that trade would largely continue after independence.", "supporting_paragraphs": ["d03-p161"] },
+        { "id": "c0021-p2", "prompt": "How does the author answer those who say the break with Britain would have been easier forty or fifty years later?", "answer": "The colonies' military ability comes from experience gained in the last war, which would be gone in fifty years, leaving no generals or officers. At the end of that war they had experience but not numbers; later they would have numbers without experience. The right moment lies between, when enough experience remains and numbers have grown, and that moment is now.", "supporting_paragraphs": ["d03-p164"] },
+        { "id": "c0021-p3", "prompt": "How does the author propose the colonies could pay off their debt, and why would a settlement with Britain prevent it?", "answer": "By selling the back lands and reserving a quit-rent on them, which would sink the debt without burdening anyone and in time pay the yearly cost of government. If Britain stayed sovereign, those lands, which some provinces have lost through the unjust extension of Canada's limits, would be out of reach, and with them the means of paying the debt.", "supporting_paragraphs": ["d03-p166", "d03-p167"] }
+      ]
+    },
+    {
+      "id": "c0022",
+      "section": "s0022",
+      "prompts": [
+        { "id": "c0022-p1", "prompt": "How does the author describe America's present condition, and why does he think it is dangerous to leave it so?", "answer": "It has no law and no government, only power granted by courtesy, and is held together only by shared feeling that secret enemies are trying to dissolve. No property is secure and there is no such thing as treason, so everyone acts as he pleases, and the union is too loosely held; if nothing is done in time, neither reconciliation nor independence will be possible.", "supporting_paragraphs": ["d03-p170", "d03-p171"] },
+        { "id": "c0022-p2", "prompt": "Why does the author say a return to the footing of 1763 would not satisfy America?", "answer": "Britain cannot and will not offer it, and even if granted there would be no way to hold a corrupt, faithless court to it, since a later parliament could repeal it and nations cannot be taken to law. A true return would also need the burnt towns rebuilt, private losses made good and war debts paid. It might have won the continent a year ago; now it is too late.", "supporting_paragraphs": ["d03-p173"] },
+        { "id": "c0022-p3", "prompt": "What does the author say justifies taking up arms, and from what moment should America's independence be dated?", "answer": "Not the repeal of a money law, which is too trifling a cause for men's lives, but the violence done to persons, the destruction of property and the invasion of the country by armed force. From the moment such defence became necessary, subjection to Britain should have ended, so independence should date from the first musket fired against America.", "supporting_paragraphs": ["d03-p174"] }
+      ]
+    },
+    {
+      "id": "c0023",
+      "section": "s0023",
+      "prompts": [
+        { "id": "c0023-p1", "prompt": "In what three ways does the author say independence might come about, and why does he prefer the first?", "answer": "By the legal voice of the people in Congress, by a military power, or by a mob. Through Congress, Americans would have every chance to form the noblest, purest constitution on earth and begin the world over again, whereas soldiers may not always be citizens nor crowds reasonable, and virtue is neither hereditary nor permanent.", "supporting_paragraphs": ["d03-p175"] },
+        { "id": "c0023-p2", "prompt": "How does the author say independence would help America in dealing with Britain and with other nations?", "answer": "Independence is the only bond that can keep the colonies together. Britain's pride would suffer less in treating for peace with American states than with those it calls rebellious subjects, and delay only encourages her to hope for conquest. Once independent, America could offer to reopen trade, which the commercial part of England would support, and if refused could apply to other courts.", "supporting_paragraphs": ["d03-p177"] }
+      ]
+    },
+    {
+      "id": "c0024",
+      "section": "s0024",
+      "prompts": [
+        { "id": "c0024-p1", "prompt": "What does the proclamation say the King's flight proved, and why does it hold that he has given up the throne?", "answer": "The calm and mutual confidence while he was gone, and the indifference at his return, proved that the nation is better off without a king, who is a useless and heavy burden. By fleeing his post he abdicated, since desertion is settled by the act of flight, not by how long he stayed away; and a man who broke his oath and fled in disguise toward the frontier can never regain the nation's confidence.", "supporting_paragraphs": ["d04-p003", "d04-p005", "d04-p006"] },
+        { "id": "c0024-p2", "prompt": "Why does the proclamation call the office of king useless yet dangerous, and what does it say about what a king costs?", "answer": "An office that needs neither experience nor ability, is left to the chance of birth, and can be filled as well by an idiot, a madman or a tyrant as by the wise, is a place of show, not of use, and may still be extremely dangerous. The thirty millions spent on a king could instead reduce taxes, relieving the people and checking political corruption; a nation's greatness lies in its sense of its own dignity, not in the splendour of thrones.", "supporting_paragraphs": ["d04-p010", "d04-p011"] }
+      ]
+    },
+    {
+      "id": "c0025",
+      "section": "s0025",
+      "prompts": [
+        { "id": "c0025-p1", "prompt": "According to the essay, how did royalty begin, and how did power seized by force become a hereditary right?", "answer": "Bands of brigands conquered a country and their chief took the title of king. Another brigand overthrew him and reigned in his place; with time the origin was forgotten, and the successors corrupted those around them, invented sacred genealogies and took religion as their guard, so usurped power became hereditary right.", "supporting_paragraphs": ["d05-p009", "d05-p010"] },
+        { "id": "c0025-p2", "prompt": "Why does the essay say government by one person is bad in itself, apart from the ruler's own vices?", "answer": "No single man is equal to the affairs of a whole nation. If the king is a man of genius, his ambition drives him to conquest and despotism and his subjects starve while celebrating his glory; if he is ordinary, he and the petty intriguers around him bring incapacity and vice. In short, monarchs do nothing and their ministers do evil.", "supporting_paragraphs": ["d05-p013", "d05-p014", "d05-p015"] }
+      ]
+    },
+    {
+      "id": "c0026",
+      "section": "s0026",
+      "prompts": [
+        { "id": "c0026-p1", "prompt": "Why does the essay say no one can inherit a right to govern others?", "answer": "Ancestors cannot pass on a right they never had, and no one has authority over generations not yet born: a person can no more be the slave of the dead than of the living. To inherit government is to inherit peoples as if they were herds, treating descendants in advance like cattle with no will or rights of their own.", "supporting_paragraphs": ["d05-p016", "d05-p017"] },
+        { "id": "c0026-p2", "prompt": "What does the essay say makes hereditary kings what they are, and why can a monarch not feel for his people?", "answer": "Hereditary succession itself, which breeds monsters as a marsh breeds vipers: a prince who holds that his power comes from his birth and his birth from God thinks he owes nothing to men. People are kind through sympathy, by putting themselves in another's place, but a monarch has never been and can never be anywhere but in his own place, so he is the egoist above all others.", "supporting_paragraphs": ["d05-p018", "d05-p019", "d05-p020", "d05-p021"] },
+        { "id": "c0026-p3", "prompt": "What does the essay say the office of king requires, and what does honoring such an office do to a people?", "answer": "A simple workman needs some talent, but a king needs only a human shape; the office can be filled by infants or idiots, and since great men seldom have worthy children, a hereditary administrator is as absurd as an author by birthright. A people that bows down to such a thing is debased, giving the same homage to vice and virtue, and no institution has caused more degeneracy of mind.", "supporting_paragraphs": ["d05-p025", "d05-p026"] }
+      ]
+    },
+    {
+      "id": "c0027",
+      "section": "s0027",
+      "prompts": [
+        { "id": "c0027-p1", "prompt": "How does the essay answer the claims that a king is needed to protect the people from powerful men and to restrain the legislature?", "answer": "Against powerful men: establish the rights of man and equality, a good constitution with divided powers, no privileges of birth or monopolies, free industry and trade and a free press, and every citizen will be under the law. Against the legislature: representatives frequently renewed who neither administer nor judge, assemblies that can be called at any moment, and a people who can read and defend themselves make legislative tyranny hard; one should not imagine an evil for the sake of its remedy.", "supporting_paragraphs": ["d05-p029", "d05-p030", "d05-p031", "d05-p032"] },
+        { "id": "c0027-p2", "prompt": "How does the essay answer the fear that without a hereditary king every election of a chief would bring civil war?", "answer": "It is hereditary succession alone that produced the civil wars of France and England; the claims of royal families have brought foreign wars, and inherited crowns caused the troubles of regencies. An elected chief, moreover, would not be a king surrounded by courtiers, pomp and idolatry and paid thirty millions.", "supporting_paragraphs": ["d05-p036", "d05-p037"] }
+      ]
+    },
+    {
+      "id": "c0028",
+      "section": "s0028",
+      "prompts": [
+        { "id": "c0028-p1", "prompt": "What does the declaration list as the natural rights of men, and how does it define liberty and its limits?", "answer": "Liberty, equality, security, property, social protection and resistance to oppression. Liberty is the right to do whatever is not contrary to the rights of others, so each person's rights are limited only by what secures the same rights to everyone else; it is preserved by submission to the law, the expression of the general will.", "supporting_paragraphs": ["d06-p003", "d06-p004", "d06-p005"] },
+        { "id": "c0028-p2", "prompt": "What protections does the declaration give a person who is accused or arrested?", "answer": "No one may be accused, arrested or held except in cases and forms set by law; other acts are arbitrary and void, those who carry them out should be punished, and citizens may repel them by force, though they must obey a lawful summons. Everyone is presumed innocent until legally found guilty, needless harshness in arrest is forbidden, punishment requires a law made before the offence, retroactive laws are a crime, and penalties must be necessary and proportioned.", "supporting_paragraphs": ["d06-p013", "d06-p014", "d06-p015", "d06-p016", "d06-p017", "d06-p018", "d06-p019"] },
+        { "id": "c0028-p3", "prompt": "Where does the declaration place sovereignty, and in what cases does it say there is oppression?", "answer": "Sovereignty is one and indivisible and resides in the whole people, each citizen having an equal right to share in it; no group or individual may exercise authority without delegation by law. There is oppression when a law violates the natural rights it should guarantee, when officials violate the law in applying it, or when arbitrary acts violate citizens' rights against the law.", "supporting_paragraphs": ["d06-p028", "d06-p029", "d06-p030", "d06-p034", "d06-p035", "d06-p036"] }
+      ]
+    },
+    {
+      "id": "c0029",
+      "section": "s0029",
+      "prompts": [
+        { "id": "c0029-p1", "prompt": "Why does the author say the science of government has stood still, and where does he say its study should begin?", "answer": "Unlike other arts and sciences, government has scarcely improved, because the old systems rest on a false principle, put antiquity in place of principle and use their power to forbid inquiry into their origin. Yet it is easy to understand if one begins at the right point: not with the many subdivisions such as aristocracy, democracy or monarchy, but with the primary divisions that contain them all.", "supporting_paragraphs": ["d07-p003", "d07-p004", "d07-p005"] },
+        { "id": "c0029-p2", "prompt": "What are the two primary divisions of government, and why would proving one of them wrong settle the question?", "answer": "Government by election and representation, and government by hereditary succession; even mixed governments are made of parts that are one or the other. Since there are only two and one must be accepted, proving that one has no right to exist amounts to proving the other. Monarchy, royalty and aristocracy are only signs of the hereditary system and fall with it.", "supporting_paragraphs": ["d07-p007", "d07-p008", "d07-p009", "d07-p011", "d07-p012"] }
+      ]
+    },
+    {
+      "id": "c0030",
+      "section": "s0030",
+      "prompts": [
+        { "id": "c0030-p1", "prompt": "Why does the author say no family could ever have had a right to begin hereditary government?", "answer": "A thing has a right to continue only if it had a right to begin, and no family has any superior right by which hereditary rule could begin: whatever right the first ruling families had to set themselves up, Robespierre had just as much to do the same in France, so the right belongs to none of them.", "supporting_paragraphs": ["d07-p016", "d07-p017"] },
+        { "id": "c0030-p2", "prompt": "Why, according to the author, can time not turn hereditary government into a right?", "answer": "Time has no effect on principle: a wrong begun a thousand years ago is as much a wrong as one begun today, and a right that begins today is as good as one a thousand years old. And when we meet a wrong in our own lifetime, that is when it begins for us, so our right to resist it is the same as if it had never existed before.", "supporting_paragraphs": ["d07-p019"] },
+        { "id": "c0030-p3", "prompt": "Why does the author say lawmakers cannot set up hereditary government by law, considering those who are minors when the law is made?", "answer": "The rights of minors are as sacred as those of adults and are held in trust for them until they come of age; their guardians cannot take them away. A law setting up hereditary rulers would bind every minor to a government he could neither consent to nor oppose, though had he been born a few years sooner he could have voted against it; so it annuls their rights, and no right to make it exists.", "supporting_paragraphs": ["d07-p022", "d07-p023"] }
+      ]
+    },
+    {
+      "id": "c0031",
+      "section": "s0031",
+      "prompts": [
+        { "id": "c0031-p1", "prompt": "Why does the author say no generation may establish hereditary government for the generations after it?", "answer": "A nation is constantly renewed, and in this flowing succession no part has authority over another: each generation, like our ancestors, is only a tenant for life in the freehold of rights, which belongs to the whole family of man. Every generation is equal in rights and as free to act for itself as the one before, so governing beyond the grave is the most ridiculous and insolent tyranny; one generation has no property in those that follow.", "supporting_paragraphs": ["d07-p025", "d07-p026", "d07-p030"] },
+        { "id": "c0031-p2", "prompt": "How does the author define a generation in the political sense, and how long does such a generation hold authority?", "answer": "All persons over twenty-one at the time counted from, in whom legal authority resides. Such a generation holds authority for between fourteen and twenty-one years, until the minors who have come of age outnumber those who remain of the former stock.", "supporting_paragraphs": ["d07-p028"] }
+      ]
+    },
+    {
+      "id": "c0032",
+      "section": "s0032",
+      "prompts": [
+        { "id": "c0032-p1", "prompt": "Why does the author say a nation that sets up a hereditary family commits despotism, even though it acts by its own choice?", "answer": "The generation that first chooses a ruler lives under a government of its own choice, not a hereditary one; hereditary succession begins only after it dies. By binding its successors it turns from a legislator into a testator, willing away their rights and the free agency it used itself. Preventing the consent of later generations is despotism, and being sold by one's parent only makes slavery worse.", "supporting_paragraphs": ["d07-p035", "d07-p037", "d07-p039"] },
+        { "id": "c0032-p2", "prompt": "Why does the author say no generation can give away the rights of those who come after it?", "answer": "The rights of men in society can be neither bequeathed, transferred nor destroyed, only passed down, and no generation can cut off their descent: if one generation chooses to be slaves, the next still has the right to be free, because wrongs cannot descend by law. Hereditary succession by law is like A making a will to take B's property and give it to C.", "supporting_paragraphs": ["d07-p041", "d07-p042"] },
+        { "id": "c0032-p3", "prompt": "What example does the author give of lawmakers binding posterity, and why does he call such an act treason?", "answer": "The English parliament of 1688 made William and Mary king and queen and then bound the people, their heirs and posterity to them and their heirs forever; the French constituent assembly of 1789 did the same for the Capets. A nation may govern itself as it pleases, but hereditary government is government for people not yet born or still minors, so assuming a right to set it up is treason against the right of posterity.", "supporting_paragraphs": ["d07-p044", "d07-p045"] }
+      ]
+    },
+    {
+      "id": "c0033",
+      "section": "s0033",
+      "prompts": [
+        { "id": "c0033-p1", "prompt": "What does the author say is the origin and the true basis of representative government?", "answer": "Its origin needs no search: man himself is the origin and the evidence of the right, which belongs to him by his existence. Its only true basis is equality of rights: every man has one vote and no more, and neither rich nor poor may exclude the other, since exclusion is a matter of force, not right.", "supporting_paragraphs": ["d07-p048", "d07-p049"] },
+        { "id": "c0033-p2", "prompt": "How does the author describe a law that gives the vote only to people with a certain amount of property?", "answer": "As a combination of those who have that property to exclude those who do not, making themselves a self-created part of society; to assume such power is arbitrary and amounts to robbery, since the right of voting is a most sacred kind of property. Its supporters assume the exclusion will never fall on themselves, a vanity that has ruined thousands who sought more than equal rights and lost all.", "supporting_paragraphs": ["d07-p050", "d07-p051", "d07-p052"] }
+      ]
+    },
+    {
+      "id": "c0034",
+      "section": "s0034",
+      "prompts": [
+        { "id": "c0034-p1", "prompt": "Why does the author say making property the test of the right to vote is dangerous, whether the amount required is large or small?", "answer": "A large amount excludes most of the people and unites them against the government, which the majority can overturn whenever it pleases. A small amount disgraces liberty by tying it to chance, as when a man gains or loses his vote because his mare foals a mule or the mule dies; and property is often gained without merit and lost without crime.", "supporting_paragraphs": ["d07-p053", "d07-p054"] },
+        { "id": "c0034-p2", "prompt": "Why does the author call the right to vote the primary right, and what danger does he see in excluding people from it?", "answer": "It is the right by which all other rights are protected; a man without a vote is subject to the will of another, which is slavery, so proposing to disfranchise any class is as criminal as taking away property. A government is as strong as the number of people interested in supporting it: men can be excluded from voting, but not from rebelling against the exclusion.", "supporting_paragraphs": ["d07-p056", "d07-p057"] },
+        { "id": "c0034-p3", "prompt": "How does the author distinguish civil government from a bank or trading company, and why does he say equal rights protect property best?", "answer": "In a company the members' rights come only from the property they invest, but civil government concerns every person, so every kind of right must be represented: protecting a person is more sacred than protecting property, and a man's ability to work for his living is itself his property. Equal rights remove causes of complaint and violence, so property is secure; using property as a ground for unequal rights provokes indignation and tumult.", "supporting_paragraphs": ["d07-p060", "d07-p061", "d07-p062"] }
+      ]
+    },
+    {
+      "id": "c0035",
+      "section": "s0035",
+      "prompts": [
+        { "id": "c0035-p1", "prompt": "What does the author say about titles, about how aristocracy began, and about its effect on the mind?", "answer": "A title is mere sound, and a government making nobles is as absurd as one making wise men. Aristocracy began in robbery: the great landed estates were plundered at the conquest, the robbers hid their real names under titles, and the house of lords began as an association to protect stolen property. Like slavery, aristocracy weakens the mind, which is consumed by the childishness of ribbons and titles.", "supporting_paragraphs": ["d07-p063", "d07-p064", "d07-p065", "d07-p066", "d07-p067", "d07-p068"] }
+      ]
+    },
+    {
+      "id": "c0036",
+      "section": "s0036",
+      "prompts": [
+        { "id": "c0036-p1", "prompt": "Where does the author say rights come from, and what does a declaration of rights do?", "answer": "Rights are not gifts from one man or class to another, since no one could be the first giver; they belong to man by his existence and are therefore equal for all. A declaration of rights does not create or grant them: it states the principle by which they exist and lists them, every civil right resting on a natural right.", "supporting_paragraphs": ["d07-p070"] },
+        { "id": "c0036-p2", "prompt": "Why, according to the author, does civil society exist, and how does representative government arise from it?", "answer": "In nature all men are equal in rights but not in power, so the weak cannot protect themselves; society exists to equalize power in support of equal rights, each man taking the protection of the law as stronger than his own. So every man has an equal right to help form the government and laws, and in large countries that right can only be exercised by election and representation.", "supporting_paragraphs": ["d07-p071"] }
+      ]
+    },
+    {
+      "id": "c0037",
+      "section": "s0037",
+      "prompts": [
+        { "id": "c0037-p1", "prompt": "What does the author treat as a matter of principle and what as a matter of opinion, and how should questions of opinion be settled?", "answer": "Equal rights are a matter of principle; how the parts of government are arranged is a matter of opinion. In opinion the majority rules and the minority obeys in practice, since no one has a right that his opinion govern the rest and anyone may be in the majority one time and the minority the next. If the minority is right it will grow into a majority, so no insurrection is justified where rights are equal and opinion free.", "supporting_paragraphs": ["d07-p073", "d07-p074"] },
+        { "id": "c0037-p2", "prompt": "Which arrangement of the legislature does the author consider the worst, and what does he suggest instead?", "answer": "A single body in which the whole legislature sits together, because it is subject to the haste and passion of one individual: it is an individual in mass. Deliberation needs a reserve, so it would be better to divide the representatives by lot into two parts that revise and correct each other.", "supporting_paragraphs": ["d07-p076"] },
+        { "id": "c0037-p3", "prompt": "How does the author describe the executive, and what two rules does he give for the authority that oversees the carrying out of the laws?", "answer": "Power has two parts, willing the laws and carrying them out, like the mind and the body; the executive is official and subordinate to the legislature, with no discretion but to act as the laws decree. What is called executive power is an authority to superintend the execution of the laws; it should never give extraordinary power to one individual, nor leave power long in the same hands.", "supporting_paragraphs": ["d07-p079", "d07-p080", "d07-p081"] }
+      ]
+    },
+    {
+      "id": "c0038",
+      "section": "s0038",
+      "prompts": [
+        { "id": "c0038-p1", "prompt": "What does the author say about how liberty should be preserved once despotism has been overthrown?", "answer": "Insurrection and discretionary power are justified only by necessity while despotism is being overthrown. Afterwards, since people are convinced at different speeds, those convinced first have no right to persecute the rest: a revolution should instruct, not destroy. A constitution should have been set up early, because it limits party by a common principle, whereas without one party governs principle. And an eagerness to punish is dangerous: to secure his own liberty a man must guard even his enemy from oppression.", "supporting_paragraphs": ["d07-p084", "d07-p085", "d07-p086"] }
+      ]
+    },
+    {
+      "id": "c0039",
+      "section": "s0039",
+      "prompts": [
+        { "id": "c0039-p1", "prompt": "How does the author say the end of a system of finance can be foreseen without any prophecy?", "answer": "As we can set a limit to a man's life by observing what has happened in all cases, a system that shows a series of symptoms of decay will certainly dissolve, and the time can be calculated from those symptoms. Earlier writers expected the English funding system to fall only as a matter of opinion, without data; he means to show it from facts already known.", "supporting_paragraphs": ["d08-p003", "d08-p004", "d08-p005"] },
+        { "id": "c0039-p2", "prompt": "How does the author compare the English funding system with the paper money of America and France, and why does he say it lasts about twenty times longer?", "answer": "Every system of credit is a system of paper money. America and France issued their whole capital, glutting the market until its value fell within five or six years; England keeps the capital out of sight and adds paper only as interest accumulates, so it reaches the same end more slowly. At five percent the capital equals twenty years of interest, so twenty years of the English system equal one year of the others.", "supporting_paragraphs": ["d08-p006", "d08-p007", "d08-p008", "d08-p009"] }
+      ]
+    },
+    {
+      "id": "c0040",
+      "section": "s0040",
+      "prompts": [
+        { "id": "c0040-p1", "prompt": "What rule does the author find for the cost of each new English war, and how well does it fit the record?", "answer": "Each war costs as much as the one before plus half of that, a series like 8, 12, 18, 27 that grows very fast. Starting from the cost of the first war of the funding system, the rule gives costs for the following wars that closely match the figures Smith reports.", "supporting_paragraphs": ["d08-p020", "d08-p021", "d08-p023", "d08-p025", "d08-p026"] },
+        { "id": "c0040-p2", "prompt": "Why does the author say easy borrowing hastens rather than delays the end of the funding system?", "answer": "The loans are paper transactions, so it is their excess, not any difficulty in raising them, that drives the growing depreciation of funded paper money that will dissolve the system; the present war's loans already run beyond the ratio. Carried forward, the ratio gives debts and interest so huge that the system cannot possibly continue.", "supporting_paragraphs": ["d08-p027", "d08-p028", "d08-p031"] }
+      ]
+    },
+    {
+      "id": "c0041",
+      "section": "s0041",
+      "prompts": [
+        { "id": "c0041-p1", "prompt": "Why does the author say the ratio exists, although no minister ever planned it?", "answer": "Prices follow the quantity of money. Before the funding system the only money was gold and silver, which the mines yield sparingly, so prices barely changed; once paper grew with the interest on each loan, prices rose, so each new war needed a bigger loan to meet them, which added more paper and pushed prices higher still. This accelerating depreciation of funded paper is a necessity, and the ratio measures it.", "supporting_paragraphs": ["d08-p037", "d08-p038", "d08-p039"] },
+        { "id": "c0041-p2", "prompt": "Why does the author say the far higher cost of the present war cannot be explained by greater effort or success?", "answer": "The war that cost twenty-one millions was a victorious alliance of England, Austria and Holland, while the present far costlier war is a larger coalition of eight powers that the French Republic alone has beaten. Only the depreciation of money accounts for the difference.", "supporting_paragraphs": ["d08-p039", "d08-p040"] }
+      ]
+    },
+    {
+      "id": "c0042",
+      "section": "s0042",
+      "prompts": [
+        { "id": "c0042-p1", "prompt": "Why does the author say the English are mistaken in believing their paper money keeps its value against gold and silver?", "answer": "Paper has pulled gold and silver down to its own level: coin buys less than it would if there were no paper, or than it does where there is none. People call the rise in prices dearness, as they did in America and France, but it is really depreciation caused by the growing mass of paper, and in the end gold and silver will break away from paper.", "supporting_paragraphs": ["d08-p041", "d08-p044", "d08-p045"] },
+        { "id": "c0042-p2", "prompt": "Why does the author say that gold and silver separating from paper would be fatal to the funding system in particular?", "answer": "Unfunded paper can go on being issued after its value parts from gold and silver, as in America and France, but the funding system rests entirely on paper staying equal to coin. Even before the split, loans and taxes lose value before they can be spent, forcing the minister to issue more exchequer and navy bills, which speeds the depreciation; so the split is not a danger but a death-stroke.", "supporting_paragraphs": ["d08-p046", "d08-p047"] }
+      ]
+    },
+    {
+      "id": "c0043",
+      "section": "s0043",
+      "prompts": [
+        { "id": "c0043-p1", "prompt": "Why does the author say the bank could not pay its notes if people demanded coin?", "answer": "Taxes and the interest on the debt are paid in bank notes, and there is too little gold and silver in the nation even to pay the taxes in coin. Most of the coin is spread through the country and in people's tills, so the bank can hardly hold two millions and probably about one, and on that slender twig hangs the whole funded debt of four hundred millions and many millions of notes.", "supporting_paragraphs": ["d08-p048", "d08-p049", "d08-p050"] },
+        { "id": "c0043-p2", "prompt": "Why does the author say the regular payment of interest proves nothing, and why can the bank get no new supply of coin?", "answer": "The interest is paid in bank notes, which can always be made; the real test is whether the bank can give cash for those notes, and it cannot. No new coin can come in, because taxes and merchants' bills will all be paid in notes, and refusing notes for taxes would destroy their credit at once.", "supporting_paragraphs": ["d08-p051"] },
+        { "id": "c0043-p3", "prompt": "What does the author say has followed every failure of finances since paper money began, and what does he expect for England?", "answer": "A revolution in government, total or partial: the failure of French finances produced the French revolution, the failure of the assignats ended the revolutionary government, and the failure of the old American Congress's finances produced the federal Constitution. By the same reasoning, the failure of English finances will bring some change in the government of England.", "supporting_paragraphs": ["d08-p053"] }
+      ]
+    },
+    {
+      "id": "c0044",
+      "section": "s0044",
+      "prompts": [
+        { "id": "c0044-p1", "prompt": "Why does the author say the approach of bankruptcy can be hidden, and how does he describe credit and insolvency?", "answer": "Unlike old age, which cannot pass for youth, the decline of credit can be concealed by appearances: today's bankrupt was in good credit yesterday. Credit can exist in a state of insolvency, being only suspicion asleep. Insolvency always comes before bankruptcy, which is simply the publication of insolvency.", "supporting_paragraphs": ["d08-p055", "d08-p056", "d08-p061"] },
+        { "id": "c0044-p2", "prompt": "What does the author say the funding system does to a nation's resources?", "answer": "What ministers call a resource is only the anticipation of one: the system spends in advance what would have been the resources of later generations, who must pay the interest on every debt contracted before them. Had it begun a hundred years earlier, the taxes needed would be enormous, and bank notes would long since have become as worthless as American continental paper or French assignats.", "supporting_paragraphs": ["d08-p057"] },
+        { "id": "c0044-p3", "prompt": "How does the author use the workings of nature to show the folly of the funding system?", "answer": "Nature works by renewed succession, removing the old to make room for the new, not by piling up additions forever: men and trees continue through new generations. The funding system acts as if new loans could be added endlessly, like new beings born while none die; counting the graves shows the folly of that arithmetic.", "supporting_paragraphs": ["d08-p058"] }
+      ]
+    },
+    {
+      "id": "c0045",
+      "section": "s0045",
+      "prompts": [
+        { "id": "c0045-p1", "prompt": "In what three ways does the author say the bank acts, and why can the first two not explain the mass of notes in circulation?", "answer": "As a bank of discount, a bank of deposit, and banker for the government. Discounting merchants' two-month bills, judged by its profits, would keep only a modest amount of notes out at any time; and deposits are now made almost wholly in notes and are not the bank's own property, so they add nothing to its means of paying.", "supporting_paragraphs": ["d08-p063", "d08-p064", "d08-p065", "d08-p066"] },
+        { "id": "c0045-p2", "prompt": "Why does the author say acting as the government's banker threatens to ruin a bank?", "answer": "It forces the bank's credit far beyond its ability to pay. When the treasury is empty in wartime, the minister issues exchequer and navy bills, which are mere acknowledgements of debt, and the bank discounts, buys or carries them, putting more notes into circulation with no property behind them; the bank's original capital was long ago lent to the government and wasted. So notes are issued not because there is property in the bank but because there is none.", "supporting_paragraphs": ["d08-p067", "d08-p068", "d08-p069"] }
+      ]
+    },
+    {
+      "id": "c0046",
+      "section": "s0046",
+      "prompts": [
+        { "id": "c0046-p1", "prompt": "How does the author estimate the quantity of bank notes in circulation?", "answer": "Taxes can never be more than about a fourth of a nation's money, as was seen in England before paper and in France. English taxes are about twenty millions, so coin and notes together come to about eighty millions; with only about twenty millions in coin, there must be about sixty millions in notes payable on demand. Even if there were only a third of that, the bank could not pay half a crown in the pound.", "supporting_paragraphs": ["d08-p072", "d08-p073", "d08-p074"] },
+        { "id": "c0046-p2", "prompt": "What second generation of creditors does the author say the funding system has produced, and how does it change where power lies?", "answer": "Every holder of a bank note is a real creditor, owed payment on demand, and this debt in notes was largely run up to pay the interest on the funded debt. It lets even a small part of the note holders check any government measure, without meetings or societies, simply by demanding payment at the bank for their notes, which would stop new notes, loans and advances for the war.", "supporting_paragraphs": ["d08-p077", "d08-p078"] }
+      ]
+    },
+    {
+      "id": "c0047",
+      "section": "s0047",
+      "prompts": [
+        { "id": "c0047-p1", "prompt": "Why does the author regard the bank's new five-pound notes as a bad sign?", "answer": "With the wealthier classes already overstocked with notes, small notes were the only way to push more paper among shopkeepers, market people and renters of small houses, like an insolvent who borrows five pounds from his servants the day before he breaks. They will make the bank even less able to pay its larger notes, since even small taxes will now be paid in notes.", "supporting_paragraphs": ["d08-p080", "d08-p081"] },
+        { "id": "c0047-p2", "prompt": "Why does the author say that funding the bank notes would leave them worth less than French assignats?", "answer": "The assignats have solid property in reserve in the national lands, while bank notes have none; and the English revenue would then sink back to what it was before the funding system began.", "supporting_paragraphs": ["d08-p083"] }
+      ]
+    },
+    {
+      "id": "c0048",
+      "section": "s0048",
+      "prompts": [
+        { "id": "c0048-p1", "prompt": "What two kinds of property does the author distinguish, and in which of them can there be equality?", "answer": "Natural property, which comes from the Creator, such as the earth, air and water, and artificial or acquired property, made by men. Equality is impossible in acquired property, since people never contribute in the same proportion, but everyone is born with a legitimate claim to a share of natural property or its equivalent.", "supporting_paragraphs": ["d09-p010"] },
+        { "id": "c0048-p2", "prompt": "What error does the author find in the French constitution, and what harm does he expect from it?", "answer": "It ties the right to vote to payment of a direct tax, so equality of suffrage is not kept, though the vote belongs to all equally even if it were tied to property, since everyone has a birthright in property. This lowers the dignity of the vote, gave Babeuf's conspiracy the resentment it fed on, and will let scheming candidates pay the tax for poor men in return for their votes.", "supporting_paragraphs": ["d09-p011", "d09-p012", "d09-p013", "d09-p016"] },
+        { "id": "c0048-p3", "prompt": "What does the author say about how France has changed under its new constitution, and about what society really aims at?", "answer": "A revolution's benefits cannot be enjoyed while it is still going on, but compared with the revolutionary government and the Terror, France has changed astonishingly fast: famine has given way to abundance and the hope of growing prosperity. The royalist conspirators thought society cared about maintaining courtiers and pensioners, but it aims at maintaining itself.", "supporting_paragraphs": ["d09-p014", "d09-p015"] }
+      ]
+    },
+    {
+      "id": "c0049",
+      "section": "s0049",
+      "prompts": [
+        { "id": "c0049-p1", "prompt": "What error in a bishop's sermon led the author to publish this work, and what does he say true religion consists in?", "answer": "The sermon claimed that God made both rich and poor; the author answers that God made only male and female and gave them the earth for their inheritance. Practical religion consists in doing good, and the only way to serve God is to try to make his creation happy.", "supporting_paragraphs": ["d09-p022", "d09-p023", "d09-p024"] }
+      ]
+    },
+    {
+      "id": "c0050",
+      "section": "s0050",
+      "prompts": [
+        { "id": "c0050-p1", "prompt": "How does the author compare civilized life with the natural state of man, and why can people not simply return to nature?", "answer": "Civilization has made some people richer and others more wretched than either would be in the natural state, where there is no poverty but also none of the benefits of agriculture, arts and science. A return is impossible because living by hunting needs about ten times as much land as cultivation, so a populous country could not feed most of its people; the task is to remedy civilization's evils while keeping its benefits.", "supporting_paragraphs": ["d09-p028", "d09-p029", "d09-p030"] },
+        { "id": "c0050-p2", "prompt": "What principle does the author say civilization should follow, and how does he explain the origin of landed property?", "answer": "No one born into civilized society should be worse off than if born before it began, yet millions are. The earth in its natural state was the common property of mankind; landed property arose with cultivation because the improvement could not be separated from the land, but only the value of the improvement is truly individual property, so every owner of cultivated land owes the community a ground-rent.", "supporting_paragraphs": ["d09-p031", "d09-p032", "d09-p033", "d09-p035"] },
+        { "id": "c0050-p3", "prompt": "How does the author distinguish agrarian justice from agrarian law, and what does his plan propose?", "answer": "Agrarian law, dividing up cultivated land, would be unjust, because the value added by cultivation belongs to those who made, inherited or bought it; but those dispossessed of their natural inheritance are owed compensation as a right, not a charity. He proposes a national fund paying everyone fifteen pounds at twenty-one, as partial compensation for that lost inheritance, and ten pounds a year for life to everyone over fifty.", "supporting_paragraphs": ["d09-p036", "d09-p037", "d09-p038", "d09-p040", "d09-p041"] }
+      ]
+    },
+    {
+      "id": "c0051",
+      "section": "s0051",
+      "prompts": [
+        { "id": "c0051-p1", "prompt": "Whom does the author blame for the loss of natural inheritance, and why should the payments go to rich and poor alike?", "answer": "Not the present owners, unless they oppose justice: the fault lies in the system, which crept upon the world unnoticed. Payments go to everyone to avoid invidious distinctions and because they replace a natural inheritance that is everyone's right; those who do not want theirs can put it back into the common fund.", "supporting_paragraphs": ["d09-p044", "d09-p045"] },
+        { "id": "c0051-p2", "prompt": "At what moment does the author propose to take the fund's share from property, and why then?", "answer": "When property passes at a death to a new owner. This disturbs no present owner and does not interfere with taxes, is the least troublesome and most effective method, and comes when the subtraction is best borne: the one who leaves the property gives nothing and the one who receives it pays nothing; only the monopoly of natural inheritance begins to end with him.", "supporting_paragraphs": ["d09-p047"] }
+      ]
+    },
+    {
+      "id": "c0052",
+      "section": "s0052",
+      "prompts": [
+        { "id": "c0052-p1", "prompt": "Why does the author base his calculation on the English minister's own estimate of the national capital?", "answer": "Because it was ready to hand and can serve as a scale for any nation in proportion to its capital and population, and because it lets him show the minister, on his own figures, how much better money could be used than in wasting it on setting up Bourbon kings: it is better that the people have bread.", "supporting_paragraphs": ["d09-p052"] },
+        { "id": "c0052-p2", "prompt": "What share of the property passing at death does the author claim for the fund, and when should society take more?", "answer": "A tenth, which he takes as the fair value of the natural inheritance absorbed into it. Where there are no direct heirs, society should take an additional part, larger as the next of kin is more distant, because a person's relationship to society becomes comparatively greater as his kin are more remote.", "supporting_paragraphs": ["d09-p054", "d09-p056"] }
+      ]
+    },
+    {
+      "id": "c0053",
+      "section": "s0053",
+      "prompts": [
+        { "id": "c0053-p1", "prompt": "Why does the author say the rich themselves should be willing to pay into his plan?", "answer": "He is a friend to riches because they can do good and does not care how rich some are, provided none are miserable as a result. But wealth cannot be fully enjoyed while so much misery is mixed into the scene: the sight of it is a greater drawback on the happiness of affluence than the proposed ten percent is worth, so whoever would not pay the one to be rid of the other has no charity even for himself.", "supporting_paragraphs": ["d09-p064"] },
+        { "id": "c0053-p2", "prompt": "Why does the author say private charity is not enough, and why should his plan rest on justice instead?", "answer": "However generous, an individual can relieve little of the whole misery: he may satisfy his conscience but not his heart, and only civilization organized to work like a system of pulleys can lift the whole weight. Justice should not be left to the choice of individuals, so the plan ought to be the act of the whole nation.", "supporting_paragraphs": ["d09-p065", "d09-p067"] },
+        { "id": "c0053-p3", "prompt": "What good does the author expect from giving every young person a sum of money at twenty-one?", "answer": "It would prevent poverty instead of relieving it only after it comes, which is better even as economy, since the poor have become a hereditary race that grows every year. A young couple starting with fifteen pounds each could buy a cow and tools to farm a few acres and become useful citizens instead of burdens, and national lands would sell better in small lots.", "supporting_paragraphs": ["d09-p068", "d09-p069"] }
+      ]
+    },
+    {
+      "id": "c0054",
+      "section": "s0054",
+      "prompts": [
+        { "id": "c0054-p1", "prompt": "Why does the author include personal property, and not only land, in his plan?", "answer": "Land is the Creator's common gift, but personal property is the effect of society: an individual alone on an island or a continent could not become rich. All accumulation beyond what a man's own hands produce comes from living in society, so he owes part of it back. Often it also comes from paying labour too little, so that workers perish in old age; society should keep that share for them in a common fund.", "supporting_paragraphs": ["d09-p073"] },
+        { "id": "c0054-p2", "prompt": "Why does the author say his plan is needed to protect property, as well as for justice?", "answer": "The old awe that surrounded wealth is passing away; when wealth is seen as an insult to wretchedness, its right is called in question and property is in danger, which is why owners dread revolutions. Security lies only in a system of justice that makes property a national blessing, so that the richer a man grows the more the national fund grows, and the hostility ends.", "supporting_paragraphs": ["d09-p074", "d09-p075", "d09-p076"] },
+        { "id": "c0054-p3", "prompt": "Why does the author say a revolution in the state of civilization must go with a revolution in government?", "answer": "Civilization must match the government to give a revolution effect: despotism rests on an abject civilization and keeps the people down by poverty. When a republic ensures that everyone born in it inherits some means to begin life and need not fear a miserable old age, its revolution will have an ally in the hearts of all nations; an army of principles can go where an army of soldiers cannot.", "supporting_paragraphs": ["d09-p078", "d09-p079", "d09-p080"] }
+      ]
+    },
+    {
+      "id": "c0055",
+      "section": "s0055",
+      "prompts": [
+        { "id": "c0055-p1", "prompt": "How does the author propose to collect the fund's share of each estate and pay out the money in practice?", "answer": "Commissioners elected in each canton would keep a register; the principal heir would give a bond to pay the tenth within a year in quarterly payments, with half the property held as security. The bonds would be lodged at the national bank, which would issue notes on them to pay the pensions and the sums at twenty-one; backed by real property, and with cash arriving from the bonds, the notes would keep their value.", "supporting_paragraphs": ["d09-p082", "d09-p084", "d09-p085", "d09-p086", "d09-p088"] }
+      ]
+    }
+  ],
+  "x_drafter": { "model": "claude-opus-5-5", "date": "2026-11-19" },
+  "x_changes": [
+    { "round": 1, "issue": "R1-I1", "change": "Removed the six exclusions of d04 to d09 and divided those essays into new sections s0024 to s0055 with checkpoints c0024 to c0055; only the title heading and Editor's Introduction of Agrarian Justice (d09-p001 to d09-p005) stay excluded, as front matter." },
+    { "round": 1, "issue": "R1-I2", "change": "In c0004-p3's answer, replaced 'God said they had rejected him' with 'God said it was God, not Samuel, they had rejected'." },
+    { "round": 1, "issue": "R1-I3", "change": "In c0009-p2's answer, removed the word 'just' before 'before the Reformation'." }
+  ]
+}
