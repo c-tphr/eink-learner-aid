@@ -11,6 +11,12 @@ Nov 16, 2026 · @Christopher
 - Sections 3, 10 and 13: the two-slot table with its offsets and size budget, `boot_app0.bin` at 0x15000, updates shown only on a two-slot table with the Wi-Fi updater pointed at this repo's releases, and new identify checks and an update-path step for the device session. Source: `docs/spikes/S3-two-slot.md`.
 - Sections 2, 3 and 11: corrections learned during the project (upload hazard confirmed, the repo's starting state, where this plan lives, the base-import merge exception, and the live issue map in `docs/STATUS.md`).
 
+**2026-11-19.** The finding of spike S4 (input roles and control map) was written back into this plan. Section 1 is unchanged. Source: `docs/spikes/S4-control-map.md`.
+
+- Sections 2 and 4: only the role of GPIO5 (Confirm) is unconfirmed; the Up and Down side keys are hardware-confirmed in the SDK. Every action has a key path using only the two side keys (a short press moves the highlight, a 0.7 s hold selects; holding a side key in page view enters RSVP), and all bindings sit in one table, `src/controls/ControlMap.h`.
+- Sections 6 and 7: entering RSVP lands paused; any input pauses playback; each checkpoint screen highlights the safe action by default, with Skip checkpoint last and a short input guard on new screens.
+- Sections 9, 10, 11 and 13: the simulator's Picco key list, a new device-session step "Controls check" (later steps renumbered), and the Controls check screen and binding table added to tasks D3 and R4 and to the simulator risk.
+
 ## 1. Summary and confirmed decisions
 
 The reader is built as a public fork of mainline CrossPoint: RSVP works on any EPUB, and checkpoints come from prepared EPUBs that carry their own prompt data. This plan turns the v1 PRD into work that a Fable 5.2 orchestrator can split into GitHub issues for Opus 5.5 implementers. Everything is developed and verified in a simulator, then proven on the physical Picco in one final hands-on session.
@@ -47,7 +53,7 @@ The Picco is an ESP32-S3 reader with an 800x480 SSD1677-class panel, and mainlin
 | --- | --- | --- |
 | Processor and memory | ESP32-S3, 16 MB flash, 8 MB octal PSRAM | [FreeInk SDK device table](https://github.com/Free-Ink/freeink-sdk) |
 | Panel | 3.97" 800x480 black and white, portrait; one of four panels, identified at boot from the panel's user ID (CMD 0x2E) and, failing that, CMD 0x70: YRD0426, DEPG0397 or OPM040B3 on the SSD1677 driver, or SE0400NQW47 on the stock "SSD2677" driver. Each has its own stock waveforms (spike S2). | [FreeInk SDK](https://github.com/Free-Ink/freeink-sdk) |
-| Touch, light, inputs | Parade TMA525C touch, two-channel warm/cool I2C frontlight, slide switch, power button; nav-button roles are marked provisional | [FreeInk SDK](https://github.com/Free-Ink/freeink-sdk) |
+| Touch, light, inputs | Parade TMA525C touch, two-channel warm/cool I2C frontlight, slide switch (GPIO6); power button (GPIO2: a hold sleeps); side keys Up (GPIO21) and Down (GPIO9), marked hardware-confirmed in the SDK; a third input, GPIO5, is carried as Confirm with its physical role unconfirmed | [FreeInk SDK](https://github.com/Free-Ink/freeink-sdk) |
 | Stock partition layout | One app slot at 0xE0000 beside a vendor `safeboot` recovery app. On this layout, updates from the reader are impossible | [CrossPoint PR #3947](https://github.com/crosspoint-reader/crosspoint-reader/pull/3947), [crossplay PR #320](https://github.com/ma-r-s/crossplay/pull/320) |
 | Upload hazard | Upstream `pio run -e picco -t upload` also writes a bootloader at 0x0, a partition table, and `boot_app0` into the stock NVS area. Confirmed by reading the build scripts at the pinned commit, although upstream's `platformio.ini` comment claims an app-only upload; see `docs/BASE.md`. | [CrossPoint issue #4248](https://github.com/crosspoint-reader/crosspoint-reader/issues/4248) |
 | Two-slot move | A full flash writes the Arduino bootloader, a two-slot table, otadata and the app. NVS keeps its offset. Onyx's bootloader and safeboot come back only from a backup | [KatiePoint 2.0.0-rc3 release notes](https://github.com/InsiderPhD/crosspoint-reader/releases/tag/2.0.0-rc3) |
@@ -64,7 +70,7 @@ One early report said the Picco had 8 MB flash and no PSRAM ([readme.club](https
 - [ ] Actual partial and full refresh times for a word-sized region and for the full screen.
 - [ ] Whether any shortened waveform leaves text readable after 30 to 60 consecutive updates.
 - [ ] Flash size and PSRAM as reported by the chip.
-- [ ] Which physical side keys map to which logical buttons.
+- [ ] Which physical key is Up (GPIO21) and which is Down (GPIO9), whether GPIO5 (Confirm) is a key at all, and whether a 0.7 s hold is comfortable (Device test > Controls check).
 
 ## 3. Firmware base
 
@@ -109,6 +115,7 @@ The logic lives in two portable C++ libraries with no hardware dependencies, so 
 | CheckpointActivity | `src/activities/checkpoint/` | Prompt, reveal, grade, reread choice, skip actions | Simulator scenarios |
 | DisplayProfile | `src/display/` | Named refresh strategies (stock and candidates), per-update timing, clearing policy | Simulator timing model, device |
 | DeviceTestActivity | `src/activities/devicetest/` | Benchmark sweep, ratings, guided acceptance walk-through, results files | Simulator, device |
+| ControlMap | `src/controls/` | The single binding table (key roles, timings, event-to-action bindings, touch zones) and the input adapter | Host unit tests, simulator scenarios |
 
 ### Position model
 
@@ -123,8 +130,8 @@ A reading position is a chapter index plus a word index within that chapter. Bot
 
 - **Memory.** Words are streamed from the SD card in fixed-size blocks. No whole chapter is held in RAM, even though the Picco has 8 MB of PSRAM.
 - **Scope of change.** The feature is compiled in for the Picco targets and the simulator behind one build flag, so other CrossPoint devices are unaffected.
-- **Inputs.** The SDK marks the Picco's nav-button roles as provisional. All bindings sit in one table that maps logical actions to keys and touch zones, and can be corrected after the device session without touching activity code.
-- **Every action two ways.** Each RSVP and checkpoint action has a touch target and a key path. The simulator scenarios drive each flow once by touch and once by keys.
+- **Inputs.** The SDK confirms the Picco's Up and Down side keys but not the role of GPIO5 (Confirm). Every action has a key path that uses only the two side keys: a short press moves the highlight, a 0.7 s hold selects; Confirm and a power click set to Confirm are optional. In page view a 0.7 s side-key hold enters RSVP (new "Page turn long press: Speed read" option, default in feature builds). All bindings sit in `src/controls/ControlMap.h`; a swapped pair is fixed on the device by the Side button layout setting and durably by one line of that table (spike S4).
+- **Every action two ways.** Each RSVP and checkpoint action has a touch target and a key path. The simulator scenarios drive each flow once by touch and once by keys. The key run uses only Up and Down; Confirm is never required.
 
 ### Where data is stored
 
@@ -224,6 +231,8 @@ Delivered WPM is words shown divided by active playback time. Time spent paused,
 - Each word is placed so its focus letter sits on a fixed column, marked by small ticks above and below the word band. No grey levels are used, because the fast refresh modes are black and white only.
 - Only the word band is redrawn during playback. Guides and progress marks are drawn once per play.
 - While paused: adjust WPM and words per update, save as global default or as this book's override, step back or forward by sentence, switch to page view at the same position.
+- Entering RSVP shows the pause screen at the current word with Play highlighted; RSVP always waits for Play.
+- While playing, any key press or touch pauses and nothing else.
 
 ### Display profiles
 
@@ -269,6 +278,8 @@ Only the first grade given to a prompt is stored, so the loop through a reread c
 4. Incorrect offers Reread section (in RSVP or page view) or Continue. Continue moves on.
 5. A reread starts at the section's start anchor in the chosen mode and returns to the same prompt with the answer hidden. The reader may then retry or continue.
 6. On finish or Skip checkpoint, restore the mode that was active when the checkpoint appeared, at the first word after the break. RSVP waits for Play; page view waits for the next action.
+
+Each checkpoint screen highlights the safe action by default: Reveal; on the revealed answer, the answer text (never a grade); after Incorrect, the reread in the mode in use. Skip checkpoint is always the last item. A new screen ignores input for 300 ms after it is shown and until keys and touch are released. Layouts: spike S4.
 
 ### Grade rules
 
@@ -356,7 +367,7 @@ The emulator is CrossPoint's own [SDL2 simulator](https://github.com/crosspoint-
 | --- | --- |
 | 800x480 screen | SDL window in portrait; screenshots on demand |
 | Touch | Mouse tap and swipe |
-| Side keys | Up and Down arrow keys |
+| Side keys | Up and Down arrow keys; Return is GPIO5 Confirm (role unconfirmed); Escape, Left and Right do nothing |
 | Power button | P |
 | Slide switch | T |
 | Frontlight | Warm and cool state is tracked, not shown as light |
@@ -427,11 +438,12 @@ The orchestrator publishes a GitHub release containing everything the session ne
 4. **Confirm.** The script prints the flash plan and asks the owner to type a confirmation phrase. This is the point of no return for Onyx's bootloader.
 5. **Flash.** `session.ps1 flash` writes only the offsets in the plan, verifies each, and refuses any image whose hash differs from the plan.
 6. **First boot.** `session.ps1 monitor` starts logging serial output to a file. The owner confirms the home screen appears and copies the `sd-card/` files across by Wi-Fi transfer or card reader.
-7. **Prove the update path (optional).** With the cable still attached, install `update.bin` from the SD card through Settings and confirm the device reboots into it (it now runs from the second slot). Record the serial log.
-8. **Display benchmark.** From the Device test menu, run the sweep (below) for the stock profile and each trial profile, rating each when asked.
-9. **Guided acceptance.** Run the on-device walk-through of the PRD criteria, tapping pass or fail at each step.
-10. **Choose a profile.** Pick the display profile to keep.
-11. **Return evidence.** Attach the files from `/rsvp-bench/` and the serial log to the GitHub issue titled "Device session results".
+7. **Controls check.** From the Device test menu, press each key and the power button once and hold each side key; the screen logs the raw input and the logical button. If the side keys feel reversed, set Settings > Controls > Side button layout to Next/Prev (this fixes page view and the RSVP and checkpoint screens at once); if GPIO5 does nothing, set Short power button to Confirm if wanted. Record the result in the results issue.
+8. **Prove the update path (optional).** With the cable still attached, install `update.bin` from the SD card through Settings and confirm the device reboots into it (it now runs from the second slot). Record the serial log.
+9. **Display benchmark.** From the Device test menu, run the sweep (below) for the stock profile and each trial profile, rating each when asked.
+10. **Guided acceptance.** Run the on-device walk-through of the PRD criteria, tapping pass or fail at each step.
+11. **Choose a profile.** Pick the display profile to keep.
+12. **Return evidence.** Attach the files from `/rsvp-bench/` and the serial log to the GitHub issue titled "Device session results".
 
 Steps 2 and 3 change nothing on the device. The owner may run them earlier, at no risk, to shorten the final session and give the agents confirmed hardware facts sooner.
 
@@ -542,7 +554,7 @@ The orchestrator splits these further where a task would exceed one focused pull
 | R1 | RsvpCore: words, focus letter, pacing, grouping | Host tests cover punctuation, long words, group boundaries |
 | R2 | RsvpCore: scheduler and delivered-WPM meter | Fake-clock tests: no word skipped at any refresh delay; meter excludes pauses |
 | R3 | WordIndex build and cache | Index for fixture matches expected word and anchor positions |
-| R4 | RsvpActivity: playback, pause screen, settings, mode switch | Scenarios by touch and by keys; global and per-book settings persist |
+| R4 | RsvpActivity: playback, pause screen, settings, mode switch; single binding table `src/controls/ControlMap.h` | Scenarios by touch and by keys; global and per-book settings persist |
 | R5 | Non-prose pauses and footnote handling | Scenario pauses at image, table, code; passes footnote marks |
 | C1 | CheckpointCore: parsing, trigger and grade rules, state machine | Host tests for every rule in section 7 |
 | C2 | ReadingSession: triggers in both modes, navigation sources | Scenario: reading in fires; table-of-contents jump does not |
@@ -551,7 +563,7 @@ The orchestrator splits these further where a task would exceed one focused pull
 | C5 | State file, atomic save, restore on open | Kill-and-restart scenarios for prompt and reread |
 | D1 | DisplayProfile on device: stock profile, clearing policy, timing capture | Builds; simulator backend unchanged |
 | D2 | Trial profiles A to D with safety limits | Trials A to C disabled on SSD2677 path; off by default; unit test on limits |
-| D3 | DeviceTestActivity: sweep, ratings, guided acceptance, results files | Full sweep runs in the simulator and writes valid results |
+| D3 | DeviceTestActivity: sweep, ratings, guided acceptance, results files; Controls check screen | Full sweep runs in the simulator and writes valid results |
 | D4 | `picco_2slot` target, size gate, updates enabled on two-slot only | Image under budget; update menu hidden on single-slot table; Wi-Fi updater points at this repo's releases |
 | D5 | `session.ps1`, flash plan, offset guard, dry run, restore | Guard tests pass; dry run prints only planned offsets |
 | D6 | `DEVICE_SESSION.md` and the results-issue template | Checklist reviewed against section 10 step by step |
@@ -626,7 +638,7 @@ The largest risk is the combination the owner chose knowingly: one device sessio
 | No trial waveform is clean, or the unit has the SE0400NQW47 panel (only Stock and Trial D available) | Medium | No fast setting in v1 | Stock stays default; outcome recorded; no further waveform work in v1 |
 | Shortened waveforms stress the panel | Low | Residue or long-term wear | Off by default; bounded runs; clearing refreshes; owner chooses whether to keep one |
 | Word and page mapping in CrossPoint's engine is harder than assumed | Low (spike S1) | Delays M4 and M5 | Spike S1 found an exact mapping through CrossPoint's visible-text offsets with no layout changes, so the paragraph-level fallback is not needed. The remaining risk is the word pass counting offsets differently from the renderer, guarded by a host parity test (R3). |
-| Simulator differs from the device (button roles, touch, memory) | Medium | Input or layout surprises in the session | Single remappable control table; both input paths for every action; fixes shipped by SD update |
+| Simulator differs from the device (button roles, touch, memory) | Medium | Input or layout surprises in the session | Single remappable control table; both input paths for every action; fixes shipped by SD update; Controls check screen in the device test menu |
 | Two-slot image outgrows its slot | Low | Build cannot be flashed | CI size gate with 10% margin from the first build |
 | Cloud network blocks a build dependency | Medium | Agents cannot build | Task F2 smoke test before any feature work; owner adds hosts |
 | AI checker verdicts vary between runs | Medium | Flaky preparation | Structural checks are scripted; the checker must cite paragraphs; loop capped at three rounds |
