@@ -1,0 +1,55 @@
+# make-plan and plan refusing a wrong offset and altered files (synthetic images).
+
+$ python -m piccoflash make-plan --bootloader <tmp>/build/bootloader.bin --partitions <tmp>/build/partitions.bin --boot-app0 <tmp>/build/boot_app0.bin --app <tmp>/build/firmware.bin --version 0.1.0 --expect-offset boot_app0=0xE000 -o <tmp>/kit-bad-offset
+REFUSED: no plan was written.
+  - --expect-offset boot_app0=0xE000 disagrees with the only allowed offset 0x15000
+  - boot_app0 (boot_app0.bin): the write would erase 0xE000-0xFFFF, outside its region 0x15000-0x16FFF
+  - boot_app0 (boot_app0.bin): it would touch the stock NVS partition (0x9000-0x14FFF), which the two-slot layout keeps
+  - boot_app0 (boot_app0.bin): it would touch 0xE000, the framework's default boot_app0 offset, which is inside the stock NVS
+[process exit code 1]
+
+$ python -m piccoflash make-plan --bootloader <tmp>/build/bootloader.bin --partitions <tmp>/build/partitions.bin --boot-app0 <tmp>/build/boot_app0.bin --app <tmp>/build/firmware.bin --version 0.1.0 -o <tmp>/kit-bad-offset
+REFUSED: no plan was written.
+  - boot_app0 (boot_app0.bin): SHA-256 c8a78bc20d52919b is not the known Arduino boot_app0.bin f94c5d786a7a8fab
+[process exit code 1]
+
+$ python -m piccoflash plan --plan <tmp>/kit
+piccoflash 1.0.0 (Python 3.13.18, esptool 5.6.0 pinned)
+Flash plan: <tmp>/kit/flash-plan.json
+Firmware version: 0.1.0-synthetic   build: synthetic-images   created: 2026-11-18T22:28:24Z
+Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
+
+Region           Offset     Erase end        Size  File            SHA-256 (first 16)
+bootloader       0x00000000 0x00004FFF      18720  bootloader.bin  28c725581bf2029b
+partition_table  0x00008000 0x00008FFF       3072  partitions.bin  0d3fad517e642121
+boot_app0        0x0000E000 0x0000FFFF       8192  boot_app0.bin   f94c5d786a7a8fab
+app              0x00020000 0x00542FFF    5386144  firmware.bin    2b5ee61699b6d954
+app uses 65.2% of its 0x7E0000-byte slot
+
+REFUSED by the guard:
+  - boot_app0 (boot_app0.bin): offset 0xE000 is not the allowed offset 0x15000
+  - boot_app0 (boot_app0.bin): the write would erase 0xE000-0xFFFF, outside its region 0x15000-0x16FFF
+  - boot_app0 (boot_app0.bin): it would touch the stock NVS partition (0x9000-0x14FFF), which the two-slot layout keeps
+  - boot_app0 (boot_app0.bin): it would touch 0xE000, the framework's default boot_app0 offset, which is inside the stock NVS
+[exit 1: STOP]
+[process exit code 1]
+
+$ python -m piccoflash plan --plan <tmp>/kit
+piccoflash 1.0.0 (Python 3.13.18, esptool 5.6.0 pinned)
+Flash plan: <tmp>/kit/flash-plan.json
+Firmware version: 0.1.0-synthetic   build: synthetic-images   created: 2026-11-18T22:28:24Z
+Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
+
+Region           Offset     Erase end        Size  File            SHA-256 (first 16)
+bootloader       0x00000000 0x00004FFF      18720  bootloader.bin  28c725581bf2029b
+partition_table  0x00008000 0x00008FFF       3072  partitions.bin  0d3fad517e642121
+boot_app0        0x00015000 0x00016FFF       8192  boot_app0.bin   f94c5d786a7a8fab
+app              0x00020000 0x00542FFF    5386144  firmware.bin    2b5ee61699b6d954
+app uses 65.2% of its 0x7E0000-byte slot
+
+REFUSED by the guard:
+  - app (firmware.bin): image checksum mismatch
+  - app (firmware.bin): appended SHA-256 does not match the image
+  - app: the file's SHA-256 is e9d9bb4e25d9bc31 but the plan says 2b5ee61699b6d954; the file changed after the plan was made or verified
+[exit 1: STOP]
+[process exit code 1]

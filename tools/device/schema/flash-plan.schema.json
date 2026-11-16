@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/c-tphr/eink-learner-aid/tools/device/schema/flash-plan.schema.json",
+  "title": "Picco flash plan",
+  "description": "flash-plan.json in the device kit: which four images to write for the two-slot layout, with their offsets, sizes and SHA-256. Written by `python -m piccoflash make-plan`. The plan is checked against this schema AND against the guard's hard-coded policy (tools/device/piccoflash/guard.py); a plan the guard does not allow is refused even if it is valid here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "firmware_version", "build_id", "created_utc", "device", "images", "partition_table", "tools"],
+  "properties": {
+    "format": {"const": "picco-flash-plan"},
+    "version": {"const": 1},
+    "firmware_version": {"$ref": "#/$defs/label", "description": "Firmware version string, e.g. 0.1.0"},
+    "build_id": {"$ref": "#/$defs/label", "description": "Build identifier, e.g. the git commit"},
+    "created_utc": {"type": "string", "description": "When make-plan ran, ISO 8601 UTC"},
+    "device": {"type": "string"},
+    "images": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/image"}
+    },
+    "partition_table": {
+      "description": "The partition table the plan expects to write, row by row. Must equal the two-slot table.",
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/row"}
+    },
+    "tools": {
+      "type": "object",
+      "required": ["piccoflash", "esptool", "python"],
+      "properties": {
+        "piccoflash": {"type": "string"},
+        "esptool": {"type": "string"},
+        "python": {"type": "string"}
+      }
+    }
+  },
+  "$defs": {
+    "label": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$"},
+    "hex": {"type": "string", "pattern": "^0x[0-9A-F]+$"},
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "file", "offset", "size", "sha256"],
+      "properties": {
+        "role": {"enum": ["bootloader", "partition_table", "boot_app0", "app"]},
+        "file": {"type": "string", "minLength": 1, "pattern": "^[^/\\\\:]+$", "not": {"enum": [".", ".."]}},
+        "offset": {"$ref": "#/$defs/hex"},
+        "size": {"type": "integer", "minimum": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "subtype", "offset", "size", "flags"],
+      "properties": {
+        "name": {"type": "string"},
+        "type": {"type": "string"},
+        "subtype": {"type": "string"},
+        "offset": {"$ref": "#/$defs/hex"},
+        "size": {"$ref": "#/$defs/hex"},
+        "flags": {"type": "integer"}
+      }
+    }
+  }
+}
