@@ -1,0 +1,94 @@
+Compatibility stubs for crosspoint-simulator 84c3421d against CrossPoint 490813ff
+
+Applied by scripts/patch_simulator.py to the simulator library under
+.pio/libdeps/<env>/simulator. The simulator replaces the firmware's lib/hal
+with its own shims; these hunks answer upstream firmware changes made after
+the simulator's last sync (2026-11-10). Each hunk is additive and mirrors the
+firmware's signature, as the simulator's FORKING.md recommends.
+
+src/BoardConfig.h: enum InputStyle and BoardProfile::inputStyle
+  Firmware 867a1210 (#4407, 2026-11-15) reads BoardConfig::ACTIVE.inputStyle
+  in src/MappedInputManager.cpp:23. Enum values are copied from the SDK
+  (libs/hardware/BoardConfig/include/BoardConfig.h). The new member is last
+  and has a default, so the simulator's positional profile initialisers
+  still compile. The firmware only tests for DigitalConfirmPowerHold, which no
+  simulator profile reports, so simulated input behaves as before.
+
+src/HalDisplay.h: setReaderRefresh(), controllerIdle(),
+displayRetainedGrayscaleOverlay()
+  Firmware 5058eb43 (#4362, 2026-11-13) calls these from
+  src/activities/reader/ReaderUtils.h:246-247, src/main.cpp:150 and
+  lib/GfxRenderer/GfxRenderer.cpp:2451. The simulator models no waveforms or
+  panel power, so the first two are no-ops; the overlay returns false
+  ("not drawn"), and the firmware then refreshes as usual.
+
+src/SecureHttpClient.h: getCombinedHeader()
+  src/network/HttpDownloader.cpp:155 calls it; it exists in the SDK's
+  SecureNet at the pinned SDK commit (3f3e4c11). Joins every value of one
+  header with ", ", as the SDK does.
+
+diff --git a/src/BoardConfig.h b/src/BoardConfig.h
+index f1de19b..c04c52b 100644
+--- a/src/BoardConfig.h
++++ b/src/BoardConfig.h
+@@ -239,6 +239,16 @@ struct ViewableInsets {
+   uint8_t left = 3;
+ };
+ 
++enum class InputStyle : uint8_t {
++  XteinkAdcLadder,
++  DigitalButtons,
++  DigitalConfirmBackHold,
++  DigitalConfirmPowerHold,
++  DigitalFiveKey,
++  DigitalTwoButton,
++  OnePageAdcLadder,
++};
++
+ struct BoardProfile {
+   Board board;
+   const char *name;
+@@ -262,6 +272,7 @@ struct BoardProfile {
+   uint8_t tabBarWidthPct = 100;
+   uint8_t wifiMaxTxPower = 0;
+   float uiScale = 1.0f;
++  InputStyle inputStyle = InputStyle::XteinkAdcLadder;
+ };
+ 
+ #if defined(SIMULATOR_DISPLAY_UC8179)
+diff --git a/src/HalDisplay.h b/src/HalDisplay.h
+index b1d6f13..b430311 100644
+--- a/src/HalDisplay.h
++++ b/src/HalDisplay.h
+@@ -31,6 +31,9 @@ public:
+   GrayscaleCapabilities grayscaleCapabilities(
+       GrayscaleMode mode = GrayscaleMode::Overlay) const;
+   const char* controllerName() const;
++  void setReaderRefresh(bool) {}
++  void controllerIdle() {}
++  bool displayRetainedGrayscaleOverlay(uint16_t, uint16_t, uint16_t, uint16_t, bool) { return false; }
+ 
+   // Constructor with pin configuration
+   HalDisplay();
+diff --git a/src/SecureHttpClient.h b/src/SecureHttpClient.h
+index 72742ae..102577c 100644
+--- a/src/SecureHttpClient.h
++++ b/src/SecureHttpClient.h
+@@ -102,6 +102,17 @@ class SecureHttpClient {
+   bool hasContentLength() const { return http_.hasContentLength(); }
+   size_t getContentLength() const { return http_.getContentLength(); }
+   std::string getHeader(const std::string& name) const { return http_.getHeader(name); }
++  std::string getCombinedHeader(const char* lowercaseName) const {
++    std::string value;
++    for (const auto& h : http_.getHeaders()) {
++      std::string n = h.first;
++      for (auto& c : n) c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
++      if (n != lowercaseName) continue;
++      if (!value.empty()) value += ", ";
++      value += h.second;
++    }
++    return value;
++  }
+   bool responseComplete() const { return http_.responseComplete() && !callbackStopped_ && !aborted_; }
+   bool aborted() const { return aborted_; }
+   std::vector<std::pair<std::string, std::string>> getHeaders() const {
