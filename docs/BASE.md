@@ -45,14 +45,19 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `docs/BASE.md` | Added | This file |
 | `docs/IMPLEMENTER_GUIDE.md`, `docs/PLAN.md`, `docs/PRD.md`, `docs/STATUS.md` | Added | Project documents, present before the import |
 | `platformio.ini` | **Modified, one line** (line 4): `extra_configs = platformio.local.ini` became `extra_configs = platformio.project.ini, platformio.local.ini` | Loads this project's PlatformIO environments from a file of its own. `platformio.local.ini` is still read last, so personal overrides still win (task F2) |
-| `platformio.project.ini` | Added | Project-owned environments: `[env:simulator]` and `[env:simulator_picco]` (see "Simulator" below) (task F2) |
-| `scripts/cloud-setup.sh`, `scripts/pio_prefetch.py` | Added | Cloud session setup and the PlatformIO pre-fetch it runs (task F2) |
+| `platformio.project.ini` | Added | Project-owned environments: `[env:simulator]` and `[env:simulator_picco]` (see "Simulator" below) (task F2); `[env:picco_2slot]`, the two-slot Picco build (task D4, `docs/TWO_SLOT.md`) |
+| `scripts/cloud-setup.sh`, `scripts/pio_prefetch.py` | Added | Cloud session setup and the PlatformIO pre-fetch it runs (task F2); `picco_2slot` added to the pre-fetched environments (task D4) |
 | `scripts/net-smoke.sh`, `scripts/net_smoke.py` | Added | Network smoke test (task F2) |
 | `scripts/patch_simulator.py`, `scripts/simulator_patches/` | Added | Patches applied to the fetched simulator library (see "Simulator" below) (task F2) |
 | `docs/net-smoke-report.md`, `docs/evidence/f2/` | Added | Smoke test report and evidence (task F2) |
-| `test/CMakeLists.txt` | **Modified, three lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a) and `add_subdirectory(word_index)` (task R3), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
+| `test/CMakeLists.txt` | **Modified, four lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a), `add_subdirectory(word_index)` (task R3) and `add_subdirectory(update_policy)` (task D4), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
 | `platformio.ini` | **Modified, three lines added**: `-DCROSSPOINT_RSVP=1` at the end of `build_flags` in `[env:picco]`, `[env:picco-gh_release]` and `[env:picco-gh_release_rc]` | The RSVP feature flag, on for the Picco targets only (task F4). `simulator_picco` sets it in `platformio.project.ini`. See `docs/ARCHITECTURE-RSVP.md` |
 | `src/main.cpp` | **Modified, two lines added**: `#include "reading/RsvpLinkCheck.h"` and `runRsvpLinkCheck();` in `setup()`, after the "Starting CrossPoint version" log line | Temporary start-up check that links RsvpCore and CheckpointCore; an empty inline function without the flag (task F4). Task C2 replaces it with ReadingSession |
+| `src/main.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; in the `recoveryFirmwareMode` condition `!BoardConfig::isPicco()` became `update_gate::updateMenusVisible(!BoardConfig::isPicco())`, moved after the key test so the table is only read when the recovery key is held; one comment line | Boot recovery SD picker on a two-slot Picco only. Without the flag the function returns its argument, so other devices are unchanged |
+| `src/activities/settings/SettingsActivity.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; `if (!BoardConfig::isPicco())` before "Check for updates" and "SD Card Firmware Update" became `if (update_gate::updateMenusVisible(!BoardConfig::isPicco()))`; the comment above it extended by one sentence | Feature builds show the two update entries only when the running partition table allows self-update (`lib/UpdatePolicy`); upstream behaviour without the flag |
+| `src/network/FirmwareFlasher.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; in `flashFromSdPath`, after the next-update partition is found, `if (!update_gate::mayWriteUpdateSlot(dest->address, sdPath)) return Result::NO_PARTITION;` (3 lines) | Running-slot guard for the SD path at the point of writing (spike S3: it had none). Always true without the flag |
+| `src/network/OtaUpdater.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; `checkForUpdate` returns `NO_UPDATE` unless `update_gate::selfUpdateAllowed()`; the release URL goes through `update_gate::releaseUrl(...)`; the asset name through `update_gate::formatAssetName(...)` with upstream's `snprintf` as the fallback; `isUpdateNewer` returns `update_gate::isNewerRelease(...)` when `update_gate::PROJECT_RELEASES`; `installUpdate` calls `update_gate::mayWriteUpdateSlot(...)` before `esp_ota_begin` | Wi-Fi updater: this repository's releases and asset name, a version rule that never compares unparsed numbers, and the running-slot guard (task D4, `docs/TWO_SLOT.md`). Without the flag every call returns upstream's value |
+| `partitions_picco_2slot.csv`, `scripts/picco_2slot_pre.py`, `scripts/picco_2slot_post.py`, `scripts/make_device_kit.py`, `lib/UpdatePolicy/`, `src/update/`, `test/update_policy/`, `docs/TWO_SLOT.md`, `docs/evidence/d4/` | Added | The two-slot build, its upload refusal and checks, the device-kit builder, the update policy and its firmware glue (task D4) |
 | `src/RsvpFeature.h`, `src/reading/`, `src/activities/rsvp/`, `src/activities/checkpoint/`, `src/display/`, `src/activities/devicetest/`, `docs/ARCHITECTURE-RSVP.md` | Added | Feature flag header and the module skeletons, compiled only with the flag (task F4) |
 | `.gitignore` | Two negation lines after `.claude/*` so `.claude/commands/` and `.claude/agents/` are tracked | The `/prep-book` command and the checker subagent live there (P4) |
 | `.github/workflows/project-ci.yml`, `.github/scripts/check-format.sh`, `sim-smoke.sh`, `firmware-size.sh`, `no_skips.py`, `device_session_fixture.py`, `docs/CI.md` | Added | This project's CI (task F3); `docs/CI.md` describes it |
@@ -123,8 +128,9 @@ git merge-base --is-ancestor 490813ff4541e74e654f54f66ece9efc908361a0 HEAD && ec
 git submodule status
 
 # 3. Outside docs/ and README.md, the only upstream files modified are platformio.ini (four lines),
-#    test/CMakeLists.txt (three lines), src/main.cpp (two lines), .gitignore (two lines) and five
-#    .github/workflows files (job conditions), all in the table above;
+#    test/CMakeLists.txt (four lines), src/main.cpp, src/activities/settings/SettingsActivity.cpp,
+#    src/network/FirmwareFlasher.cpp, src/network/OtaUpdater.cpp (registration points, task D4),
+#    .gitignore (two lines) and five .github/workflows files (job conditions), all in the table above;
 #    everything else listed is an added file from the table above
 git diff --stat --diff-filter=MD 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 git diff --stat 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
@@ -147,7 +153,7 @@ cmake -S test -B build/test && cmake --build build/test -j4 && ctest --test-dir 
 
 ## Picco upload target at this commit
 
-**Do not run `pio run -e picco -t upload`.** Reading the code at this commit, it still writes the Arduino bootloader at 0x0, a partition table at 0x8000 and `boot_app0` at 0xE000 (inside the stock NVS partition), as `docs/PLAN.md` section 2 ("Upload hazard") says. Upstream's comment claiming an app-only upload is not borne out by the build scripts.
+**Do not run `pio run -e picco -t upload`.** The project's own two-slot environment, `picco_2slot`, has no upload target at all: `pio run -e picco_2slot -t upload` stops before anything runs (`docs/TWO_SLOT.md`). Reading the code at this commit, it still writes the Arduino bootloader at 0x0, a partition table at 0x8000 and `boot_app0` at 0xE000 (inside the stock NVS partition), as `docs/PLAN.md` section 2 ("Upload hazard") says. Upstream's comment claiming an app-only upload is not borne out by the build scripts.
 
 ### What the configuration intends
 

@@ -497,11 +497,22 @@ jobs:
       - if: steps.detect.outputs.present == 'true'
         name: Size gate
         run: |
+          # pipefail: without it the exit status is tee's, and an image over budget would pass.
+          set -o pipefail
           .github/scripts/firmware-size.sh picco_2slot build/pio-picco_2slot.log --gate | tee build/size-picco_2slot.txt
           if [[ -f scripts/size_gate.py ]]; then
             echo "scripts/size_gate.py found: running it as well"
             python3 scripts/size_gate.py .pio/build/picco_2slot/firmware.bin
           fi
+      - if: steps.detect.outputs.present == 'true'
+        name: Device kit from the real images (the flashing tool's guard must accept them)
+        # Offsets from the build's envdump, `piccoflash make-plan` with --expect-offset, `piccoflash plan`,
+        # and `flash --dry-run` against the fake device of tools/device/tests. Never touches a device.
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          python3 -m venv build/venv-device
+          build/venv-device/bin/python -m pip install -q -r tools/device/requirements-test.txt
+          build/venv-device/bin/python scripts/make_device_kit.py --out build/device-kit --rehearse
       - if: steps.detect.outputs.present == 'true'
         name: Upload firmware
         uses: actions/upload-artifact@v6
@@ -513,6 +524,7 @@ jobs:
             .pio/build/picco_2slot/partitions.bin
             .pio/build/picco_2slot/firmware.map
             build/size-picco_2slot.txt
+            build/device-kit/kit-report.txt
           if-no-files-found: warn
 
   ci-ok:

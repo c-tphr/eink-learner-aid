@@ -29,6 +29,7 @@
 #include "OtaUpdateActivity.h"
 #include "SdCardFontSystem.h"
 #include "SdFirmwareUpdateActivity.h"
+#include "update/UpdateGate.h"
 #include "SettingsList.h"
 #include "SilentRestart.h"
 #include "StatusBarSettingsActivity.h"
@@ -200,8 +201,8 @@ void SettingsActivity::rebuildSettings() {
   // OTA fetches this board's own release asset (see OtaUpdater); boards whose
   // asset isn't published yet just report no update available. The Picco's
   // stock layout has one app slot (partitions_picco.csv), so it cannot update
-  // itself either way.
-  if (!BoardConfig::isPicco()) {
+  // itself either way. Feature builds ask the running partition table instead (update/UpdateGate.h).
+  if (update_gate::updateMenusVisible(!BoardConfig::isPicco())) {
     addAction(SettingsSection::General, StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates);
     addAction(SettingsSection::General, StrId::STR_SD_FIRMWARE_UPDATE, SettingAction::SdFirmwareUpdate);
   }

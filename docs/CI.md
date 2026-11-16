@@ -19,7 +19,7 @@ Durations are each job's own time on GitHub-hosted runners (`ubuntu-24.04` with 
 | `firmware-other-device (x4pro)` | One non-Picco device still compiles (`x4pro`: ESP32-S3, no `custom_sdkconfig`). Upstream's eight-device matrix is disabled in this fork (`docs/BASE.md`). | 7 min 45 s | 2 min 40 s |
 | `simulator` | `pio run -e simulator_picco` builds with this project's simulator patches, and the binary starts headless under `xvfb-run`, reaches the Home screen (the firmware logs `Entering activity: Home`), saves a screenshot and quits with exit status 0. | 5 min 46 s | 1 min 47 s |
 | `scenarios` | The scenario harness's self-tests pass and every scenario under `tools/simtest/scenarios/` passes against the `simulator_picco` binary built by the `simulator` job (screens, log lines, SD-card files, reference images). Self-activating (below): active since task E2 merged. | 1 min 8 s (first run with the harness) | 52 s |
-| `firmware-2slot` | Self-activating (below). Today: prints `no picco_2slot environment yet` and succeeds. | 14 s | 12 s |
+| `firmware-2slot` | Self-activating (below), active since task D4: `pio run -e picco_2slot` builds, `firmware.bin` passes the size gate (7,431,782 bytes), and the flashing tool's guard accepts the real images (`scripts/make_device_kit.py --rehearse`). | 14 s (before D4) | 12 s (before D4) |
 | `ci-ok` | Every job above finished with `success` (a failed, cancelled or skipped job fails it). | 3 s | 3 s |
 
 The longest job sets the run's wall time: about 8 minutes cold, about 3 minutes warm. Cold: [run 43961711738](https://github.com/c-tphr/eink-learner-aid/actions/runs/43961711738) (empty caches; the harness was not on `main` yet, so the `scenarios` cold time is from [run 43966670239](https://github.com/c-tphr/eink-learner-aid/actions/runs/43966670239)). Warm: [run 43968230165](https://github.com/c-tphr/eink-learner-aid/actions/runs/43968230165). A change under `src/` or `lib/` falls back to an older build cache, so a firmware job then takes between the two (about 8 minutes after a large merge from `main`, run 43966670239).
@@ -48,7 +48,7 @@ Run from the repository root. In a Claude Code cloud session run `./scripts/clou
 | `firmware-other-device` | `./scripts/cloud-setup.sh && pio run -e x4pro`. Fine in a cloud session: `x4pro` uses no `custom_sdkconfig`. |
 | `simulator` | `./scripts/cloud-setup.sh && pio run -e simulator_picco && .github/scripts/sim-smoke.sh` (needs Pillow: `pip install pillow`). The screenshot is `build/sim-smoke/home.png`, the log `build/sim-smoke/simulator.log`. |
 | `scenarios` | `pio run -e simulator_picco`, `python3 -m pip install -r tools/simtest/requirements.txt`, then `python3 -m pytest tools/simtest -q` and `xvfb-run -a python3 -m tools.simtest run --all --report-dir build/simtest-report` |
-| `firmware-2slot` | `pio run -e picco_2slot && .github/scripts/firmware-size.sh picco_2slot "" --gate`, once the environment exists. |
+| `firmware-2slot` | `./scripts/cloud-setup.sh && pio run -e picco_2slot && .github/scripts/firmware-size.sh picco_2slot "" --gate`, then, in a virtualenv from `tools/device/requirements-test.txt`, `python scripts/make_device_kit.py --out build/device-kit --rehearse` (`docs/TWO_SLOT.md`). |
 
 ## Artifacts
 
@@ -60,7 +60,7 @@ Run from the repository root. In a Claude Code cloud session run `./scripts/clou
 | `windows-session-powershell`, `windows-session-pwsh` | `device-tool-windows` | One log per `session.ps1` command, `results.txt` (command, exit code, expected), the tool's own logs from the work folder, the `summary` output and the runtime stamp. All from synthetic images; nothing from a device. |
 | `host-tests-log` | `host-tests`, on failure only | CTest's `LastTest.log`. |
 | `scenario-report` | `scenarios` | The harness's report folder `build/simtest-report/`: `index.html` (every step, screenshots, diffs, logs, the SD card after the run), `results.json`, `junit.xml` (tools/simtest/README.md). |
-| `firmware-picco_2slot` | `firmware-2slot`, once active | As `firmware-picco`, for `picco_2slot`. |
+| `firmware-picco_2slot` | `firmware-2slot` | As `firmware-picco`, for `picco_2slot`, plus `kit-report.txt` (the kit builder's output: offsets, parsed table, the guard's verdict, the dry run). Not a device kit: the kit itself is not uploaded. |
 
 Artifacts are kept for GitHub's default retention period (90 days for a public repository).
 
@@ -69,7 +69,7 @@ Artifacts are kept for GitHub's default retention period (90 days for a public r
 Both jobs always run and always report; they decide from the checked-out tree whether there is work to do, so the tasks that add the harness and the environment need not touch the workflow.
 
 - **`scenarios`** turns on when `tools/simtest/__main__.py` exists (task E2). It then downloads the `simulator-picco` artifact into `.pio/build/simulator_picco/`, installs the SDL2/OpenSSL runtime, Xvfb, `tools/simtest/requirements.txt` if present and pytest, runs `python -m pytest tools/simtest -q` and `python -m tools.simtest run --all` under `xvfb-run -a`, and uploads the report folder `build/simtest-report/`. Without the harness it prints `no scenario harness yet` and succeeds; that is how it ran until task E2 merged.
-- **`firmware-2slot`** turns on when `[env:picco_2slot]` appears in `platformio.ini` or `platformio.project.ini` (task D4). It then runs `scripts/cloud-setup.sh`, `pio run -e picco_2slot` and the size gate: `.github/scripts/firmware-size.sh picco_2slot <log> --gate` fails when `firmware.bin` is larger than 7,431,782 bytes (the app slot of the two-slot table, `docs/PLAN.md` section 11 and spike S3; `APP_SLOT_BUDGET_BYTES` in the workflow). If `scripts/size_gate.py` exists it is run as well, as `python3 scripts/size_gate.py .pio/build/picco_2slot/firmware.bin`. Until then it prints `no picco_2slot environment yet` and succeeds. Note: `scripts/cloud-setup.sh` pre-fetches packages for `picco` and `simulator_picco` only; on a runner (no intercepting proxy) `pio run` fetches anything else itself.
+- **`firmware-2slot`** turns on when `[env:picco_2slot]` appears in `platformio.ini` or `platformio.project.ini` (task D4). It then runs `scripts/cloud-setup.sh`, `pio run -e picco_2slot` and the size gate: `.github/scripts/firmware-size.sh picco_2slot <log> --gate` prints `size gate: PASS`, or `size gate: FAIL` and fails, when `firmware.bin` is larger than 7,431,782 bytes (the app slot of the two-slot table minus 10%, `docs/PLAN.md` section 11 and spike S3; `APP_SLOT_BUDGET_BYTES` in the workflow). The step sets `pipefail`: before task D4 it piped the script into `tee` without it, so the step's status was `tee`'s and an image over budget would have passed. If `scripts/size_gate.py` exists it is run as well (it does not; the comparison lives in `firmware-size.sh`). Then `scripts/make_device_kit.py --rehearse` assembles the device kit from the real images and fails the job if the flashing tool's guard refuses any of them (`docs/TWO_SLOT.md`). Before task D4 it printed `no picco_2slot environment yet` and succeeded. `scripts/cloud-setup.sh` pre-fetches packages for `picco`, `picco_2slot` and `simulator_picco`.
 
 ## Caches
 

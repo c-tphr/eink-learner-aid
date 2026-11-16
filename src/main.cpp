@@ -47,6 +47,7 @@
 #include "fontIds.h"
 #include "platform/UsbSerialJtagHandoff.h"
 #include "reading/RsvpLinkCheck.h"
+#include "update/UpdateGate.h"
 #include "util/ButtonNavigator.h"
 #include "util/PluginEvents.h"
 #include "util/ScreenshotUtil.h"
@@ -607,9 +608,11 @@ void setup() {
   // gate recovery on the non-strap Down key (GPIO7) to avoid a stuck-in-recovery loop.
   const auto recoveryButton = (BoardConfig::isX4Pro() || BoardConfig::isX4Classic()) ? MappedInputManager::Button::Down
                                                                                      : MappedInputManager::Button::Up;
-  // The Picco has no second app slot to flash into (partitions_picco.csv).
+  // The Picco has no second app slot to flash into (partitions_picco.csv). Feature builds ask the
+  // running partition table instead (update/UpdateGate.h).
   const bool recoveryFirmwareMode = wakeupReason == HalGPIO::WakeupReason::PowerButton && !BoardConfig::isPaperMono() &&
-                                    !BoardConfig::isPicco() && mappedInputManager.isPressed(recoveryButton);
+                                    mappedInputManager.isPressed(recoveryButton) &&
+                                    update_gate::updateMenusVisible(!BoardConfig::isPicco());
 
   halTiltSensor.begin();
   halClock.begin();
