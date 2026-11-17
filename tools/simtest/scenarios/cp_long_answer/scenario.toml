@@ -1,0 +1,106 @@
+# A long reference answer pages inside its box (task C3a; docs/spikes/S4-control-map.md row 20). The
+# real book fixtures/books/paine-essays.prepared.epub: checkpoint c0038 has its longest answer (521
+# characters), which wraps to 23 lines in the answer font, so it shows in three parts of 8 lines,
+# with a part counter "1/3" in the box. Nothing is cut: every line is in one part.
+#
+# Pass 1, touch: a tap on the box shows the next part (2/3); a swipe up inside the box the next
+# (3/3), and again stays on the last; a swipe down the previous (2/3, then 1/3), and again stays on
+# the first; taps then cycle 2/3, 3/3, 1/3. Skip checkpoint by tap.
+# Pass 2, keys: the box is the default highlight, so each 0.7 s hold shows the next part and cycles
+# (2/3, 3/3, 1/3); Down x4 and a hold skip the checkpoint. Each part looks the same by touch and keys.
+description = "Long answer from the Paine book: three parts paged forward and back by tap, swipe and key hold, with a part counter"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0", CROSSPOINT_SIM_CHECKPOINT = "c0038;c0038" } }
+
+sd = [
+  { src = "fixtures/books/paine-essays.prepared.epub", dst = "books/paine-essays.prepared.epub" },
+  { json = { openEpubPath = "/books/paine-essays.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+]
+
+wait_timeout_ms = 30000
+
+steps = [
+  { wait_log = "\\[CPT\\] checkpoint data epub/rsvp/checkpoints.json: sections=55 checkpoints=55 prompts=130 sha=96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561 bytes=91475 copy=made", timeout_ms = 60000 },
+  { wait_log = "\\[CPT\\] open checkpoint=c0038 prompts=1 section=s0038 mode=page " },
+
+  # Pass 1: touch.
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0038-p1 recorded=none focus=Reveal " },
+  { shot = "prompt" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=1/3 lines=23 refresh=clear" },
+  { screen_has = "1/3 | Insurrection and" },
+  { shot = "touch_part1" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [240, 340], note = "tap the box: next part" },
+  { wait_log = "\\[CPT\\] answer part=2/3 move=cycle changed=1" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=2/3 lines=23 refresh=update" },
+  { shot = "touch_part2" },
+  { swipe = [240, 480, 240, 200], note = "swipe up inside the box: next part" },
+  { wait_log = "\\[CPT\\] answer part=3/3 move=swipe-next changed=1" },
+  { wait_log = "\\[CPT\\] screen=Answer .* part=3/3 lines=23 refresh=update" },
+  { shot = "touch_part3" },
+  { swipe = [240, 480, 240, 200], note = "swipe up on the last part: stays" },
+  { wait_log = "\\[CPT\\] answer part=3/3 move=swipe-next changed=0" },
+  { swipe = [240, 200, 240, 480], note = "swipe down: previous part" },
+  { wait_log = "\\[CPT\\] answer part=2/3 move=swipe-previous changed=1" },
+  { wait_log = "\\[CPT\\] screen=Answer .* part=2/3 lines=23 refresh=update" },
+  { swipe = [240, 200, 240, 480], note = "swipe down: previous part" },
+  { wait_log = "\\[CPT\\] answer part=1/3 move=swipe-previous changed=1" },
+  { wait_log = "\\[CPT\\] screen=Answer .* part=1/3 lines=23 refresh=update" },
+  { shot = "touch_part1_again" },
+  { swipe = [240, 200, 240, 480], note = "swipe down on the first part: stays" },
+  { wait_log = "\\[CPT\\] answer part=1/3 move=swipe-previous changed=0" },
+  { tap = [240, 340] },
+  { wait_log = "\\[CPT\\] answer part=2/3 move=cycle changed=1" },
+  { tap = [240, 340] },
+  { wait_log = "\\[CPT\\] answer part=3/3 move=cycle changed=1" },
+  { tap = [240, 340], note = "after the last part, a tap shows the first" },
+  { wait_log = "\\[CPT\\] answer part=1/3 move=cycle changed=1" },
+  { wait_log = "\\[CPT\\] screen=Answer .* part=1/3 lines=23 refresh=update" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=0 ch=7 word=0 mode=page saved=1" },
+
+  # Pass 2: keys.
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0038-p1 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=1/3 lines=23 refresh=clear" },
+  { shot = "keys_part1" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { press = "DOWN", hold_ms = 900, note = "hold on the box: next part" },
+  { wait_log = "\\[CTL\\] Answer select=AnswerBox" },
+  { wait_log = "\\[CPT\\] answer part=2/3 move=cycle changed=1" },
+  { wait_log = "\\[CPT\\] screen=Answer .* part=2/3 lines=23 refresh=update" },
+  { shot = "keys_part2" },
+  { press = "UP", hold_ms = 900, note = "hold (either key): next part" },
+  { wait_log = "\\[CPT\\] answer part=3/3 move=cycle changed=1" },
+  { wait_log = "\\[CPT\\] screen=Answer .* part=3/3 lines=23 refresh=update" },
+  { shot = "keys_part3" },
+  { press = "DOWN", hold_ms = 900, note = "hold: after the last part, the first" },
+  { wait_log = "\\[CPT\\] answer part=1/3 move=cycle changed=1" },
+  { wait_log = "\\[CPT\\] screen=Answer .* part=1/3 lines=23 refresh=update" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=Correct" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=Incorrect" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=SkipPrompt" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=SkipCheckpoint" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=0 ch=7 word=0 mode=page saved=1" },
+  { quit = true },
+
+  { expect_json = "books/paine-essays.prepared.epub.rsvp-state.json", pointer = "/book_sha256", equals = "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561" },
+  { expect_json = "books/paine-essays.prepared.epub.rsvp-state.json", pointer = "/grades", equals = {}, note = "paging and skipping grade nothing" },
+  { expect_json = "books/paine-essays.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 7, word = 0, mode = "page" } },
+  { compare = "prompt" },
+  { compare = "touch_part1" },
+  { compare = "touch_part2" },
+  { compare = "touch_part3" },
+  { compare = "touch_part1_again", same_as = "touch_part1" },
+  { compare = "keys_part1", same_as = "touch_part1" },
+  { compare = "keys_part2", same_as = "touch_part2" },
+  { compare = "keys_part3", same_as = "touch_part3" },
+]

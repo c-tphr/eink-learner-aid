@@ -92,12 +92,29 @@ void openCheckpoint(GfxRenderer& renderer, MappedInputManager& input, const std:
   if (activity) activityManager.pushActivity(std::move(activity));
 }
 
+// One "<id>[,rsvp|page]" entry of the variable; false when malformed.
+bool parseEntry(const std::string& text, std::string& id, checkpoint::ReadingMode& mode) {
+  const size_t comma = text.find(',');
+  id = text.substr(0, comma);
+  const std::string modeText = comma == std::string::npos ? "page" : text.substr(comma + 1);
+  mode = modeText == "rsvp" ? checkpoint::ReadingMode::Rsvp : checkpoint::ReadingMode::Page;
+  return !id.empty() && (modeText == "page" || modeText == "rsvp");
+}
+
+// The entry starting at `at` in `entries` (entries are separated by ';'); `at` moves past it.
+std::string takeEntry(const std::string& entries, size_t& at) {
+  const size_t end = std::min(entries.find(';', at), entries.size());
+  std::string entry = entries.substr(at, end - at);
+  at = end + 1;
+  return entry;
+}
+
 }  // namespace
 
 void runCheckpointSimEntryIfRequested(GfxRenderer& renderer, MappedInputManager& input) {
   static State state = State::UNCHECKED;
-  static std::string id;
-  static checkpoint::ReadingMode mode = checkpoint::ReadingMode::Page;
+  static std::string entries;  // the variable's value
+  static size_t next = 0;      // where the next entry starts in it
   static uint32_t readerSince = 0;
   if (state == State::DONE) return;
 
@@ -107,15 +124,16 @@ void runCheckpointSimEntryIfRequested(GfxRenderer& renderer, MappedInputManager&
       state = State::DONE;
       return;
     }
-    const std::string value = text;
-    const size_t comma = value.find(',');
-    id = value.substr(0, comma);
-    const std::string modeText = comma == std::string::npos ? "page" : value.substr(comma + 1);
-    if (id.empty() || (modeText != "page" && modeText != "rsvp")) {
-      LOG_ERR("CPT", "CROSSPOINT_SIM_CHECKPOINT='%s' must be <checkpoint id>[,rsvp|page]", text);
-      std::abort();
+    entries = text;
+    for (size_t at = 0; at <= entries.size();) {
+      std::string id;
+      checkpoint::ReadingMode mode = checkpoint::ReadingMode::Page;
+      if (!parseEntry(takeEntry(entries, at), id, mode)) {
+        LOG_ERR("CPT", "CROSSPOINT_SIM_CHECKPOINT='%s' must be <checkpoint id>[,rsvp|page], several separated by ';'",
+                text);
+        std::abort();
+      }
     }
-    mode = modeText == "rsvp" ? checkpoint::ReadingMode::Rsvp : checkpoint::ReadingMode::Page;
     state = State::WAITING;
   }
 
@@ -137,7 +155,11 @@ void runCheckpointSimEntryIfRequested(GfxRenderer& renderer, MappedInputManager&
   if (readerSince == 0) readerSince = now == 0 ? 1 : now;
   if (now - readerSince < READER_SETTLE_MS) return;
 
-  state = State::DONE;
+  std::string id;
+  checkpoint::ReadingMode mode = checkpoint::ReadingMode::Page;
+  parseEntry(takeEntry(entries, next), id, mode);
+  if (next > entries.size()) state = State::DONE;
+  readerSince = 0;
   openCheckpoint(renderer, input, id, mode);
 }
 

@@ -255,8 +255,9 @@ void CheckpointActivity::loop() {
     case controls::Act::SwipePrev: {
       const controls::Zone* z = controls::hit(layout, e.x, e.y);
       if (screen == Screen::Answer && z != nullptr && z->item == Item::AnswerBox) {
-        page(e.ev == controls::Ev::SwipeUp ? checkpointui::PageMove::Next : checkpointui::PageMove::Previous,
-             "swipe");
+        const bool next = e.ev == controls::Ev::SwipeUp;
+        page(next ? checkpointui::PageMove::Next : checkpointui::PageMove::Previous,
+             next ? "swipe-next" : "swipe-previous");
       }
       return;
     }
@@ -269,7 +270,7 @@ void CheckpointActivity::loop() {
 void CheckpointActivity::activate(const Item item) {
   LOG_DBG("CTL", "%s select=%s", checkpointui::screenName(screen), controls::itemName(item));
   if (item == Item::AnswerBox) {
-    page(checkpointui::PageMove::Cycle, "next");
+    page(checkpointui::PageMove::Cycle, "cycle");
     return;
   }
   FlowEvent event = FlowEvent::Reveal;
@@ -304,6 +305,7 @@ void CheckpointActivity::apply(const FlowEvent event) {
     RenderLock lock;  // the flow, the index and the screen belong to the render task too
     char gradedId[checkpoint::ID_BUFFER_BYTES];
     std::memcpy(gradedId, promptId, sizeof(gradedId));
+    const uint16_t prompt = session->flow.promptIndex();  // a finish clears it
     char at[checkpoint::TIMESTAMP_CHARS + 1] = {};
     const bool grading = event == FlowEvent::Correct || event == FlowEvent::Incorrect;
     const checkpoint::Transition t = session->flow.handle(event, grading ? gradeTime(at) : nullptr);
@@ -316,7 +318,7 @@ void CheckpointActivity::apply(const FlowEvent event) {
     if (t.save == checkpoint::Save::Now) persist(t, gradedId, checkpoint::flowEventName(event));
     how = checkpointui::endFor(event, t);
     if (how != checkpointui::End::None) {
-      end(how, t);
+      end(how, t, prompt);
     } else {
       enterScreen();
     }
@@ -352,10 +354,10 @@ void CheckpointActivity::persist(const checkpoint::Transition& t, const char* gr
           change.hasActive ? change.active.id : "none", change.active.promptIndex, position, ok ? 1 : 0);
 }
 
-void CheckpointActivity::end(const checkpointui::End how, const checkpoint::Transition& t) {
+void CheckpointActivity::end(const checkpointui::End how, const checkpoint::Transition& t, const uint16_t prompt) {
   ended = true;
   outcome->end = how;
-  outcome->promptIndex = session->flow.promptIndex();
+  outcome->promptIndex = prompt;
   if (t.finished) {
     outcome->resume = t.resume;
   } else {
@@ -373,6 +375,7 @@ void CheckpointActivity::enterScreen() {
   focus = checkpointui::defaultFocus(screen, request.mode);
   answerPart = 0;
   answerParts = 1;
+  answerLines = 0;
   needClear = true;
   guardRestartPending.store(true);
   const uint16_t prompt = flow.promptIndex();
@@ -481,7 +484,14 @@ void CheckpointActivity::paintPrompt() {
 }
 
 void CheckpointActivity::paintAnswer() {
-  paintHeader(false, recorded == Grade::Ungraded ? nullptr : gradeLabel(recorded));
+  if (recorded == Grade::Ungraded) {
+    paintHeader(false, nullptr);
+  } else {
+    // "Question 1 of 3 · recorded: Incorrect": the grade a later answer cannot change.
+    char suffix[64];
+    snprintf(suffix, sizeof(suffix), tr(STR_CP_RECORDED), gradeLabel(recorded));
+    paintHeader(true, suffix);
+  }
   // The prompt, shortened to two lines (an ellipsis marks the cut): it was shown in full before.
   paintWrapped(LABEL_FONT, promptText, SHORT_PROMPT_Y, SHORT_PROMPT_LINES);
 

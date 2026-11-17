@@ -8,8 +8,11 @@
 // EPUB is open in the reader with a page laid out, it opens the book's checkpoint data
 // (reading::CheckpointBook), resolves the checkpoint's section through the chapter's word index,
 // makes the Fire step that reading past the section's last word would make
-// (checkpoint::rsvpStep() on that word), and pushes CheckpointActivity over the reader. Once per
-// process. A book without checkpoint data or an unknown id logs an error line and does nothing.
+// (checkpoint::rsvpStep() on that word), and pushes CheckpointActivity over the reader with that
+// mode as the mode in use. Several entries separated by ';' (the harness sets one value per
+// scenario) open one after another, each once the reader is back in front; a new process starts
+// again from the first. A book without checkpoint data or an unknown id logs an error line and that
+// entry does nothing; a malformed value stops the program with an error line.
 //
 // Only simulator builds with the RSVP flag have it; everywhere else, the device included, the call
 // in main.cpp is the empty inline function below.

@@ -55,7 +55,8 @@ class CheckpointActivity final : public Activity {
   void apply(checkpoint::FlowEvent event);
   void page(checkpointui::PageMove move, const char* how);
   void persist(const checkpoint::Transition& t, const char* promptId, const char* reason);
-  void end(checkpointui::End how, const checkpoint::Transition& t);
+  // `prompt`: the prompt the ending event was given on.
+  void end(checkpointui::End how, const checkpoint::Transition& t, uint16_t prompt);
   // The screen for the flow's state, with the prompt's text loaded when the prompt changed.
   void enterScreen();
   static const char* gradeTime(char* out);
