@@ -1,8 +1,8 @@
 """The word pass (tools/prep/words.py) against docs/spikes/S1-word-stream.md section 5, rule by rule.
 
-Each test names the rule it covers. The last group feeds the C++ prototype's worked example
-(test/spike_word_stream/fixture_s1.xhtml) through the Python pass and compares with what the
-prototype's own test expects.
+Each test names the rule it covers. The last group feeds the worked example of spike S1's C++
+prototype (fixtures/words/fixture_s1.xhtml; the prototype was removed in task R3) through the
+Python pass and compares with what the prototype's own test expected.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from tools.prep.words import (
 from tools.prep.xmltree import XmlError
 
 REPO = Path(__file__).resolve().parents[3]
-SPIKE = REPO / "test" / "spike_word_stream"
+SPIKE = REPO / "fixtures" / "words"
 
 HEAD = ('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n'
         '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">'
@@ -393,9 +393,10 @@ def test_tokenize_plain_text():
 
 
 # --------------------------------------------------------------------------
-# Parity with the C++ prototype's worked example (test/spike_word_stream/)
+# Parity with the C++ prototype's worked example (fixtures/words/fixture_s1.xhtml)
 
-# Copied by hand from test/spike_word_stream/SpikeWordStreamTest.cpp, test FixtureWordsAnchorsAndMarkers:
+# Copied by hand from the prototype's test/spike_word_stream/SpikeWordStreamTest.cpp (removed in task R3;
+# `git show f1e7405e^:test/spike_word_stream/SpikeWordStreamTest.cpp`), test FixtureWordsAnchorsAndMarkers:
 # the word list is lines 280-287, the anchors lines 292-301, the markers lines 303-312, the flag checks
 # lines 314-319 (SENT_END checks at lines 316-317 left out: the Python side sets no sentence ends).
 SPIKE_WORDS = [

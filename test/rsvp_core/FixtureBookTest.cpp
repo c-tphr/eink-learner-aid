@@ -149,10 +149,12 @@ TEST(FixtureBook, TokensFollowTheExpectedFile) {
     }
     EXPECT_EQ(flagged, stopsAt);
 
-    // Paragraph ends: every PARA_END word that is handed out.
+    // Paragraph ends: every PARA_END or LINE_END word that is handed out, as IndexWordSource marks them.
     std::set<size_t> paraEnds;
-    for (const auto& run : rsvptest::fixtureFlagRuns(document, "PARA_END")) {
-      for (size_t w = run.first; w < run.second; ++w) paraEnds.insert(w);
+    for (const char* flag : {"PARA_END", "LINE_END"}) {
+      for (const auto& run : rsvptest::fixtureFlagRuns(document, flag)) {
+        for (size_t w = run.first; w < run.second; ++w) paraEnds.insert(w);
+      }
     }
     for (const auto& t : tokens) {
       EXPECT_EQ((t.flags & rsvp::TOKEN_PARAGRAPH_END) != 0, paraEnds.count(t.wordIndex) != 0) << t.text;
@@ -288,6 +290,10 @@ TEST(FixtureBook, SpecificTokenDetails) {
   EXPECT_EQ(t.text, "phosphorescence,");
   EXPECT_EQ(rsvp::rawWeight(rsvp::classifyWord(t.text, t.flags, nextText(longWord))),
             rsvp::PACING.clause + rsvp::PACING.longWord[2].extra);
+  // "lines:", the word before a <br>, ends a block, as IndexWordSource marks LINE_END.
+  const CaseWord lineEnd = caseWord(rsvptest::fixtureTokenCase("Word before a `<br/>` line break"));
+  ASSERT_LT(lineEnd.position, lineEnd.tokens.size());
+  EXPECT_NE(lineEnd.tokens[lineEnd.position].flags & rsvp::TOKEN_PARAGRAPH_END, 0);
 }
 
 TEST(FixtureBook, ChaptersGroupWithoutCrossingBoundaries) {

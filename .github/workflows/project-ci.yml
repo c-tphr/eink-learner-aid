@@ -6,7 +6,9 @@
 #
 # Linux jobs run on ubuntu-24.04, the system of the cloud sessions where work is
 # done and validated (docs/PLAN.md section 11), not on ubuntu-latest, which moves
-# (it is Ubuntu 26.04 with GCC 15 at the time of writing; docs/CI.md).
+# (it is Ubuntu 26.04 with GCC 15 at the time of writing; docs/CI.md). On
+# 2026-11-17 the host tests and the simulator build passed there too (task H1);
+# the simulator's headless smoke run did not (docs/CI.md, "Runner images").
 name: Project CI
 
 on:

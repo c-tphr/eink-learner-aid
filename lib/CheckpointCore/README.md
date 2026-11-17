@@ -61,28 +61,28 @@ The duplicate scans compare every pair, which is O(n²), but they compare 32-bit
 
 ## Limits
 
-These are named constants in `CheckpointLimits.h`. A file that exceeds one is rejected with code `limit`, which the Python validator does not have. "Characters" are code points after unescaping, as in the schema's `maxLength`, so each limit can be copied into the Python schema as it is.
+These are named constants in `CheckpointLimits.h`. A file that exceeds one is rejected with code `limit`. "Characters" are code points after unescaping, as in the schema's `maxLength`. The preparation tools mirror every limit: `tools/prep/schema/checkpoints.schema.json` has the ones a JSON Schema can express (`maxItems`, `maxLength`), and `tools/prep/limits.py` checks all of them by their C++ names, so `prep validate` rejects a file that breaks one with code `limit` (check `firmware-limits`; `tools/prep/README.md`, "Firmware limits"). `tools/prep/tests/test_limits.py` fails if a number in `limits.py` differs from this header. The last column says where the schema has the limit.
 
-| Constant | Value | Applies to | In the Python schema today |
+| Constant | Value | Applies to | In the Python schema |
 | --- | --- | --- | --- |
-| `MAX_FILE_BYTES` | 1,048,576 | File size in bytes | none |
-| `MAX_SECTIONS` | 512 | Entries in `sections` | none |
-| `MAX_CHECKPOINTS` | 512 | Entries in `checkpoints` | none |
-| `MAX_PROMPTS` | 1,024 | Prompts in the whole file | none |
-| `MAX_PROMPTS_PER_CHECKPOINT` | 32 | `prompts` of one checkpoint | none |
-| `MAX_CHAPTERS` | 256 | Distinct `chapter_href` values | none |
-| `STRING_POOL_BYTES` | 16,384 | Sum over section ids, checkpoint ids, checkpoint `section` values and distinct chapter hrefs of (UTF-8 bytes + 1) | none |
-| `MAX_ID_CHARS` | 64 | Every id | same (64) |
-| `MAX_PROMPT_CHARS` | 300 | `prompt` | same (300) |
-| `MAX_ANSWER_CHARS` | 600 | `answer` | same (600) |
-| `MAX_HREF_CHARS` | 255 | `chapter_href` | none |
-| `MAX_LABEL_CHARS` | 200 | `label` | none |
-| `MAX_TITLE_CHARS` | 300 | `book.title` | none |
-| `MAX_LANGUAGE_CHARS` | 35 | `book.language` (RFC 5646 section 4.4.1) | none |
-| `MAX_INSTRUCTIONS_VERSION_CHARS` | 32 | `book.instructions_version` | none |
-| `MAX_DEPTH` | 32 | Nesting of objects and arrays anywhere, including unknown members (the top-level object counts as 1) | none (Python fails with RecursionError at about 1,000) |
-| `MAX_OPEN_MEMBERS` | 128 | Members of all objects that are open at one time, anywhere in the file | none |
-| `MAX_NUMBER_CHARS` | 64 | Characters in one number, anywhere in the file | none (Python rejects integers over 4,300 digits as `parse`) |
+| `MAX_FILE_BYTES` | 1,048,576 | File size in bytes | none (`limits.py` only) |
+| `MAX_SECTIONS` | 512 | Entries in `sections` | `maxItems` 512 |
+| `MAX_CHECKPOINTS` | 512 | Entries in `checkpoints` | `maxItems` 512 |
+| `MAX_PROMPTS` | 1,024 | Prompts in the whole file | none (`limits.py` only) |
+| `MAX_PROMPTS_PER_CHECKPOINT` | 32 | `prompts` of one checkpoint | `maxItems` 32 |
+| `MAX_CHAPTERS` | 256 | Distinct `chapter_href` values | none (`limits.py` only) |
+| `STRING_POOL_BYTES` | 16,384 | Sum over section ids, checkpoint ids, checkpoint `section` values and distinct chapter hrefs of (UTF-8 bytes + 1) | none (`limits.py` only) |
+| `MAX_ID_CHARS` | 64 | Every id | `maxLength` 64 |
+| `MAX_PROMPT_CHARS` | 300 | `prompt` | `maxLength` 300 |
+| `MAX_ANSWER_CHARS` | 600 | `answer` | `maxLength` 600 |
+| `MAX_HREF_CHARS` | 255 | `chapter_href` | `maxLength` 255 |
+| `MAX_LABEL_CHARS` | 200 | `label` | `maxLength` 200 |
+| `MAX_TITLE_CHARS` | 300 | `book.title` | `maxLength` 300 |
+| `MAX_LANGUAGE_CHARS` | 35 | `book.language` (RFC 5646 section 4.4.1) | `maxLength` 35 |
+| `MAX_INSTRUCTIONS_VERSION_CHARS` | 32 | `book.instructions_version` | `maxLength` 32 |
+| `MAX_DEPTH` | 32 | Nesting of objects and arrays anywhere, including unknown members (the top-level object counts as 1) | none (`limits.py` only; Python's own JSON parser fails with RecursionError at about 1,000) |
+| `MAX_OPEN_MEMBERS` | 128 | Members of all objects that are open at one time, anywhere in the file | none (`limits.py` only) |
+| `MAX_NUMBER_CHARS` | 64 | Characters in one number, anywhere in the file | none (`limits.py` only; Python's own JSON parser rejects integers over 4,300 digits as `parse`) |
 
 For the limits on counts, text lengths and the string pool, the scan continues: a `parse` problem anywhere in the file, or a newer `version`, still wins over the limit, and the limit wins over `schema` and cross-reference problems. The four structural limits (`MAX_FILE_BYTES`, `MAX_DEPTH`, `MAX_OPEN_MEMBERS`, `MAX_NUMBER_CHARS`) are different. They stop the scan where they are found, because the rest of the file cannot be read within the memory bound. A version 2 file that breaks one of them is therefore reported as `limit`, not `unsupported-version`.
 
@@ -149,7 +149,7 @@ for (uint16_t p = 0; p < index->promptCount(c); ++p) index->loadPromptText(c, p,
 
 There are none in verdicts or codes, apart from the firmware-only codes:
 
-- `limit`: a file the reference accepts can be rejected for exceeding a firmware limit (table above).
+- `limit`: a file that exceeds a firmware limit (table above). Where the schema has the limit, the reference rejects the file too, with code `schema`; for the other limits the reference (`validate_checkpoints()`) accepts it, and `prep validate` rejects it through `limits.py` with code `limit`.
 - `io`: the source failed to read.
 
 Paths match the reference for every sample. For `schema`, the parser reports the issue whose path sorts first, as the Python validator sorts them; it does not report every schema issue. For the cross-reference layer it reports the first issue in the reference's order, not the full list.

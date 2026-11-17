@@ -1,36 +1,29 @@
-## Summary
+Closes #<issue number>
 
-* **What is the goal of this PR?** (e.g., Implements the new feature for file uploading.)
-* **What changes are included?**
+<!-- One issue, one branch (task/<n>-<slug>), one pull request: docs/IMPLEMENTER_GUIDE.md. Title: "<task id>: <title>". -->
 
-## Scope Check
+## What changed
 
-CrossPoint is intentionally narrow. See [SCOPE.md](../blob/master/SCOPE.md) and [ROADMAP.md](../blob/master/ROADMAP.md).
-Please confirm:
+<!-- What you changed and why, item by item of the issue. -->
 
-- [ ] I have read SCOPE.md and ROADMAP.md.
-- [ ] This PR is **not** a new built-in theme (themes are temporarily closed pending the move to SD-loaded themes).
-- [ ] This PR is **not** a new external network connector (sync engine, cloud storage, remote file access, etc.).
-- [ ] This PR is **not** an interactive app, writing tool, RSS/news/browser, media playback, or PDF feature.
-- [ ] The stock firmware does not already handle this well, **and** no other popular CrossPoint fork already does
-      (or, if one does, I explain why CrossPoint still needs it below).
-- [ ] If this PR touches `freeink-sdk/`, `lib/hal/`, the bootloader, OTA, or recovery code, I have coordinated with
-      the relevant maintainer.
+## Upstream files touched
 
-**If this PR was opened against the previous (broader) scope and was already in flight under Phase 0, link the
-relevant Discussion or issue so reviewers can see the history.**
+<!-- Every changed file that comes from upstream CrossPoint, each also listed in docs/BASE.md
+("What differs from the pinned commit"), or "None". -->
 
-## Additional Context
+## Acceptance commands
 
-* Add any other information that might be helpful for the reviewer (e.g., performance implications, potential risks,
-  specific areas to focus on).
-* Memory / flash impact, if known.
+<!-- Each acceptance command of the issue with its real output (trimmed), failures included. -->
 
----
+```text
+$ <command>
+<output>
+```
 
-### AI Usage
+## Evidence
 
-While CrossPoint doesn't have restrictions on AI tools in contributing, please be transparent about their usage as it
-helps set the right context for reviewers.
+<!-- Screenshots, scenario reports, CI run links, measurements. -->
 
-Did you use AI tools to help write this code? _**< YES | PARTIALLY | NO >**_
+## Could not do or verify
+
+<!-- What you could not do or verify, and why; "None" if nothing. -->

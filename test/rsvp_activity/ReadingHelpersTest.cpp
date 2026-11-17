@@ -44,15 +44,7 @@ IndexState decide(wixtest::MemoryFile* file, const std::string& source, bool sou
 // boundary word (and the chapter's first token).
 std::vector<uint32_t> expectedSentenceStarts(const char* href) {
   const testjson::Value& document = rsvptest::fixtureDocument(href);
-  std::vector<rsvptest::OwnedToken> tokens = rsvptest::chapterTokens(document);
-  // IndexWordSource also ends a block at a <br> (LINE_END), which chapterTokens() leaves out.
-  std::set<uint32_t> lineEnds;
-  for (const auto& [start, end] : rsvptest::fixtureFlagRuns(document, "LINE_END")) {
-    for (size_t i = start; i < end; ++i) lineEnds.insert(static_cast<uint32_t>(i));
-  }
-  for (auto& token : tokens) {
-    if (lineEnds.count(token.wordIndex) != 0) token.flags |= rsvp::TOKEN_PARAGRAPH_END;
-  }
+  const std::vector<rsvptest::OwnedToken> tokens = rsvptest::chapterTokens(document);
   std::vector<uint32_t> starts;
   bool start = true;
   for (size_t i = 0; i < tokens.size(); ++i) {

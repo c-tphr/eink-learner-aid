@@ -1,6 +1,7 @@
 #include "StateCodec.h"
 
 #include <cstring>
+#include <limits>
 
 #include "JsonText.h"
 
@@ -58,17 +59,14 @@ class Writer {
     }
   }
   void putUInt(uint32_t value) {
-    char digits[10];
-    size_t n = 0;
+    // Filled from the end, so no reversal copy is needed. Holds UINT32_MAX (10 digits).
+    char digits[std::numeric_limits<uint32_t>::digits10 + 1];
+    size_t start = sizeof(digits);
     do {
-      digits[n++] = static_cast<char>('0' + value % 10);
+      digits[--start] = static_cast<char>('0' + value % 10);
       value /= 10;
     } while (value != 0);
-    char out[10];
-    for (size_t i = 0; i < n; ++i) {
-      out[i] = digits[n - 1 - i];
-    }
-    putN(out, n);
+    putN(digits + start, sizeof(digits) - start);
   }
   // Values written by this encoder are ids, hex and fixed words: no escaping needed.
   void putString(const char* text, size_t length) {

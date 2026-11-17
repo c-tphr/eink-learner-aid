@@ -19,7 +19,7 @@ struct ClearingLimits {
 
 class ClearingPolicy {
  public:
-  explicit ClearingPolicy(ClearingLimits limits = {}) : limits(limits) {}
+  explicit ClearingPolicy(ClearingLimits initialLimits = {}) : limits(initialLimits) {}
 
   void setLimits(ClearingLimits newLimits) { limits = newLimits; }
   ClearingLimits currentLimits() const { return limits; }
