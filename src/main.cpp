@@ -611,8 +611,8 @@ void setup() {
   // The Picco has no second app slot to flash into (partitions_picco.csv). Feature builds ask the
   // running partition table instead (update/UpdateGate.h).
   const bool recoveryFirmwareMode = wakeupReason == HalGPIO::WakeupReason::PowerButton && !BoardConfig::isPaperMono() &&
-                                    mappedInputManager.isPressed(recoveryButton) &&
-                                    update_gate::updateMenusVisible(!BoardConfig::isPicco());
+                                    update_gate::updateMenusVisible(!BoardConfig::isPicco()) &&
+                                    mappedInputManager.isPressed(recoveryButton);
 
   halTiltSensor.begin();
   halClock.begin();

@@ -59,7 +59,8 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
       releaseParser.feed(reinterpret_cast<const char*>(data + offset), 1);
       offset++;
       if (releaseParser.foundTag()) {
-        if (!update_gate::formatAssetName(assetName, sizeof(assetName), releaseParser.getTagName())) {
+        if (!update_gate::PROJECT_RELEASES ||
+            !update_gate::formatAssetName(assetName, sizeof(assetName), releaseParser.getTagName())) {
           snprintf(assetName, sizeof(assetName), "crosspoint-%s%s.bin", releaseParser.getTagName(), assetSuffix);
         }
         releaseParser.setFirmwareAssetName(assetName);

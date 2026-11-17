@@ -69,11 +69,11 @@ prints the size, the budget, the headroom and the share used, then `size gate: P
 Where the answer is used (feature builds; other devices keep upstream's `!BoardConfig::isPicco()`):
 
 - Settings > General shows "Check for updates" and "SD Card Firmware Update" only when allowed.
-- The boot recovery picker (hold the recovery key, Up on the Picco, while waking with the power button) opens only when allowed. Spike S3 suggested leaving it off on the Picco in v1; it is enabled on the two-slot table because it is the only way to install an SD update when the firmware boots but its menus do not work. It is entered only while the key is held at a power-button wake, and the power button's hold-to-sleep leaves it.
+- The boot recovery picker (hold the recovery key, Up on the Picco, while waking with the power button) opens only when allowed. Spike S3 suggested leaving it off on the Picco in v1; it is enabled on the two-slot table because it is the only way to install an SD update when the firmware boots but its menus do not work. It is entered only while the key is held at a power-button wake, and the power button's hold-to-sleep leaves it. Every power-button wake therefore reads the table once and logs the verdict, for example `[UPD] self-update allowed: Allowed (5 partitions, running 0x20000, next 0x800000)`; the serial log of the device session shows which layout is running.
 - `OtaUpdater::checkForUpdate` reports no update when not allowed.
 - **At the point of writing** both paths call `checkWrite()` on the partition they are about to erase: the SD path in `firmware_flash::flashFromSdPath` (before the first erase; refusal = `NO_PARTITION`, shown as "write failed") and the Wi-Fi path in `OtaUpdater::installUpdate` (before `esp_ota_begin`; refusal = `INTERNAL_UPDATE_ERROR`). A write is allowed only if `decide()` allows it, the target is the next update slot (`TargetNotNext`) and not the running slot (`TargetIsRunning`). The log line is `[UPD] refusing to write update slot 0x...: <verdict>`.
 
-In the simulator nothing is offered or written (no partition table there); the OTA sources are not even compiled (`build_src_filter`).
+In the simulator nothing is offered or written (no partition table there); the OTA sources are not even compiled (`build_src_filter`). The scenario `tools/simtest/scenarios/update_entries_hidden_keys` checks that Settings > System lists neither entry.
 
 ### Wi-Fi updater: where it looks and what it installs
 
