@@ -331,6 +331,13 @@ the chapter end; if one is due when playback resumes, it runs before the first f
 
 `DeliveredWpmMeter` gives the session's words shown divided by its active time. A session runs from
 `resetSession()` (the activity calls it when RSVP opens); pauses, stops and seeks do not end it.
+`continueSession(meter, audit, afterNonProse)` carries a session on into another scheduler: the RSVP
+activity closes at a non-prose stop to show the item in page view, and a new one reopens after it
+(task R5). Call it after moving the source to the word after the stop and calling `reposition()`:
+the meter and audit become the ones given, and with `afterNonProse` the next `play()` allows the
+audit's forward skip exactly as `play()` at the stop would have, so the audit's open segment carries
+on and the time spent on the item is never active. The only difference from playing on is the pacing
+remainder (under 1 ms), which starts afresh (`SchedulerTest`, `AContinuedSession...`).
 
 **Active time** is made of spans. Each span starts at the first display operation (a frame or a
 clearing refresh) after a `play()` and runs without a break until playback stops being active:

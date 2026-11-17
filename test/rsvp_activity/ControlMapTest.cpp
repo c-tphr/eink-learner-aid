@@ -181,3 +181,37 @@ TEST(ControlMap, TimingsAreS4s) {
   EXPECT_EQ(REPEAT_MS, 400);
   EXPECT_EQ(ARM_MS, 300);
 }
+
+TEST(ControlMap, BannerMatchesS4Rows15And16) {
+  // Task R5: Continue (the default) at 16,688,264,72, Stay at 304,688,160,72; Down x1 reaches Stay.
+  ASSERT_EQ(BANNER.count, 2);
+  EXPECT_EQ(BANNER.zones[BANNER.defaultIndex].item, Item::Continue);
+  const Zone& c = BANNER.zones[indexOf(BANNER, Item::Continue)];
+  EXPECT_EQ(c.x, 16);
+  EXPECT_EQ(c.y, 688);
+  EXPECT_EQ(c.w, 264);
+  EXPECT_EQ(c.h, 72);
+  const Zone& s = BANNER.zones[indexOf(BANNER, Item::Stay)];
+  EXPECT_EQ(s.x, 304);
+  EXPECT_EQ(s.y, 688);
+  EXPECT_EQ(s.w, 160);
+  EXPECT_EQ(s.h, 72);
+  for (int i = 0; i < BANNER.count; ++i) {
+    EXPECT_GE(BANNER.zones[i].h, 64);
+    EXPECT_GE(BANNER.zones[i].w, 96);
+    EXPECT_FALSE(BANNER.zones[i].repeats);
+  }
+  EXPECT_GE(s.x - (c.x + c.w), 12) << "at least 12 px between targets";
+  int f = BANNER.defaultIndex;
+  EXPECT_EQ(focusPrev(f), f) << "no wrap above Continue";
+  f = focusNext(BANNER, f);
+  EXPECT_EQ(BANNER.zones[f].item, Item::Stay);
+  EXPECT_EQ(focusNext(BANNER, f), f) << "no wrap below Stay";
+  // The simulator tokens of S4 section 9.
+  EXPECT_EQ(hit(BANNER, 148, 724)->item, Item::Continue);
+  EXPECT_EQ(hit(BANNER, 384, 724)->item, Item::Stay);
+  EXPECT_EQ(hit(BANNER, 292, 724), nullptr) << "the gap between the buttons";
+  EXPECT_EQ(hit(BANNER, 240, 400), nullptr) << "a tap on the page is not a banner target";
+  EXPECT_STREQ(itemName(Item::Continue), "Continue");
+  EXPECT_STREQ(itemName(Item::Stay), "Stay");
+}

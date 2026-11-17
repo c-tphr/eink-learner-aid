@@ -93,6 +93,8 @@ const char* entryFromName(const EntryFrom from) {
       return "saved";
     case EntryFrom::Resumed:
       return "resumed";
+    case EntryFrom::Continued:
+      return "continue";
   }
   return "?";
 }
@@ -101,6 +103,32 @@ bool pageViewOffset(wordindex::WordIndexReader& reader, const uint32_t position,
   const uint32_t count = reader.wordCount();
   if (count == 0) return false;
   return reader.wordStart(position < count ? position : count - 1, offset);
+}
+
+bool itemBefore(wordindex::WordIndexReader& reader, const uint32_t from, const uint32_t next, wordindex::Marker& out) {
+  constexpr uint8_t ITEMS = wordindex::kindBit(wordindex::MARKER_IMAGE) | wordindex::kindBit(wordindex::MARKER_TABLE) |
+                            wordindex::kindBit(wordindex::MARKER_CODE);
+  uint32_t position = 0;
+  if (!reader.nextMarker(from, ITEMS, out, &position)) return false;
+  // Markers are in order of their start; an item inside a note never stops playback.
+  for (uint32_t i = position; i < reader.markerCount(); ++i) {
+    if (!reader.marker(i, out) || out.wordStart > next) return false;
+    if ((wordindex::kindBit(out.kind) & ITEMS) != 0 && (out.flags & wordindex::MARKER_IN_NOTE) == 0) return true;
+  }
+  return false;
+}
+
+const char* itemKindName(const uint8_t kind) {
+  switch (kind) {
+    case wordindex::MARKER_IMAGE:
+      return "image";
+    case wordindex::MARKER_TABLE:
+      return "table";
+    case wordindex::MARKER_CODE:
+      return "code";
+    default:
+      return "?";
+  }
 }
 
 uint8_t chapterPercent(const uint32_t position, const uint32_t wordCount) {

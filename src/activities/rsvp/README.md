@@ -6,12 +6,13 @@
 `docs/spikes/S4-control-map.md` through the binding table in `src/controls/`.
 
 Filled by task R4a (#21); R4b (#22) added the WPM and words-per-update steppers, saving them, and the
-saved RSVP position; R5 (#23) adds the non-prose hand-off to page view.
+saved RSVP position; R5 (#23) the non-prose hand-over to page view and the pause on a display timeout.
 
 | File | What it holds |
 | --- | --- |
-| `RsvpLaunch.h` | The reader's entry point: `rsvpentry::create()` with an `Entry` (the page on screen), `HandOff` (how RSVP returns, and how it saves the reader's progress), `openedInRsvp()`. Without the flag `create()` returns nothing and `openedInRsvp()` false |
-| `RsvpActivity.h/.cpp` | The activity: playback, pause screen, chapter changes, input |
+| `RsvpLaunch.h` | The reader's entry point: `rsvpentry::create()` with an `Entry` (the page on screen, or the item to continue after), `HandOff` (how RSVP returns, how it saves the reader's progress, and `ItemStop`, the session kept across a non-prose item), `openedInRsvp()`, `createItemBanner()`. Without the flag `create()` and `createItemBanner()` return nothing and `openedInRsvp()` false |
+| `RsvpActivity.h/.cpp` | The activity: playback, pause screen, chapter changes, input, the hand-over at a non-prose item |
+| `ItemBanner.h/.cpp` | The banner over page view at a non-prose item: Continue and Stay (S4 rows 15-16) |
 | `WordBand.h/.cpp` | Where a frame is drawn in the word band (pure arithmetic, host-tested) |
 
 Everything here is compiled only with the RSVP feature flag (`docs/ARCHITECTURE-RSVP.md`).
@@ -61,7 +62,11 @@ The position written is always "the next word": the word Play would show first.
 | Home gesture during playback | Nothing: it pauses (S4 section 6), and the pause saves | Unchanged |
 | Sleep (power hold, auto-sleep cannot fire while playing) | chapter, word, `rsvp` (`prepareForSleep()`) | Saved the same way as for the Home gesture |
 | Power-off | The firmware has no power-off hook besides sleep: the last pause or chapter change | The last route above, or the page RSVP was entered from |
-| A pause (any reason: key, touch, image or table, end of book) | chapter, word, `rsvp` | Unchanged; rule 1 restores from the state file |
+| A pause (any reason: key, touch, end of book, display timeout) | chapter, word, `rsvp` | Unchanged; rule 1 restores from the state file |
+| An image, table or code block ("Non-prose items" below) | chapter, the first prose word after the item, `rsvp` | The reader shows the item's page; its render saves that page |
+| Banner: Continue | Unchanged (that word, `rsvp`) | Unchanged |
+| Banner: Stay, Back, or a page-turn swipe | chapter, the same word, `page` | The item's page, or the page the swipe turns to |
+| Home gesture, sleep or power loss while the banner shows | Unchanged (`rsvp`): reopening the book opens RSVP after the item | The item's page |
 | A chapter change during playback | chapter, first word, `rsvp` | Unchanged |
 
 How often during playback: never per word (SD wear, and a write would delay the next frame on the
@@ -89,6 +94,73 @@ default (which is 240 WPM and 1 word until a default is saved).
 The state file is read when RSVP opens and when a book opens; an invalid one (not JSON, wrong
 members, a newer version) or an unreadable one gives the defaults, and the next save moves it aside
 to `<file>.bad` and writes a fresh one. `book_sha256` is not computed yet (`src/reading/README.md`).
+
+## Non-prose items
+
+Plan section 1: images, tables (`<table>`) and code blocks (`<pre>`) pause RSVP and show in page view;
+footnote reference marks are passed over. Controls: S4 rows 15 and 16 and its wireframe.
+
+**The stop.** The word source flags the last prose word before an item (`TOKEN_NON_PROSE_FOLLOWS`),
+and the scheduler stops once that word has had its full slot. RSVP then finds the item
+(`reading::itemBefore()`: the first IMAGE, TABLE or CODE marker outside the notes that starts after the
+last word shown and not after the next prose word), logs the `pause` line (the session's meter and
+audit so far), saves the position (the first prose word after the item, mode `rsvp`), fills
+`HandOff::item` and finishes with `Then::ShowItem`. An item before a chapter's first prose word, met
+when playback moves into that chapter, is handed over the same way. On a trial display profile the
+screen is cleared with a clearing refresh first (plan section 6, "Safety limits"); the stock profile
+goes straight to the page.
+
+**Which page.** The reader jumps to the item's start offset (`Marker::offsetStart`) with its own
+offset jump. Once that page is drawn, it checks it against
+`Section::getPageForVisibleTextOffset(offset, /*preferFirstAtOffset=*/true)`: an image takes no
+offset, so an image-only page starts at the same offset as the page after it, and the first of them is
+the image. If that is another page, the reader shows it first. A table or code block that spans pages
+is shown at its first page. The reader's render saves that page as its progress.
+
+**Runs of items.** The word source treats items with no prose between them (an image directly followed
+by a table) as one gap, so one banner covers the run: it names and shows the run's first item, and
+Continue goes to the first prose word after the whole run. Continue therefore always moves past at
+least the item shown and never stops at the same item twice. The rest of a run, or of a table split
+over pages, is reached by reading on in page view (Stay, or a page-turn swipe).
+
+**Captions.** S1 section 5: an image's `figcaption` is prose and is read after the image (the fixture's
+"Figure 1. ..."); a table's `caption` is inside the `<table>`, so it belongs to the item and is shown,
+not read. Alt text is never a word.
+
+**The banner** (`ItemBanner`) is a small activity the reader pushes once the item's page is on screen.
+It draws only the bottom strip (y 632 to 800: a rule, "Image. Speed reading stopped here." or "Table."
+or "Code block.", the two buttons, the key hint) over the page left in the frame buffer, with a fast
+refresh; the item can be partly under it, as in S4's wireframe. If a render of the banner was not asked
+for by the banner itself (another screen, such as the light panel, covered it and has closed, so the
+frame buffer no longer holds the page), it finishes with `Then::ShowItem` and the reader draws the page
+and opens the banner again.
+
+| Input while the banner shows | What it does |
+| --- | --- |
+| Tap Continue (16,688,264,72), or hold a side key while Continue is highlighted (the default), or Confirm | Continue: RSVP opens again at the first prose word after the item, on the pause screen with Play highlighted |
+| Tap Stay (304,688,160,72), or Down then hold, or a left-edge swipe (Back) | Stay: the banner goes, page view stays on the item's page, the state file's mode becomes `page` |
+| A page-turn swipe (left or right, mid-screen) | Stay, and the page turns as it would have |
+| Short Up or Down press | Moves the highlight (no wrap); does not turn the page |
+| A tap anywhere else (the page, the centre tap for the toolbar, tap-mode page zones, links) | Nothing: the banner is modal (S4 section 6). The toolbar and the reader menu are reachable after Stay |
+| Bottom-edge swipe (Home) | Goes Home as everywhere; the state file keeps the word after the item in RSVP mode, so reopening the book opens RSVP there |
+| Top-edge swipe (light panel) | Opens the light panel over the banner; when it closes, the page is drawn again and the banner returns |
+| Power button | Unchanged: a hold sleeps (the reopened book continues after the item), a short click does what its setting says |
+
+**Continue keeps the session.** The banner sets `Then::Continue`; the reader calls `openSpeedRead()`
+with the hand-off as `Entry::after`. The new RSVP activity opens at `ItemStop::nextWord` with the pace
+that was in use (saved or not), without reading the state file, and carries the session on
+(`rsvp::Scheduler::continueSession()`): the delivered-WPM meter and the word-order audit as they were
+at the stop. Time on the banner is outside active playback, so it never counts in delivered WPM, and
+the audit's open segment continues: after a stop it allows the one forward skip that `play()` at the
+stop would have allowed, which covers the item's own word indexes (a table's or code block's words,
+and any note words right after it; counted in `skipped=`). An image has no words, so nothing is
+skipped. RSVP opens on its pause screen and waits for Play, as everywhere (plan section 6,
+"Presentation"). S4 row 15 says Continue "starts playing"; the plan wins where they differ.
+
+**Entering RSVP on an item's page** (the hold, or "Speed read") starts after the item: the page's
+entry word is inside it or after it, and the word source moves to the first prose word after it
+(S4 section 13). The saved word after Stay is used when it lies on the page shown ("Where RSVP
+opens").
 
 ## Tasks and timing
 
@@ -125,14 +197,27 @@ rule with the renderer's real text widths. Black and white only.
 WPM of the session, rounded), position (chapter title, chapter and book percent), Exit / Menu / Page
 view, the words Play starts with, back one sentence, Play (default), forward one sentence, the WPM
 and words-per-update values between their minus and plus steppers (drawn shapes, so the screen text of
-a row is its value), Save as default and Save for this book, a one-line note, and the key hint. Notes: "An image, table or code block was skipped" after a
-non-prose stop (Play continues after the item), "End of the book", "This chapter cannot be speed
-read" (no index could be built).
+a row is its value), Save as default and Save for this book, a one-line note, and the key hint. Notes: "End of the book", "This chapter cannot be speed
+read" (no index could be built), "Paused: the display did not respond" (below).
 
 **Chapters.** At a chapter end playback continues into the next spine item that has prose (its index
-is built if needed; "Preparing..." is shown when the chapter's XHTML is 32 KB or more). An image,
-table or code block before that chapter's first prose word pauses with the note. Past the last
-chapter, playback pauses with "End of the book".
+is built if needed; "Preparing..." is shown when the chapter's XHTML is 32 KB or more). Footnote and
+endnote bodies are passed over (`lib/WordIndex`, NOTE regions), so a document made only of notes (the
+fixture's endnotes) is skipped as a chapter without prose. An image, table or code block before that
+chapter's first prose word is handed over to page view like any other ("Non-prose items"). Past the
+last chapter, playback pauses with "End of the book".
+
+**Display timeout.** The display backend counts a word update of 5 s or more as a timeout
+(`stats().updates.timeouts`; `src/display/README.md`, "Timeouts"). After a frame whose update timed
+out, playback pauses before the next word (`reading::UpdateTimeoutWatch`, armed at each Play), with
+the note "Paused: the display did not respond" and `pause reason=display-timeout`. A stuck panel then
+costs one long update (up to the SDK's 30 s BUSY limit), not one per word; Play tries again. The
+simulator's modelled backend never classes a call as a timeout, so this is proven in
+`test/rsvp_activity/DisplayTimeoutTest.cpp` through the device backend's timing logic.
+
+**Checkpoints.** A stop at a section end with a checkpoint (`STOP_CHECKPOINT`) pauses with
+`reason=checkpoint` and no note. No section ends are passed to the word source yet, so it does not
+happen; task C2 handles it.
 
 **Sentence steps** (`src/reading/RsvpPosition.h`): back goes to the start of the current sentence, or
 of the previous one when already at a start; forward to the next sentence. Held (key path), they
@@ -146,31 +231,41 @@ are decimal, times in ms.
 | Line | When |
 | --- | --- |
 | `state <missing\|read\|invalid\|unreadable\|no-memory> book_wpm=<w> book_words=<k> default_wpm=<w> default_words=<k> wpm=<w> words_per_update=<k> position=<none\|rsvp\|page> ch=<c> word=<w>` | RSVP read the state file: the book's overrides (0: none), the global default, the values used, the saved position |
-| `enter ch=<spine> page_offset=<o> word=<w> chapter_words=<n> activity_bytes=<b> from=<page\|saved\|resumed>` | RSVP opened at word `w`, by which rule ("Where RSVP opens") |
+| `enter ch=<spine> page_offset=<o> word=<w> chapter_words=<n> activity_bytes=<b> from=<page\|saved\|resumed\|continue>` | RSVP opened at word `w`, by which rule ("Where RSVP opens"; `continue`: Continue on the banner) |
 | `book state <read\|invalid\|unreadable\|no-memory> mode=<none\|rsvp\|page> ch=<c> word=<w>` | A book with a state file opened (`openedInRsvp()`) |
 | `play ch=<spine> word=<w> wpm=<t> words_per_update=<k>` | Play |
 | `frame ch=<spine> first=<i> last=<j> words=<k> hold=<ideal ms> ms=<update ms> text="<text>"` | After every frame shown; `ms` is the backend's measured update time |
 | `clear ch=<spine> ms=<ms>` | A clearing refresh during playback (clearing policy) |
 | `chapter ch=<spine> word=<w> chapter_words=<n>` | Playback moved into the next chapter |
-| `pause reason=<pause\|non-prose\|end-of-book\|index-rebuilt> ch=<spine> word=<next word> target=<wpm> delivered=<wpm.d> words=<n> active_ms=<ms> updates=<n> clears=<n> mean_update_ms=<ms> max_update_ms=<ms> audit=<ok\|violated> drawn=<n> segments=<n> violations=<n> gaps=<n> repeats=<n> skipped=<n> declared=<n>` | Playback ended; meter (`DeliveredWpmMeter::stats()`) and word-order audit for the session. Followed by `[DSP] stats ...` |
+| `pause reason=<pause\|non-prose\|end-of-book\|index-rebuilt\|display-timeout\|checkpoint> ch=<spine> word=<next word> target=<wpm> delivered=<wpm.d> words=<n> active_ms=<ms> updates=<n> clears=<n> mean_update_ms=<ms> max_update_ms=<ms> audit=<ok\|violated> drawn=<n> segments=<n> violations=<n> gaps=<n> repeats=<n> skipped=<n> declared=<n>` | Playback ended; meter (`DeliveredWpmMeter::stats()`) and word-order audit for the session. Followed by `[DSP] stats ...` |
 | `pause screen focus=<Item> refresh=<clear\|update> status="<first line>"` | The pause screen was refreshed |
 | `sentence <back\|forward> ch=<spine> from=<w> to=<w>` | A sentence step |
 | `leave to=<page-view\|menu\|exit> ch=<spine> word=<w> offset=<visible offset>` | Leaving RSVP |
+| `leave to=item kind=<image\|table\|code> ch=<spine> word=<next word> offset=<item start offset>` | Handing over to page view at a non-prose item |
+| `[ERR] [RSVP] display timeout ch=<spine> word=<next word>: pausing` | A word update timed out; the pause follows |
+| `banner kind=<image\|table\|code> ch=<spine> word=<next word> item_offset=<o> activity_bytes=<b> hand_off_bytes=<b>` | The banner opened |
+| `banner screen focus=<Continue\|Stay>` | The banner was drawn |
+| `banner page redraw` | A screen that covered the banner closed: the reader draws the page and opens the banner again |
 | `values wpm=<w> words_per_update=<k> changed=<0\|1>` | A stepper press (`changed=0` at a limit) |
 | `saved default wpm=<w> words_per_update=<k> ok=<0\|1>`, `saved book ...` | Save as default, Save for this book |
-| `position saved reason=<pause\|non-prose\|end-of-book\|index-rebuilt\|chapter\|page-view\|menu\|exit\|home\|sleep> ch=<spine> word=<w> mode=<rsvp\|page> ok=<0\|1>` | The state file's position was written |
+| `position saved reason=<pause\|non-prose\|end-of-book\|index-rebuilt\|display-timeout\|checkpoint\|chapter\|page-view\|menu\|exit\|home\|sleep\|stay> ch=<spine> word=<w> mode=<rsvp\|page> ok=<0\|1>` | The state file's position was written (`stay`: by the banner) |
 | `state <path> set aside as <path>.bad` | An invalid or unreadable state file was moved aside before a save |
 | `Index built spine=<s> words=<n> bytes=<n> source=<n> ms=<ms>`, `Index open spine=<s> ...` | `src/reading/ChapterWordIndex` |
 | `[CTL] Pause armed` | The pause screen accepts input (300 ms after it is shown and every key and finger up) |
 | `[CTL] Pause focus=<Item>`, `[CTL] Pause select=<Item>` | Highlight moved, item activated (S4 section 9) |
 | `[CTL] Playing pause=<key\|touch\|gesture\|home>` | Input paused playback |
+| `[CTL] Banner armed`, `[CTL] Banner focus=<Item>`, `[CTL] Banner select=<Continue\|Stay>`, `[CTL] Banner swipe=<next\|previous>` | The banner's input (a swipe is followed by Stay's `position saved` line) |
 
 ## Memory
 
-The activity is one heap object made when RSVP opens (`activity_bytes` in the enter line, 5,440
+The activity is one heap object made when RSVP opens (`activity_bytes` in the enter line, 5,464
 bytes in the simulator: the scheduler with its 300-byte frame, the 1.9 KB index reader, the 2.3 KB
 sentence window, the band geometry; R4b's entry parameters, values, status and last saved place add
-40 bytes). Playback allocates nothing per word: frames, text widths (a 257-byte stack copy) and the
+40 bytes; R5's `Entry::after`, timeout watch and two flags 24 bytes). The `HandOff` the reader makes
+at each entry (one `make_shared`, as before) grows by `ItemStop`, the meter and audit kept across an
+item: 176 bytes in the simulator (`hand_off_bytes` in the banner line). The banner is one more heap
+object per item shown, 248 bytes in the simulator (`activity_bytes` in the banner line), freed when it
+closes; Stay writes the state file as below. Playback allocates nothing per word: frames, text widths (a 257-byte stack copy) and the
 band layout use fixed storage. An index build is transient (`src/reading/README.md`).
 
 Reading or writing the state file allocates one `checkpoint::BookState` (78 KB; on the Picco the

@@ -9,7 +9,7 @@ device-test (D3a) screens add their screens and zones to the same table.
 
 | File | What it holds | Host-tested |
 | --- | --- | --- |
-| `ControlMap.h/.cpp` | Key roles (`KEYS`), timings (hold 0.7 s, repeat 0.4 s, arming 0.3 s), events, actions and contexts, `BINDINGS` and `resolve()`, screens with their items in focus order and touch zones (`PAUSE`; `CHECKPOINT_PROMPT`, `CHECKPOINT_ANSWER`, `CHECKPOINT_INCORRECT`), `hit()` | yes |
+| `ControlMap.h/.cpp` | Key roles (`KEYS`), timings (hold 0.7 s, repeat 0.4 s, arming 0.3 s), events, actions and contexts, `BINDINGS` and `resolve()`, screens with their items in focus order and touch zones (`PAUSE`; `BANNER`, the non-prose banner's Continue and Stay, task R5; `CHECKPOINT_PROMPT`, `CHECKPOINT_ANSWER`, `CHECKPOINT_INCORRECT`), `hit()` | yes |
 | `ControlGesture.h/.cpp` | `GestureReader`: one frame of input to one event (short press on release, hold, hold repeat, Confirm, tap, Back, vertical swipe with its start; the arming guard of a new screen) | yes |
 | `ControlInput.h/.cpp` | The adapter: the only control code that reads `MappedInputManager` | no (simulator scenarios) |
 | `ControlDefaults.h` | Seeds "Page turn long press" from `KEYS` before the settings load (called from `src/main.cpp`) | |

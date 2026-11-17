@@ -59,6 +59,7 @@ Registration points so far:
 | `test/CMakeLists.txt` | `add_subdirectory(rsvp_activity)` | R4a |
 | `src/activities/reader/EpubReaderMenuActivity.h/.cpp` | `MenuAction::SPEED_READ`; "Speed read" as the menu's first row (so also the toolbar's More panel) in RSVP builds; one more row of capacity | R4a |
 | `src/activities/reader/EpubReaderActivity.h/.cpp` | `openSpeedRead()` and its result handler; the `SPEED_READ` menu action and long-press branch call it | R4a |
+| `src/activities/reader/EpubReaderActivity.h/.cpp` | `showSpeedReadItem()` and the check in `loop()` that calls it: the non-prose item's page, then the banner (`rsvpentry::createItemBanner()`) | R5 |
 | `src/CrossPointSettings.h`, `src/SettingsList.cpp` | `LONG_PRESS_BUTTON_BEHAVIOR::SPEED_READ = 3`; its label "Speed Read" offered in RSVP builds | R4a |
 | `lib/hal/HalDisplay.h` | `setCustomLut(bool, const unsigned char*)`, an inline pass-through to the SDK's public `FreeInkDisplay::setCustomLUT()`; called only by the device backend of the trial profiles (RSVP builds); the simulator stub is `scripts/simulator_patches/0004-hal-display-set-custom-lut.patch` | D2 |
 | `src/main.cpp` | `#include "controls/ControlDefaults.h"` and `seedRsvpControlDefaults();` before `SETTINGS.loadFromFile()`: the Speed read long press is the default in RSVP builds | R4a |

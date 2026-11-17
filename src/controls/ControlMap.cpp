@@ -31,6 +31,10 @@ int indexOf(const Screen& screen, const Item item) {
 
 const char* itemName(const Item item) {
   switch (item) {
+    case Item::Continue:
+      return "Continue";
+    case Item::Stay:
+      return "Stay";
     case Item::Exit:
       return "Exit";
     case Item::Menu:
