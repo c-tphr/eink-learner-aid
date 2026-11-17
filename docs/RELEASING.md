@@ -104,7 +104,7 @@ Verdicts of the updater's code (`scripts/tests/test_make_release_kit.py`, `test_
 
 ### What devices see when a release is published
 
-The updater reads `releases/latest` of this repository, which GitHub resolves to the newest published release that is neither a draft nor a pre-release. A draft is never seen; a `preview` (pre-release) is never seen, even when published. When a `final` release is published and marked latest, every Picco on the two-slot layout whose version is lower is offered it the next time the owner chooses "Check for updates", and installs it only after confirming. A Picco on the stock single-slot table is never offered anything (`docs/TWO_SLOT.md`). A device on a higher version is not offered an older release: the updater never downgrades.
+The updater reads `releases/latest` of this repository, which GitHub resolves to the newest published release that is neither a draft nor a pre-release. A draft is never seen; a `preview` (pre-release) is never seen, even when published. When a `final` release is published and marked latest, every Picco on the two-slot layout whose version is lower is offered it the next time the owner chooses Settings > System > "Check for Updates", and installs it only after confirming. A Picco on the stock single-slot table is never offered anything (`docs/TWO_SLOT.md`). A device on a higher version is not offered an older release: the updater never downgrades.
 
 ## Reviewing a draft
 

@@ -39,7 +39,6 @@ def build_parser() -> argparse.ArgumentParser:
         if plan:
             sp.add_argument("--plan", default=os.path.join("kit", planmod.PLAN_FILE_NAME),
                             help="flash-plan.json or the folder holding it (default: kit/flash-plan.json)")
-        sp.add_argument("--launcher", default="python -m piccoflash", help=argparse.SUPPRESS)
 
     common(sub.add_parser("identify", help="read-only: chip, eFuses, bootloader header, partition table"), plan=False)
     common(sub.add_parser("backup", help="read-only: read all 16 MB twice and keep it if both match"), plan=False)
@@ -82,8 +81,7 @@ def main(argv: Optional[List[str]] = None, device_factory: Optional[Callable[[st
     if args.command == "make-plan":
         return _make_plan(args, ui)
     ctx = Context(ui=ui, work=args.work_dir, plan_path=getattr(args, "plan", ""), port=args.port,
-                  dry_run=args.dry_run, device_factory=device_factory, port_resolver=port_resolver,
-                  launcher=args.launcher)
+                  dry_run=args.dry_run, device_factory=device_factory, port_resolver=port_resolver)
     if args.command in ("identify", "backup", "flash", "restore", "monitor"):
         ui.open_log(os.path.join(args.work_dir, "logs", "%s%s-%s.log" % (
             args.command, "-dryrun" if args.dry_run else "", workdir.timestamp())))

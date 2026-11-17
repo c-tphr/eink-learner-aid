@@ -111,7 +111,7 @@ Type:
 
 Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`
 
-It prints <!--q-->`Summary written:` followed by a file name, `work\early-check-summary-….txt`. This one text file is safe to share. It contains what the tools found (chip, memory, security settings, layout), fingerprints of the files rather than the files themselves, the commands you ran, and the last lines of their logs. The Picco's MAC address is partly hidden, and your Windows user name is removed from file paths. The summary does not contact the Picco.
+It prints <!--q-->`Summary written:` followed by a file name, `work\session-summary-….txt`. Every line of this one text file is safe to share. It contains what the tools found (chip, memory, security settings, layout), fingerprints of the files rather than the files themselves, the commands you ran, and the last lines of their logs. The Picco's MAC address is partly hidden, and your Windows user name is removed from file paths. The summary does not contact the Picco.
 
 ## 6. Send the results
 

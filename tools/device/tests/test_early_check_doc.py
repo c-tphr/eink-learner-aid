@@ -130,5 +130,5 @@ def test_quoted_commands_exist():
 def test_issue_template_points_back_to_the_sheet():
     path = os.path.join(DEVICE, "..", "..", ".github", "ISSUE_TEMPLATE", "device-early-check.md")
     text = open(path, encoding="utf-8").read()
-    assert "DEVICE_EARLY_CHECK.md" in text and ".bin" in text and "early-check-summary" in text
+    assert "DEVICE_EARLY_CHECK.md" in text and ".bin" in text and "session-summary" in text
     assert "device-early-check.md" in open(SHEET, encoding="utf-8").read()

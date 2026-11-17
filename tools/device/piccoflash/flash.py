@@ -52,13 +52,15 @@ def _preconditions(ctx: Context, plan: planmod.Plan) -> Tuple[List[str], List[st
     ok: List[str] = []
     found = backup.find_backup_for_flash(work) if os.path.isdir(work) else None
     if found is None:
-        problems.append("no verified backup in the work folder %s: run identify, then backup" % work)
+        problems.append("no verified backup in the work folder %s. Run identify, then backup:\n    %s\n    %s"
+                        % (work, ctx.command_hint("identify"), ctx.command_hint("backup")))
         return problems, ok, None
     side_path, rec = found
     mac = rec.get("mac")
     idf = workdir.latest_identify(work, mac)
     if idf is None or idf[1].get("verdict") != identify.PASS:
-        problems.append("no passing identify for MAC %s in %s" % (mac, work))
+        problems.append("no passing identify for MAC %s in %s. Run identify with this Picco connected:\n    %s"
+                        % (mac, work, ctx.command_hint("identify")))
     else:
         ok.append("identify passed for MAC %s (%s)" % (mac, os.path.basename(idf[0])))
     bpath = os.path.join(os.path.dirname(side_path), rec.get("file", ""))
@@ -155,7 +157,8 @@ def _flash_connected(ctx: Context, dev, plan: planmod.Plan, rec: dict, bpath: st
         problems.append("the connected Picco has MAC %s, but the backup is of MAC %s: a different device" % (
             res.chip.mac, rec["mac"]))
     if res.verdict == identify.ALREADY_CONVERTED:
-        problems.append("this Picco already has the two-slot table; install updates from the SD card instead")
+        problems.append("this Picco already has the two-slot table; install updates from the SD card instead "
+                        "(Settings > System > SD Card Firmware Update)")
     elif res.verdict != identify.PASS:
         problems += ["%s: %s" % (c.name, c.detail) for c in res.evaluation.stops]
     if res.boot_blob is not None and res.boot_blob != backup_bytes[0:0x8000]:
@@ -233,7 +236,8 @@ def write_all(ctx: Context, dev, plan: planmod.Plan, bpath: Optional[str], bsha:
     ui.say("")
     ui.say("DONE: all four images written and verified.")
     ui.say(reset_note)
-    ui.say("Next: '%s' to record the first boot." % ctx.command_hint("monitor"))
+    ui.say("Next: record the first start of the new firmware in the serial log. Type:")
+    ui.say("    %s" % ctx.command_hint("monitor", "-Reset"))
     return OK
 
 

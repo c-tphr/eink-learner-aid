@@ -45,7 +45,7 @@ def choose_port(requested: Optional[str], ports: List[PortInfo]) -> str:
     if len(esp) > 1:
         raise PortProblem(
             "More than one Espressif device is connected:\n%s\n"
-            "Unplug the ones that are not the Picco, or name the port: -Port COMn (session.ps1) or --port COMn."
+            "Unplug the ones that are not the Picco, or name the port: add -Port COMn at the end of the command."
             % "\n".join("    " + p.label() for p in esp))
     raise PortProblem(
         "No Espressif USB serial port was found. Serial ports seen:\n%s\n"
@@ -54,7 +54,7 @@ def choose_port(requested: Optional[str], ports: List[PortInfo]) -> str:
         "  - a data-capable cable, plugged straight into the PC;\n"
         "  - the Picco is on, on its Home screen, and not in USB drive mode;\n"
         "  - unplug and replug the cable and watch which COM port appears.\n"
-        "If you know the port, name it: -Port COMn (session.ps1) or --port COMn. This tool does not guess."
+        "If you know the port, name it: add -Port COMn at the end of the command. This tool does not guess."
         % listing)
 
 

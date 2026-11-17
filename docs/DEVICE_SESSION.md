@@ -13,6 +13,7 @@ What happens in the session:
 
 * Do one numbered line at a time. Tick the box when it is done.
 * A line that starts with "Command:" holds a **command** in a grey box. Type only the text in the box, exactly, into the PowerShell window and press Enter. A line that starts with "Phrase:" holds a confirmation phrase: type only the text in the box.
+* When the tool shows a command for you to type next, it is written the same way as on this sheet, starting `powershell -ExecutionPolicy Bypass -File`. You can type it exactly as the tool shows it.
 * Text in a grey box after "you see" is what the **tool prints**, or what the **Picco's screen** shows. It may be one line of a longer text.
 * `<...>` stands for something that differs on your PC, for example a file name or a version number.
 * Lines with `____` are for you to write on. The same fields are on the [results sheet](#appendix-e-results-sheet) at the end.
@@ -88,10 +89,10 @@ Write the version here: ____________
 1. [ ] In File Explorer, open the folder with the two files. Click the address bar, type `powershell` and press Enter.
 2. [ ] Type this line, with your version instead of `<version>` (twice), and press Enter:
 
-   `(Get-FileHash .\picco-2slot-<version>.zip).Hash -eq (Get-Content .\picco-2slot-<version>.zip.sha256).Split(' ')[0]`
+   Command: <!--pwsh-->`(Get-FileHash .\picco-2slot-<version>.zip).Hash -eq (Get-Content .\picco-2slot-<version>.zip.sha256).Split(' ')[0]`
 
 3. [ ] It must print `True`. If it prints `False`, delete the ZIP, download it again and repeat. If it is `False` twice, stop and report it.
-4. [ ] If the line shows a red error instead, compare by eye. Type `Get-FileHash .\picco-2slot-<version>.zip` and press Enter: it prints a `Hash` of 64 characters. Open the `.sha256` file in Notepad: its first 64 characters must be the same (upper and lower case do not matter).
+4. [ ] If the line shows a red error instead, compare by eye. Type <!--pwsh-->`Get-FileHash .\picco-2slot-<version>.zip` and press Enter: it prints a `Hash` of 64 characters. Open the `.sha256` file in Notepad: its first 64 characters must be the same (upper and lower case do not matter).
 
 ### Extract the kit
 
@@ -102,9 +103,9 @@ Write the version here: ____________
 5. [ ] Click the address bar, type `powershell` and press Enter. A PowerShell window opens in the kit folder.
 6. [ ] Optional: check every file of the kit against its list. Type this line and press Enter:
 
-   `Get-Content .\MANIFEST.sha256 | ForEach-Object { $p = $_.Split(' ', 3); if ((Get-FileHash $p[2]).Hash -ne $p[0]) { 'DIFFERENT: ' + $p[2] } }; 'Check done.'`
+   Command: <!--pwsh-->`Get-Content .\MANIFEST.sha256 | ForEach-Object { $p = $_.Split(' ', 3); if ((Get-FileHash $p[2]).Hash -ne $p[0]) { 'DIFFERENT: ' + $p[2] } }; 'Check done.'`
 
-   It must print only `Check done.`. A line starting `DIFFERENT:` means the extraction went wrong: delete the kit folder and extract again.
+   It must print only `Check done.`. A line starting `DIFFERENT:` means the extraction went wrong: delete the kit folder and extract again. (When a file is missing, PowerShell also shows a red error with "Cannot find path" just before its `DIFFERENT:` line.)
 
 ### What is in the kit folder
 
@@ -209,7 +210,7 @@ Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 backu
 6. [ ] Copy **both** files, `picco-backup-<...>.bin` and `picco-backup-<...>.json`, from the `work` folder to the USB stick or the second disk.
 7. [ ] Check the copy. In a **second** PowerShell window, type (with the stick's drive letter and the real file name):
 
-   `Get-FileHash E:\picco-backup-<...>.bin`
+   Command: <!--pwsh-->`Get-FileHash E:\picco-backup-<...>.bin`
 
    The `Hash` it prints must equal the SHA-256 you wrote down (upper and lower case do not matter). The file size must be 16,777,216 bytes (File Explorer > right-click > Properties).
 8. [ ] Back in the first window, the tool asks <!--q-->`When the copy is done, type the LAST 8 characters of the SHA-256 above:` Type the last 8 characters and press Enter.
@@ -233,7 +234,7 @@ Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 backu
 
 **Stop here and check every line.** The next steps replace Onyx's bootloader and partition table on the Picco. Do not go on unless every box is ticked.
 
-What step 5 replaces: Onyx's second-stage bootloader, the stock partition table, the stock otadata (which says which Onyx app starts), the vendor recovery app `safeboot`, and the start of the Onyx main app. The settings area (NVS) is kept. **Only `session.ps1 restore` with the backup from step 3 returns the Picco to Onyx's firmware.** Onyx's firmware cannot be downloaded anywhere.
+What step 5 replaces: Onyx's second-stage bootloader, the stock partition table, the stock otadata (which says which Onyx app starts), the vendor recovery app `safeboot`, and the start of the Onyx main app. The settings area (NVS) is kept. **Only the restore command ([Recovery](#flashing-stops-part-way)) with the backup from step 3 returns the Picco to Onyx's firmware.** Onyx's firmware cannot be downloaded anywhere.
 
 1. [ ] Step 2 ended with <!--q-->`RESULT: PASS` today.
 2. [ ] Step 3 ended with <!--q-->`BACKUP VERIFIED: both reads are identical.` (two matching reads).
@@ -272,7 +273,7 @@ If you type anything else, you see <!--q-->`Cancelled: the phrase did not match.
 
 1. [ ] The tool connects and checks the Picco once more. You see <!--q-->`still stock, and its bootloader and table equal the backup.`
 2. [ ] Under <!--q-->`Writing (do not unplug the Picco until this says DONE)` it writes four images, in this order: `[1/4] app`, `[2/4] boot_app0`, `[3/4] partition_table`, `[4/4] bootloader`. After each one it reads the image back and shows <!--q-->`verified: SHA-256 of the bytes read back equals the plan`.
-3. [ ] **It worked if** you see <!--q-->`DONE: all four images written and verified.` and <!--q-->`The Picco has been reset and should now start the new firmware.`
+3. [ ] **It worked if** you see <!--q-->`DONE: all four images written and verified.` and <!--q-->`The Picco has been reset and should now start the new firmware.` Below that, the tool shows <!--q-->`Next: record the first start of the new firmware in the serial log. Type:` and the command of step 6, line 1.
 4. [ ] Write the time the flash took: ______ minutes
 
 **If it goes differently:**
@@ -648,22 +649,21 @@ About 20 minutes.
 
 Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`
 
-3. [ ] You see <!--q-->`Summary written:` and the file name `work\early-check-summary-<time>.txt`. This file is safe to share: it lists what identify and backup found, fingerprints instead of files, and every command you ran with its result. Your MAC address is partly hidden and your Windows user name is removed.
+3. [ ] You see <!--q-->`Summary written:` and the file name `work\session-summary-<time>.txt`. Every line of this file is safe to share. It lists what identify and backup found, each of the four flash images with whether it was written and verified (or where the flash stopped), whether each restore was verified, fingerprints instead of files, every command you ran with its result, and the last lines the tool showed. Your MAC address is partly hidden and your Windows user name is removed.
 
 ### Collect the files to send
 
 4. [ ] The results files from the Picco's SD card: **every file in the folder `/rsvp-bench/`** (names like `0001-controls.json`, `0002-bench.json`, `0003-acceptance.json`, `0004-choice.json`). Get them with File Transfer (step 6, lines 8 to 11: open the `rsvp-bench` folder in the File Manager and download each file) or with a card reader. Ignore files ending in `.tmp`.
 5. [ ] The serial logs: the files `work\serial-<time>.log` in the kit folder (one for each time you started `monitor`).
 6. [ ] Open each serial log in Notepad. Press Ctrl+F and search for your home Wi-Fi network's name. If you find it, replace it with `WIFI` and save. (With Create Hotspot it should not be there.)
-7. [ ] The summary file `work\early-check-summary-<time>.txt`.
-8. [ ] If step 5 ended with `DONE`: copy the lines of the flash output from <!--q-->`Writing (do not unplug the Picco until this says DONE)` to <!--q-->`DONE: all four images written and verified.` (select them with the mouse in the PowerShell window and copy them). These lines hold no private data. If you need to scroll back too far, skip this: the summary records that the flash command ended with exit 0.
+7. [ ] The summary file `work\session-summary-<time>.txt` (the newest one). It already holds the flash result for each image, so you do not need to copy anything from the PowerShell window.
 
 ### Open the results issue
 
-9. [ ] Open <https://github.com/c-tphr/eink-learner-aid/issues/new?template=device-session-results.md>. The title is "Device session results".
-10. [ ] Fill in each field from your [results sheet](#appendix-e-results-sheet).
-11. [ ] Attach the `/rsvp-bench/` files, the serial logs and the summary file. GitHub does not accept `.json` and `.log` files everywhere: if it refuses one, put the files into one ZIP and attach that ZIP (it must not contain any `.bin` file).
-12. [ ] Submit.
+8. [ ] Open <https://github.com/c-tphr/eink-learner-aid/issues/new?template=device-session-results.md>. The title is "Device session results".
+9. [ ] Fill in each field from your [results sheet](#appendix-e-results-sheet).
+10. [ ] Attach the `/rsvp-bench/` files, the serial logs and the summary file. GitHub does not accept `.json` and `.log` files everywhere: if it refuses one, put the files into one ZIP and attach that ZIP (it must not contain any `.bin` file).
+11. [ ] Submit.
 
 ---
 
@@ -675,10 +675,14 @@ To restore, the tool needs the backup `.bin` file and its `.json` record **in th
 
 ### Flashing stops part-way
 
-The flash stopped before `DONE`. The tool then shows <!--q-->`FLASHING DID NOT COMPLETE. The Picco may not start until it is restored.` and <!--q-->`Do not unplug it and do not close this window yet.` Under <!--q-->`To put the Picco back exactly as it was, run:` it shows the restore command with your backup's full path.
+The flash stopped before `DONE`. The tool then shows <!--q-->`FLASHING DID NOT COMPLETE. The Picco may not start until it is restored.` and <!--q-->`Do not unplug it and do not close this window yet.` Under <!--q-->`To put the Picco back exactly as it was, run:` it shows the restore command, with your backup's full path in quotes.
 
 1. [ ] Do not unplug the Picco. If the cable came out, plug it back in, straight into the PC.
-2. [ ] Type the restore command with the backup file's name (the tool showed the full path; the part in `work` is enough when you are in the kit folder):
+2. [ ] **Type the command the tool shows** under that line, exactly as shown, in the same window. It looks like this, with your kit folder and your backup's name:
+
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 restore "C:\picco\picco-2slot-<version>\work\picco-backup-<...>.bin"`
+
+   If the window was closed, open PowerShell in the kit folder again and type the same command with the backup's name. The part in `work` is enough there:
 
 Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 restore "work\picco-backup-<...>.bin"`
 
@@ -697,7 +701,7 @@ If the restore also fails:
 
 | You see | What to do |
 | --- | --- |
-| <!--q-->`RESTORE DID NOT COMPLETE:` with <!--q-->`Your backup file is unchanged. Do not unplug the Picco.` | Run the same restore command again. If it fails again, try another USB cable, or another USB port on the PC, and run it again. |
+| <!--q-->`RESTORE DID NOT COMPLETE:` with <!--q-->`Your backup file is unchanged. Do not unplug the Picco.` | Type the command the tool shows below <!--q-->`Run the restore again; if it fails again, try another USB cable or port:` (the same restore command). If it fails again, try another USB cable, or another USB port on the PC, and type it again. |
 | <!--q-->`COULD NOT REACH THE PICCO'S CHIP. Nothing was read or written.` | See [the Picco is not found](#the-picco-is-not-found-or-the-wrong-com-port), then run the restore again. |
 | <!--q-->`WARNING: this backup was taken from MAC` | The connected chip is not the one in the backup. Stop. Check you connected the right Picco. Type <!--type-->`RESTORE TO A DIFFERENT DEVICE` only if the team tells you to. |
 | <!--q-->`REFUSED. Nothing was written.` | Read the reasons. Usually the `.json` record is not beside the `.bin`, or the file is not the verified backup. Use the copy from the USB stick. |
@@ -937,7 +941,7 @@ Every step and every stop condition of `docs/PLAN.md` section 10, and the part o
 | Step 9. **Display benchmark.** | [Step 9](#step-9-display-benchmark), "What the times are", "What the ratings mean", "Run it", lines 1 to 11 |
 | Step 10. **Guided acceptance.** | [Step 10](#step-10-guided-acceptance), Part A lines 1 to 8, Part B lines 1 to 7; [Appendix A](#appendix-a-the-twelve-steps-of-part-b) |
 | Step 11. **Choose a profile.** | [Step 11](#step-11-choose-a-profile), lines 1 to 7 |
-| Step 12. **Return evidence.** | [Step 12](#step-12-return-evidence), lines 1 to 12; template `device-session-results.md` |
+| Step 12. **Return evidence.** | [Step 12](#step-12-return-evidence), lines 1 to 11; template `device-session-results.md` |
 | Steps 2 and 3 may be run earlier | [If you already did the early check](#if-you-already-did-the-early-check) |
 | Benchmark sweep, per display profile | [Step 9](#step-9-display-benchmark) (temperature, ratings Clean, Tolerable or Unreadable, residue, files and serial log) |
 | The PRD's on-device criterion | [Step 10](#step-10-guided-acceptance), Part A lines 3 to 8; Appendix A, step 12 |
@@ -1023,10 +1027,10 @@ Everything the tool makes is in the kit folder's `work` folder:
 | `identify-<time>.json` and three `identify-...bin` files | What identify read | **No** (keep private) |
 | `picco-backup-<...>.bin` and `.json` | The backup | **No.** Keep a copy on the USB stick |
 | `picco-backup-<...>-MISMATCH.json` and `.read1.bin`, `.read2.bin` | Only after two backup reads differed | **No** |
-| `flash-result-<time>.json` | What the flash wrote and verified | No need |
+| `flash-result-<time>.json` | What the flash wrote and verified | No need: the summary holds it |
 | `serial-<time>.log` | The serial log, one file for each `monitor` start | **Yes**, after the Wi-Fi name check (step 12) |
 | `logs\<command>-<time>.log` | Everything each command showed, with full paths and the full MAC | **No** |
-| `early-check-summary-<time>.txt` | The summary | **Yes** |
+| `session-summary-<time>.txt` | The summary (older kits named it `early-check-summary-<time>.txt`) | **Yes** |
 
 The last line of every command is `[exit N: NAME]`:
 

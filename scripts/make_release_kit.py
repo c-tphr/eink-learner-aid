@@ -450,6 +450,13 @@ def kit_readme(info, has_session_doc):
     return "\r\n".join(lines) + "\r\n"
 
 
+def write_sha256_file(path):
+    """<path>.sha256 as published beside a release asset: "<sha256>  <file name>" and a newline.
+    The session checklist's PowerShell line reads the first word of it."""
+    with open(path + ".sha256", "w", encoding="ascii", newline="\n") as fp:
+        fp.write("%s  %s\n" % (sha256_file(path), os.path.basename(path)))
+
+
 def manifest_text(tree, files):
     return "".join("%s  %s\n" % (sha256_file(os.path.join(tree, f)), f) for f in files)
 
@@ -777,8 +784,7 @@ def main(argv=None):
     with open(wifi, "wb") as fp:
         fp.write(firmware)
     for path in (zip_path, wifi):
-        with open(path + ".sha256", "w", encoding="ascii", newline="\n") as fp:
-            fp.write("%s  %s\n" % (sha256_file(path), os.path.basename(path)))
+        write_sha256_file(path)
     with open(os.path.join(dist, "kit-info.json"), "w", encoding="utf-8", newline="\n") as fp:
         fp.write(kit_info_text)
     with open(os.path.join(dist, "release-notes.md"), "w", encoding="utf-8", newline="\n") as fp:
