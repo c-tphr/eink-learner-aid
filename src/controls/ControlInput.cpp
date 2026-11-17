@@ -57,8 +57,7 @@ InputFrame ControlInput::sample() const {
   f.nextDown = input.isPressed(next);
   f.prevPressed = input.wasPressed(prev);
   f.nextPressed = input.wasPressed(next);
-  f.otherKeyPressed =
-      input.wasPressed(Btn::Up) || input.wasPressed(Btn::Down) || input.wasPressed(Btn::Confirm);
+  f.otherKeyPressed = input.wasPressed(Btn::Up) || input.wasPressed(Btn::Down) || input.wasPressed(Btn::Confirm);
   f.confirmReleased = input.wasReleased(Btn::Confirm);
 
   int x = 0;

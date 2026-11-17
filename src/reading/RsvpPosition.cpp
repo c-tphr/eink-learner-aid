@@ -2,13 +2,13 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "RsvpPosition.h"
-
 #include <IndexWordSource.h>
 #include <SentenceStep.h>
 
 #include <cstring>
 #include <string_view>
+
+#include "RsvpPosition.h"
 
 namespace reading {
 
@@ -20,8 +20,7 @@ constexpr int BACK_SPAN_DOUBLINGS = 2;
 
 // Loads the RSVP tokens from the first prose word at or after `from`, up to `last` (inclusive) or the
 // window's capacity, and classifies each with the text of the token after it, as FrameBuilder does.
-bool loadWindow(wordindex::WordIndexReader& reader, const uint32_t from, const uint32_t last,
-                SentenceWindow& w) {
+bool loadWindow(wordindex::WordIndexReader& reader, const uint32_t from, const uint32_t last, SentenceWindow& w) {
   w.count = 0;
   w.startsChapter = from == 0;
   w.reachesEnd = false;
@@ -60,9 +59,7 @@ uint32_t localIndex(const SentenceWindow& w, const uint32_t position) {
 
 // SentenceStep reads word 0 of a window as the chapter's first word; a window that starts later is
 // numbered from 1, so reaching its start means "load more" rather than "chapter start".
-rsvp::ClassWindow classWindow(const SentenceWindow& w) {
-  return {w.classes, w.count, w.startsChapter ? 0u : 1u};
-}
+rsvp::ClassWindow classWindow(const SentenceWindow& w) { return {w.classes, w.count, w.startsChapter ? 0u : 1u}; }
 
 }  // namespace
 

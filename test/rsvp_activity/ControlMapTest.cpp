@@ -69,9 +69,9 @@ TEST(ControlMap, PauseZonesMatchS4AndRespectTargetSizes) {
     Item item;
     int x, y, w, h;
   };
-  const Expected s4[] = {{Item::Exit, 16, 52, 136, 64},          {Item::Menu, 172, 52, 136, 64},
-                         {Item::PageView, 328, 52, 136, 64},     {Item::SentenceBack, 16, 204, 448, 64},
-                         {Item::Play, 16, 280, 448, 120},        {Item::SentenceForward, 16, 412, 448, 64}};
+  const Expected s4[] = {{Item::Exit, 16, 52, 136, 64},      {Item::Menu, 172, 52, 136, 64},
+                         {Item::PageView, 328, 52, 136, 64}, {Item::SentenceBack, 16, 204, 448, 64},
+                         {Item::Play, 16, 280, 448, 120},    {Item::SentenceForward, 16, 412, 448, 64}};
   for (const auto& e : s4) {
     const int i = indexOf(PAUSE, e.item);
     ASSERT_GE(i, 0);

@@ -69,11 +69,11 @@ struct Binding {
 };
 
 inline constexpr Binding BINDINGS[] = {
-    {Ctx::RsvpPlaying, Ev::KeyDown, Act::Pause},          {Ctx::RsvpPlaying, Ev::TouchDown, Act::Pause},
-    {Ctx::RsvpPlaying, Ev::HomeGesture, Act::Pause},      {Ctx::RsvpPlaying, Ev::BackGesture, Act::Pause},
-    {Ctx::FocusScreen, Ev::PrevShort, Act::FocusPrev},    {Ctx::FocusScreen, Ev::NextShort, Act::FocusNext},
-    {Ctx::FocusScreen, Ev::Hold, Act::Select},            {Ctx::FocusScreen, Ev::HoldRepeat, Act::SelectRepeat},
-    {Ctx::FocusScreen, Ev::Tap, Act::TapItem},            {Ctx::FocusScreen, Ev::BackGesture, Act::Back},
+    {Ctx::RsvpPlaying, Ev::KeyDown, Act::Pause},       {Ctx::RsvpPlaying, Ev::TouchDown, Act::Pause},
+    {Ctx::RsvpPlaying, Ev::HomeGesture, Act::Pause},   {Ctx::RsvpPlaying, Ev::BackGesture, Act::Pause},
+    {Ctx::FocusScreen, Ev::PrevShort, Act::FocusPrev}, {Ctx::FocusScreen, Ev::NextShort, Act::FocusNext},
+    {Ctx::FocusScreen, Ev::Hold, Act::Select},         {Ctx::FocusScreen, Ev::HoldRepeat, Act::SelectRepeat},
+    {Ctx::FocusScreen, Ev::Tap, Act::TapItem},         {Ctx::FocusScreen, Ev::BackGesture, Act::Back},
     {Ctx::PageView, Ev::Hold, Act::EnterRsvp},
 };
 
@@ -98,9 +98,9 @@ struct Screen {
 // The RSVP pause screen (S4 section 2). R4b appends the WPM and words-per-update steppers and the
 // two save buttons after SentenceForward, in the rows S4 gives them (488-704).
 inline constexpr Zone PAUSE_ZONES[] = {
-    {Item::Exit, 16, 52, 136, 64, false},          {Item::Menu, 172, 52, 136, 64, false},
-    {Item::PageView, 328, 52, 136, 64, false},     {Item::SentenceBack, 16, 204, 448, 64, true},
-    {Item::Play, 16, 280, 448, 120, false},        {Item::SentenceForward, 16, 412, 448, 64, true},
+    {Item::Exit, 16, 52, 136, 64, false},      {Item::Menu, 172, 52, 136, 64, false},
+    {Item::PageView, 328, 52, 136, 64, false}, {Item::SentenceBack, 16, 204, 448, 64, true},
+    {Item::Play, 16, 280, 448, 120, false},    {Item::SentenceForward, 16, 412, 448, 64, true},
 };
 inline constexpr Screen PAUSE{PAUSE_ZONES, static_cast<uint8_t>(sizeof(PAUSE_ZONES) / sizeof(PAUSE_ZONES[0])), 4};
 

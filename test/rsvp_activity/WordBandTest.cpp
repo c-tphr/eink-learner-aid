@@ -58,8 +58,8 @@ TEST(WordBand, FocusLetterCentredOnTheColumn) {
 
 TEST(WordBand, FocusColumnStaysFixedAcrossWords) {
   const BandGeometry b = band();
-  for (const auto& [word, focus] : {std::pair<std::string, uint16_t>{"a", 0}, {"the", 1}, {"lighthouse", 3},
-                                    {"extraordinarily", 4}}) {
+  for (const auto& [word, focus] :
+       {std::pair<std::string, uint16_t>{"a", 0}, {"the", 1}, {"lighthouse", 3}, {"extraordinarily", 4}}) {
     const BandLayout l = layoutBand(b, fixedAdvance, nullptr, word, focus, 1);
     ASSERT_TRUE(l.onColumn) << word;
     const int letterCentre = l.lines[0].x + focus * 12 + 6;

@@ -23,7 +23,9 @@ const char* const CHAPTER_1 = "OEBPS/text/chapter-1.xhtml";
 const char* const CHAPTER_2 = "OEBPS/text/chapter-2.xhtml";
 const char* const CHAPTER_3 = "OEBPS/text/chapter-3.xhtml";
 
-std::string chapterXhtml(const char* zipPath) { return wixtest::readFile(std::string(WIX_DATA_DIR "/original/") + zipPath); }
+std::string chapterXhtml(const char* zipPath) {
+  return wixtest::readFile(std::string(WIX_DATA_DIR "/original/") + zipPath);
+}
 
 uint32_t crcOf(const std::string& bytes) {
   return wordindex::crc32Update(0, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size());
@@ -135,8 +137,8 @@ TEST(IndexStore, UnverifiableSourceIsRebuilt) {
 }
 
 TEST(IndexStore, StateNames) {
-  for (const IndexState s : {IndexState::Valid, IndexState::Missing, IndexState::Unreadable, IndexState::Stale,
-                             IndexState::Unverifiable}) {
+  for (const IndexState s :
+       {IndexState::Valid, IndexState::Missing, IndexState::Unreadable, IndexState::Stale, IndexState::Unverifiable}) {
     EXPECT_STRNE(reading::indexStateName(s), "?");
   }
 }
@@ -189,8 +191,8 @@ class SentenceStepping : public ::testing::TestWithParam<const char*> {};
 
 TEST_P(SentenceStepping, ForwardVisitsEverySentenceStartInOrder) {
   OpenIndex ix(GetParam());
-  const std::vector<uint32_t> starts = expectedSentenceStarts((std::string("text/") +
-                                                               (std::string(GetParam()).substr(11))).c_str());
+  const std::vector<uint32_t> starts =
+      expectedSentenceStarts((std::string("text/") + (std::string(GetParam()).substr(11))).c_str());
   ASSERT_GT(starts.size(), 10u);
   reading::SentenceWindow window;
   uint32_t at = starts[0];
@@ -206,8 +208,8 @@ TEST_P(SentenceStepping, ForwardVisitsEverySentenceStartInOrder) {
 
 TEST_P(SentenceStepping, BackGoesToTheSentenceStartThenThePreviousOne) {
   OpenIndex ix(GetParam());
-  const std::vector<uint32_t> starts = expectedSentenceStarts((std::string("text/") +
-                                                               (std::string(GetParam()).substr(11))).c_str());
+  const std::vector<uint32_t> starts =
+      expectedSentenceStarts((std::string("text/") + (std::string(GetParam()).substr(11))).c_str());
   reading::SentenceWindow window;
   for (size_t s = 1; s < starts.size(); ++s) {
     uint32_t out = 0;
@@ -216,8 +218,8 @@ TEST_P(SentenceStepping, BackGoesToTheSentenceStartThenThePreviousOne) {
     EXPECT_EQ(out, starts[s - 1]) << "from " << starts[s];
   }
   // From inside a sentence (its second token): the start of that sentence.
-  std::vector<rsvptest::OwnedToken> tokens = rsvptest::chapterTokens(
-      rsvptest::fixtureDocument(std::string("text/") + std::string(GetParam()).substr(11)));
+  std::vector<rsvptest::OwnedToken> tokens =
+      rsvptest::chapterTokens(rsvptest::fixtureDocument(std::string("text/") + std::string(GetParam()).substr(11)));
   const std::set<uint32_t> startSet(starts.begin(), starts.end());
   int checked = 0;
   for (size_t i = 1; i < tokens.size(); ++i) {

@@ -80,7 +80,7 @@ namespace rsvpentry {
 std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& input, std::shared_ptr<Epub> epub,
                                  const int spineIndex, const uint32_t pageStartOffset,
                                  std::shared_ptr<HandOff> handOff) {
-  // One screen-lifetime object (about 6 KB: scheduler and frame, index reader, sentence window).
+  // One screen-lifetime object (about 5.4 KB: scheduler and frame, index reader, sentence window).
   auto activity = makeUniqueNoThrow<RsvpActivity>(renderer, input, std::move(epub), spineIndex, pageStartOffset,
                                                   std::move(handOff));
   if (!activity) LOG_ERR("RSVP", "OOM: RSVP activity (%u bytes)", static_cast<unsigned>(sizeof(RsvpActivity)));
@@ -200,9 +200,9 @@ void RsvpActivity::load() {
     const uint32_t word = reading::entryWord(index.reader(), pageStartOffset);
     source.seek(word);
     scheduler.reposition();
-    LOG_DBG("RSVP", "enter ch=%d page_offset=%lu word=%lu chapter_words=%lu", spine,
+    LOG_DBG("RSVP", "enter ch=%d page_offset=%lu word=%lu chapter_words=%lu activity_bytes=%u", spine,
             static_cast<unsigned long>(pageStartOffset), static_cast<unsigned long>(source.position()),
-            static_cast<unsigned long>(index.reader().wordCount()));
+            static_cast<unsigned long>(index.reader().wordCount()), static_cast<unsigned>(sizeof(RsvpActivity)));
   } else {
     note = Note::ChapterFailed;
     LOG_ERR("RSVP", "enter ch=%d failed: no word index", spine);
@@ -543,8 +543,8 @@ void RsvpActivity::loopPaused() {
       int moved = 0;
       {
         RenderLock lock;
-        focus = e.ev == controls::Ev::PrevShort ? controls::focusPrev(focus)
-                                                : controls::focusNext(controls::PAUSE, focus);
+        focus =
+            e.ev == controls::Ev::PrevShort ? controls::focusPrev(focus) : controls::focusNext(controls::PAUSE, focus);
         moved = focus;
       }
       LOG_DBG("CTL", "Pause focus=%s", controls::itemName(controls::PAUSE.zones[moved].item));

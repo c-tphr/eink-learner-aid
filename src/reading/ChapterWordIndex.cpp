@@ -33,8 +33,7 @@ class FileSink final : public wordindex::IndexSink {
     return offset + length <= end && file.seek(offset) && file.write(data, length) == length;
   }
   bool readAt(const uint32_t offset, uint8_t* data, const size_t length) override {
-    return offset + length <= end && file.seek(offset) &&
-           file.read(data, length) == static_cast<int>(length);
+    return offset + length <= end && file.seek(offset) && file.read(data, length) == static_cast<int>(length);
   }
 
  private:
@@ -125,7 +124,8 @@ bool ChapterWordIndex::build(const Epub& epub, const std::string& dir, const std
   // 4.1 KB of builder state for the length of one build; heap rather than the render task's stack.
   auto builder = makeUniqueNoThrow<wordindex::WordIndexBuilder>();
   if (!builder) {
-    LOG_ERR("RSVP", "Index build: allocation of %u bytes failed", static_cast<unsigned>(sizeof(wordindex::WordIndexBuilder)));
+    LOG_ERR("RSVP", "Index build: allocation of %u bytes failed",
+            static_cast<unsigned>(sizeof(wordindex::WordIndexBuilder)));
     return false;
   }
   HalFile out;

@@ -61,8 +61,7 @@ class ChapterWordIndex {
     bool readAt(uint32_t offset, uint8_t* data, size_t length) override;
   };
 
-  bool tryOpen(const std::string& path, uint32_t sourceBytes, uint32_t sourceCrc, bool sourceKnown,
-               IndexState& state);
+  bool tryOpen(const std::string& path, uint32_t sourceBytes, uint32_t sourceCrc, bool sourceKnown, IndexState& state);
   bool build(const Epub& epub, const std::string& dir, const std::string& path, uint32_t sourceBytes,
              BuildNotice notice, void* context);
 

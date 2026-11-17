@@ -6,7 +6,7 @@
 # strait at 3.5 knots, ...". So from word 0: forward -> 3, forward -> 13; back -> 3, back -> 0. The
 # pause screen's next-words row shows the words Play starts with (as many as fit 448 px); the checks
 # match its start, right after the "Page view" button in reading order. Then Play from word 0, a word
-# frame ("Room"), and a touch pause.
+# frame ("Room"), a touch pause, and Exit (S4 row 14) to Home.
 description = "Sentence forward and back by touch on the pause screen; positions and band text match the fixture's ground truth"
 
 env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
@@ -61,6 +61,13 @@ steps = [
   { wait_log = "\\[RSVP\\] pause reason=pause ch=1 word=\\d+ .* audit=ok .* violations=0 gaps=0 repeats=0" },
   { wait_log = "\\[CTL\\] Pause armed" },
   { screen_has = "Exit | Menu | Page view" },
+  { tap = [84, 84], note = "Exit: leaves the book like the reader's Go Home, saving the position's page" },
+  { wait_log = "\\[CTL\\] Pause select=Exit" },
+  { wait_log = "\\[RSVP\\] leave to=exit ch=1 word=\\d+ offset=\\d+" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=0" },
+  { wait_log = "Entering activity: Home" },
+  { quit = true },
+  { expect_file = ".crosspoint/epub_*/progress.bin", hex_prefix = "0100 0000" },
   { compare = "pause_sentence_13" },
   { compare = "frame_room" },
 ]

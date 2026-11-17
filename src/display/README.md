@@ -23,6 +23,11 @@ backend alone refreshes (`update()`: one word update; `clear()`: one clearing re
 called on the task that holds the RenderLock (for RSVP, the render task inside
 `Scheduler::step()`); both block until the refresh has finished and return its duration in ms.
 
+In the simulator, `RendererPresenter` also logs `[DSP] presented <update|clear> n=<count since
+start-up>` right after the real draw and before the modelled sleep: the frame is on screen from that
+line until the modelled time has passed, so scenarios take screenshots after it (R4a's
+`rsvp_slowdown`).
+
 ## Environment variables (simulator only)
 
 | Variable | Meaning |

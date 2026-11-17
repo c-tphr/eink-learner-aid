@@ -10,8 +10,9 @@ The project's firmware code sits beside upstream CrossPoint, not inside it (`doc
 | `lib/CheckpointCore/` | CheckpointCore | Checkpoint file parser, trigger rules, checkpoint and reread state machine, grade rules, state file encoding. Portable, host-tested (`test/checkpoint_core`) | C1a, C1b (done) |
 | `lib/WordIndex/` | WordIndex | Per-chapter word stream with anchors and non-prose markers; page-to-word mapping. Portable, host-tested (`test/word_index`) | R3 (done) |
 | `lib/DisplayProfileCore/` | DisplayProfile (portable part) | Profile table and clearing limits, backend interface, statistics, the `rsvp::DisplaySink` adapter, the simulator timing model, a fake backend. Portable, host-tested (`test/display_profile`) | E3 (done) |
-| `src/reading/` | ReadingSession | Position, mode, navigation source, checkpoint firing, saved state | C2 (#26), C4, C5 |
+| `src/reading/` | ReadingSession | Position, mode, navigation source, checkpoint firing, saved state. Since R4a also the chapter word index on demand and the page/word and sentence helpers | R4a (#21, index service), C2 (#26), C4, C5 |
 | `src/activities/rsvp/` | RsvpActivity | Word band, pause screen, RSVP settings, touch and keys | R4a (#21), R4b, R5 |
+| `src/controls/` | ControlMap | The single binding table (key roles, timings, event-to-action bindings, touch zones) and the input adapter (`docs/spikes/S4-control-map.md`, section 7) | R4a (#21), C3, C4, D3a |
 | `src/activities/checkpoint/` | CheckpointActivity | Prompt, reveal, grade, reread choice, skip | C3 (#27), C4 |
 | `src/display/` | DisplayProfile | Millisecond clock, simulator backend (modelled timing), placeholder device backend, a temporary simulator self-test | E3 (done), D1, D2 |
 | `src/activities/devicetest/` | DeviceTestActivity | Benchmark sweep, ratings, guided acceptance, results files | D3a (#32), D3b |
@@ -52,6 +53,12 @@ Registration points so far:
 | `src/main.cpp` | `#include "reading/RsvpLinkCheck.h"` and the call `runRsvpLinkCheck();` in `setup()` | F4 (temporary; replaced by C2) |
 | `src/main.cpp` | `#include "display/DisplaySelfTest.h"` and the call `runDisplaySelfTestIfRequested(renderer);` in `loop()`, after `activityManager.loop()`: simulator only, and only with `CROSSPOINT_SIM_DISPLAY_SELFTEST` set | E3 (temporary; removed when the RSVP activity covers the timing model) |
 | `test/CMakeLists.txt` | `add_subdirectory(display_profile)` | E3 |
+| `test/CMakeLists.txt` | `add_subdirectory(rsvp_activity)` | R4a |
+| `src/activities/reader/EpubReaderMenuActivity.h/.cpp` | `MenuAction::SPEED_READ`; "Speed read" as the menu's first row (so also the toolbar's More panel) in RSVP builds; one more row of capacity | R4a |
+| `src/activities/reader/EpubReaderActivity.h/.cpp` | `openSpeedRead()` and its result handler; the `SPEED_READ` menu action and long-press branch call it | R4a |
+| `src/CrossPointSettings.h`, `src/SettingsList.cpp` | `LONG_PRESS_BUTTON_BEHAVIOR::SPEED_READ = 3`; its label "Speed Read" offered in RSVP builds | R4a |
+| `src/main.cpp` | `#include "controls/ControlDefaults.h"` and `seedRsvpControlDefaults();` before `SETTINGS.loadFromFile()`: the Speed read long press is the default in RSVP builds | R4a |
+| `lib/I18n/translations/english.yaml` | The RSVP screens' strings | R4a |
 
 ## Simulator
 
