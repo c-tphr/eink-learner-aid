@@ -30,7 +30,7 @@ std::string planExample() {
   const size_t end = plan.find("```", start + 8);
   if (heading == std::string::npos || start == std::string::npos || end == std::string::npos) return "";
   std::string example = plan.substr(start + 8, end - start - 8);
-  const std::string placeholder = "<hash of the prepared file's source>";
+  const std::string placeholder = "<the checkpoint file's book.source_sha256>";
   const size_t at = example.find(placeholder);
   if (at == std::string::npos) return "";
   return example.replace(at, placeholder.size(), SHA);

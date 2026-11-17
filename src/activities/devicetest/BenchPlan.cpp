@@ -308,7 +308,10 @@ Next Sweep::refuse() {
   ProfileRecord& p = profiles[current];
   p.status = ProfileStatus::NOT_ALLOWED;
   p.reason = NotRunReason::REFUSED;
-  for (StepRecord& r : p.steps) r = StepRecord{StepStatus::SKIPPED};
+  for (StepRecord& r : p.steps) {
+    r = StepRecord{};
+    r.status = StepStatus::SKIPPED;
+  }
   return nextOrSummary();
 }
 
