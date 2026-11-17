@@ -68,6 +68,11 @@ DisplayBackend& firmwareBackend(GfxRenderer& renderer);
 // clears=<n> min=.. max=.. mean=.. last=..".
 void logStats(const DisplayBackend& backend);
 
+// TEMPORARY, removed with RsvpLinkCheck (task C2): links the profiles, the adapter, the modelled
+// backend, the statistics and this build's backend into the firmware before the RSVP activity
+// uses them, and logs one line. Refreshes nothing; firmwareBackend() is referenced, not called.
+void runDisplayProfileLinkCheck();
+
 // The per-call log lines the backends print (not for callers).
 void logRefresh(const DisplayBackend& backend, RefreshKind kind, uint32_t ms);
 void logModelledRefresh(const DisplayBackend& backend, const ModelledCall& call);

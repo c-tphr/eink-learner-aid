@@ -47,6 +47,50 @@ void logModelledRefresh(const DisplayBackend& backend, const ModelledCall& call)
           static_cast<unsigned long>(call.realMs), static_cast<unsigned long>(call.sleptMs));
 }
 
+namespace {
+
+// Link-check parts: a backend whose "refresh" does nothing and whose clock moves 7 ms per read.
+class NullPresenter final : public Presenter {
+ public:
+  void present(RefreshKind) override {}
+};
+class StepClock final : public rsvp::Clock {
+ public:
+  uint32_t nowMs() override { return now += 7; }
+
+ private:
+  uint32_t now = 0;
+};
+class NullSleeper final : public Sleeper {
+ public:
+  void sleepMs(uint32_t) override {}
+};
+class NullPainter final : public FramePainter {
+ public:
+  void paintFrame(const rsvp::Frame&) override {}
+  void paintClearedBand() override {}
+};
+
+}  // namespace
+
+void runDisplayProfileLinkCheck() {
+  NullPresenter presenter;
+  StepClock clock;
+  NullSleeper sleeper;
+  NullPainter painter;
+  ModelledBackend backend(presenter, clock, sleeper, TimingModel());
+  ProfileDisplaySink sink(backend, painter);
+  const bool selected = backend.select(ProfileId::TRIAL_C);
+  sink.showFrame(rsvp::Frame{});
+  sink.clearingRefresh();
+  DisplayBackend& (*volatile build)(GfxRenderer&) = &firmwareBackend;
+  LOG_DBG("DSP", "Link check: %u profiles, %s selected %d, updates %lu (%lu ms), clears %lu, build backend %s",
+          static_cast<unsigned>(PROFILE_COUNT), backend.info().key, selected ? 1 : 0,
+          static_cast<unsigned long>(backend.stats().updates.count),
+          static_cast<unsigned long>(backend.stats().updates.lastMs),
+          static_cast<unsigned long>(backend.stats().clears.count), build != nullptr ? "linked" : "missing");
+}
+
 void logStats(const DisplayBackend& backend) {
   const RefreshStats& u = backend.stats().updates;
   const RefreshStats& c = backend.stats().clears;
