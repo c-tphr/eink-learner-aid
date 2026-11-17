@@ -57,6 +57,7 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `scripts/display_timings.py`, `scripts/gen_display_timings.py` | Added | The display timings file's validator and header generator, and the `simulator_picco` pre-script that runs it (task E3; `lib/DisplayProfileCore/README.md`, "Timing model") |
 | `src/RsvpFeature.h`, `src/reading/`, `src/activities/rsvp/`, `src/activities/checkpoint/`, `src/display/`, `src/activities/devicetest/`, `docs/ARCHITECTURE-RSVP.md` | Added | Feature flag header and the module skeletons, compiled only with the flag (task F4) |
 | `.gitignore` | Two negation lines after `.claude/*` so `.claude/commands/` and `.claude/agents/` are tracked | The `/prep-book` command and the checker subagent live there (P4) |
+| `AGENTS.md` (and `CLAUDE.md`, a link to it) | **Modified**: a boxed preamble added directly under the title; the rest of the file is unchanged | States that this fork's workflow is `docs/PLAN.md` section 11 and `docs/IMPLEMENTER_GUIDE.md`, that upstream's rules on pull requests, pushes and human handoff apply to upstream contributions only, and that the technical guidance still applies (owner's decision, 2026-11-19) |
 | `.github/workflows/project-ci.yml`, `.github/scripts/check-format.sh`, `sim-smoke.sh`, `firmware-size.sh`, `no_skips.py`, `device_session_fixture.py`, `docs/CI.md` | Added | This project's CI (task F3); `docs/CI.md` describes it |
 | `.github/workflows/ci.yml` ("CI (build)") | **Modified**: every job (`clang-format`, `cppcheck`, `build`, `unit-tests`, `test-status`) gets `if: github.repository == 'crosspoint-reader/crosspoint-reader'` (`test-status`: `always() &&` that) and a one-line comment | On every pull request it built eight devices, including the `custom_sdkconfig` ones, ran clang-format over every upstream file and duplicated the host tests; `project-ci.yml` covers this project's checks, with one other device (`x4pro`) as the compile guard (task F3) |
 | `.github/workflows/pr-formatting-check.yml` ("PR Formatting") | **Modified**: `if:` as above on its one job | Requires Conventional Commits titles (`feat: ...`); this project's titles are `<task id>: <title>` (`docs/PLAN.md` section 11), so it failed on every pull request. It runs on `pull_request_target`, which uses the base branch's copy, so it stops only once this is on `main` (task F3) |
@@ -125,8 +126,8 @@ git merge-base --is-ancestor 490813ff4541e74e654f54f66ece9efc908361a0 HEAD && ec
 git submodule status
 
 # 3. Outside docs/ and README.md, the only upstream files modified are platformio.ini (four lines),
-#    test/CMakeLists.txt (four lines), src/main.cpp (four lines), .gitignore (two lines) and five
-#    .github/workflows files (job conditions), all in the table above;
+#    test/CMakeLists.txt (four lines), src/main.cpp (four lines), .gitignore (two lines), AGENTS.md (a
+#    preamble under the title) and five .github/workflows files (job conditions), all in the table above;
 #    everything else listed is an added file from the table above
 git diff --stat --diff-filter=MD 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 git diff --stat 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'

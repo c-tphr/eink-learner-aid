@@ -1,0 +1,247 @@
+{
+  "format": "rsvp-draft",
+  "version": 1,
+  "book": {
+    "title": "Essays",
+    "language": "en-US",
+    "source_sha256": "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561",
+    "instructions_version": "1.0"
+  },
+  "excluded": [
+    { "chapter_href": "text/titlepage.xhtml", "first_paragraph": "d01-p001", "last_paragraph": "d01-p001", "reason": "Front matter: title page (an image only)." },
+    { "chapter_href": "text/imprint.xhtml", "first_paragraph": "d02-p001", "last_paragraph": "d02-p006", "reason": "Front matter: the publisher's imprint." },
+    { "chapter_href": "text/the-republican-proclamation.xhtml", "first_paragraph": "d04-p001", "last_paragraph": "d04-p012", "reason": "Another essay of this collection (The Republican Proclamation), not prepared: only Common Sense is prepared in this edition." },
+    { "chapter_href": "text/anti-monarchal-essay.xhtml", "first_paragraph": "d05-p001", "last_paragraph": "d05-p039", "reason": "Another essay of this collection (Anti-Monarchal Essay), not prepared: only Common Sense is prepared in this edition." },
+    { "chapter_href": "text/declaration-of-rights.xhtml", "first_paragraph": "d06-p001", "last_paragraph": "d06-p038", "reason": "Another essay of this collection (Declaration of Rights), not prepared: only Common Sense is prepared in this edition." },
+    { "chapter_href": "text/dissertation-on-first-principles-of-government.xhtml", "first_paragraph": "d07-p001", "last_paragraph": "d07-p088", "reason": "Another essay of this collection (Dissertation on First Principles of Government), not prepared: only Common Sense is prepared in this edition." },
+    { "chapter_href": "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml", "first_paragraph": "d08-p001", "last_paragraph": "d08-p087", "reason": "Another essay of this collection (The Decline and Fall of the English System of Finance), not prepared: only Common Sense is prepared in this edition." },
+    { "chapter_href": "text/agrarian-justice.xhtml", "first_paragraph": "d09-p001", "last_paragraph": "d09-p090", "reason": "Another essay of this collection (Agrarian Justice), not prepared: only Common Sense is prepared in this edition." },
+    { "chapter_href": "text/colophon.xhtml", "first_paragraph": "d11-p001", "last_paragraph": "d11-p007", "reason": "Back matter: the publisher's colophon." },
+    { "chapter_href": "text/uncopyright.xhtml", "first_paragraph": "d12-p001", "last_paragraph": "d12-p005", "reason": "Back matter: the publisher's licence statement (Uncopyright)." }
+  ],
+  "sections": [
+    { "id": "s0001", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p001", "last_paragraph": "d03-p010", "label": "Common Sense: Introduction" },
+    { "id": "s0002", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p011", "last_paragraph": "d03-p018", "label": "Of the Origin and Design of Government in General" },
+    { "id": "s0003", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p019", "last_paragraph": "d03-p037", "label": "Concise Remarks on the English Constitution" },
+    { "id": "s0004", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p038", "last_paragraph": "d03-p047", "label": "Of Monarchy and Hereditary Succession: kings and scripture" },
+    { "id": "s0005", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p048", "last_paragraph": "d03-p053", "label": "The folly of hereditary right" },
+    { "id": "s0006", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p054", "last_paragraph": "d03-p062", "label": "The evils of hereditary succession, and the business of a king" },
+    { "id": "s0007", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p063", "last_paragraph": "d03-p069", "label": "Thoughts on the Present State of American Affairs: from argument to arms" },
+    { "id": "s0008", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p070", "last_paragraph": "d03-p077", "label": "Answering the arguments for the connection with Britain" },
+    { "id": "s0009", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p078", "last_paragraph": "d03-p083", "label": "No advantage, and many injuries" },
+    { "id": "s0010", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p084", "last_paragraph": "d03-p091", "label": "Reconciliation tried by the feelings of nature" },
+    { "id": "s0011", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p092", "last_paragraph": "d03-p096", "label": "Why Britain cannot govern the continent" },
+    { "id": "s0012", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p097", "last_paragraph": "d03-p105", "label": "What a reconciliation would bring" },
+    { "id": "s0013", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p106", "last_paragraph": "d03-p113", "label": "Hints for a continental government" },
+    { "id": "s0014", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p114", "last_paragraph": "d03-p117", "label": "A government of our own" },
+    { "id": "s0015", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p118", "last_paragraph": "d03-p129", "label": "Of the Present Ability of America: strength, debt and the cost of a navy" },
+    { "id": "s0016", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p130", "last_paragraph": "d03-p136", "label": "Why America should build a fleet" },
+    { "id": "s0017", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p137", "last_paragraph": "d03-p141", "label": "Why the present time is the right time" },
+    { "id": "s0018", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p142", "last_paragraph": "d03-p146", "label": "Religion, the charter and representation" },
+    { "id": "s0019", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p147", "last_paragraph": "d03-p153", "label": "Reasons for an open declaration of independence" },
+    { "id": "s0020", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p154", "last_paragraph": "d03-p160", "label": "Appendix: the King's Speech" },
+    { "id": "s0021", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p161", "last_paragraph": "d03-p167", "label": "The interest of America to be separated" },
+    { "id": "s0022", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p168", "last_paragraph": "d03-p174", "label": "Independence the more practicable plan" },
+    { "id": "s0023", "chapter_href": "text/common-sense.xhtml", "first_paragraph": "d03-p175", "last_paragraph": "d03-p178", "label": "Concluding hints" }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0001",
+      "section": "s0001",
+      "prompts": [
+        { "id": "c0001-p1", "prompt": "Why does the author expect his ideas to meet resistance at first, and why does he think that resistance will not last?", "answer": "A long habit of not thinking something wrong makes it look right, so new ideas at first raise an outcry in defense of custom. But the outcry soon dies down, because time makes more converts than reason.", "supporting_paragraphs": ["d03-p003"] },
+        { "id": "c0001-p2", "prompt": "Why does the author say the cause of America concerns more than America itself?", "answer": "Because it is in great measure the cause of all mankind: the circumstances it raises are universal, not local. Laying a country waste with fire and sword and making war on the natural rights of mankind is the concern of everyone who has the power of feeling.", "supporting_paragraphs": ["d03-p006"] }
+      ]
+    },
+    {
+      "id": "c0002",
+      "section": "s0002",
+      "prompts": [
+        { "id": "c0002-p1", "prompt": "How does the author distinguish society from government, and why does he call government a necessary evil?", "answer": "Society is produced by our wants and promotes happiness positively by uniting our affections; government is produced by our wickedness and works negatively by restraining our vices. Society is always a blessing, but government is at best a necessary evil: because conscience is not clear and obeyed by everyone, people must give up part of their property to protect the rest, choosing the lesser of two evils.", "supporting_paragraphs": ["d03-p012", "d03-p013"] },
+        { "id": "c0002-p2", "prompt": "In the author's imagined story of a few settlers in a remote place, what first brings them together, and what later makes government necessary?", "answer": "Necessity first draws them into society, because one person alone cannot meet his own wants: he cannot build a dwelling alone, and illness or misfortune would ruin him. Later, once the first hardships are overcome, they grow slack in their duty and attachment to one another, and that failure of moral virtue makes some form of government necessary.", "supporting_paragraphs": ["d03-p014", "d03-p015"] },
+        { "id": "c0002-p3", "prompt": "As the imagined colony grows, how does the author say its government should change, and why should elections be frequent?", "answer": "When the colony is too large for everyone to meet, lawmaking is left to representatives chosen from the whole body, and as it grows further it is divided into parts that each send their proper number. Elections should be frequent so that the elected soon return and mix again with the electors, keep a common interest with them and never form an interest of their own.", "supporting_paragraphs": ["d03-p017"] }
+      ]
+    },
+    {
+      "id": "c0003",
+      "section": "s0003",
+      "prompts": [
+        { "id": "c0003-p1", "prompt": "What principle does the author use to judge forms of government, and why does it count against the English constitution?", "answer": "That the simpler a thing is, the less likely it is to go wrong and the easier it is to repair. The English constitution is so complex that the nation can suffer for years without finding which part is at fault, whereas under a simple absolute government the people at least know where their suffering comes from and what the remedy is.", "supporting_paragraphs": ["d03-p019", "d03-p020"] },
+        { "id": "c0003-p2", "prompt": "What does the author say the English constitution is made of, and which of its parts does he think add nothing to the nation's freedom?", "answer": "It is made of the remains of two ancient tyrannies, the monarchical one in the King and the aristocratic one in the Peers, mixed with new republican material in the Commons. The King and the Peers add nothing to freedom, because being hereditary they are independent of the people.", "supporting_paragraphs": ["d03-p021", "d03-p022", "d03-p023", "d03-p024", "d03-p025"] },
+        { "id": "c0003-p3", "prompt": "Why does the author call it absurd to say that the King and the Commons check each other?", "answer": "Giving the Commons a check on the King assumes the King cannot be trusted and the Commons are wiser than the crown. Yet the same constitution lets the King check the Commons by rejecting their bills, which assumes the King is wiser than those it has already assumed to be wiser than him. The two assumptions contradict each other.", "supporting_paragraphs": ["d03-p027", "d03-p028", "d03-p029", "d03-p030"] },
+        { "id": "c0003-p4", "prompt": "Which part of the English constitution does the author say really governs, and where does its power come from?", "answer": "The crown. As in a machine, the heaviest power finally has its way however much the others slow it. The crown's weight comes from being the giver of places and pensions, so that the English have locked the door against absolute monarchy but given the crown the key.", "supporting_paragraphs": ["d03-p033", "d03-p034"] }
+      ]
+    },
+    {
+      "id": "c0004",
+      "section": "s0004",
+      "prompts": [
+        { "id": "c0004-p1", "prompt": "Which distinction between people does the author say has no natural or religious justification, and how does it differ from other distinctions?", "answer": "The distinction of men into kings and subjects. Male and female are distinctions of nature and good and bad are distinctions of heaven, and rich and poor can be explained without blaming oppression, but nothing natural or religious explains how one race of men came to be raised above the rest like a new species.", "supporting_paragraphs": ["d03-p039", "d03-p040"] },
+        { "id": "c0004-p2", "prompt": "What does the author say kings have done to peace, and where does he say government by kings came from?", "answer": "In the earliest ages there were no kings and therefore no wars; it is the pride of kings that throws mankind into confusion, and Holland without a king has had more peace than the monarchies of Europe. Government by kings was first introduced by the heathens, who paid divine honors to their dead kings, and the children of Israel copied it; it served idolatry.", "supporting_paragraphs": ["d03-p041", "d03-p042"] },
+        { "id": "c0004-p3", "prompt": "How does the author use the stories of Gideon and of Samuel to argue that scripture condemns monarchy?", "answer": "When the people, elated by Gideon's victory, offered him a hereditary crown, he refused and said the Lord should rule over them, denying their right to make a king at all. Later, when the people asked Samuel for a king to be like other nations, God said they had rejected him; Samuel warned that a king would take their sons, daughters and best fields, and after thunder and rain the people confessed that asking for a king was a sin.", "supporting_paragraphs": ["d03-p046", "d03-p047"] }
+      ]
+    },
+    {
+      "id": "c0005",
+      "section": "s0005",
+      "prompts": [
+        { "id": "c0005-p1", "prompt": "Why does the author say hereditary succession wrongs later generations, even if the first king deserved his honors?", "answer": "All men are born equal, so no one has a right to set his family above all others forever, and his descendants may be quite unworthy. Those who chose the first king could honor him, but had no power to give away their children's rights; such a compact might put later generations under a rogue or a fool.", "supporting_paragraphs": ["d03-p048", "d03-p049"] },
+        { "id": "c0005-p2", "prompt": "According to the author, how did the first kings probably arise, and how did hereditary right come to be claimed?", "answer": "The first king was probably no better than the chief ruffian of a gang of plunderers who made the peaceful pay for their safety. His followers never meant to make his rule hereditary; that came later, helped by superstitious tales and by fear of disorder when a new leader had to be chosen, so that what was first accepted as a convenience was afterwards claimed as a right.", "supporting_paragraphs": ["d03-p050"] },
+        { "id": "c0005-p3", "prompt": "What are the three ways the author says a first king could have come to the throne, and why does none of them support hereditary succession?", "answer": "By lot, by election or by usurpation. A king chosen by lot or by election sets a precedent for choosing the next one the same way, which rules out inheritance; to say the first electors bound all future generations has no parallel except original sin. Usurpation nobody will defend.", "supporting_paragraphs": ["d03-p052", "d03-p053"] }
+      ]
+    },
+    {
+      "id": "c0006",
+      "section": "s0006",
+      "prompts": [
+        { "id": "c0006-p1", "prompt": "What harm does the author say hereditary succession does through the kind of rulers it puts on the throne?", "answer": "Men raised to believe they were born to reign grow insolent and live apart from the real world, so when they succeed they are often the most ignorant and unfit people in the realm. The throne can also pass to a child or to a king worn out by age, leaving the public prey to regents and schemers who exploit that weakness.", "supporting_paragraphs": ["d03-p054", "d03-p055"] },
+        { "id": "c0006-p2", "prompt": "What is the most plausible argument made for hereditary succession, and how does the author answer it?", "answer": "That it saves a nation from civil wars. He calls this false: England's own history since the Conquest is full of civil wars and rebellions, such as the long, bloody contest between the houses of York and Lancaster, so hereditary succession works against peace rather than for it.", "supporting_paragraphs": ["d03-p056", "d03-p057"] },
+        { "id": "c0006-p3", "prompt": "What does the author say a king of England actually does, and why does he think the English government is nearly as monarchical as that of France?", "answer": "He does little more than make war and give away places, which impoverishes the nation and sets people quarrelling, and he is paid hugely for it. Because the crown has all the places at its disposal, its corrupt influence has swallowed the power and eaten out the virtue of the House of Commons, the republican part of the constitution.", "supporting_paragraphs": ["d03-p061", "d03-p062"] }
+      ]
+    },
+    {
+      "id": "c0007",
+      "section": "s0007",
+      "prompts": [
+        { "id": "c0007-p1", "prompt": "Why does the author say that all earlier plans and arguments about the quarrel with Britain are now out of date?", "answer": "Because the contest has passed from argument to arms: the King chose to appeal to force and the continent accepted the challenge. All earlier proposals aimed at union with Great Britain and differed only in whether to secure it by force or by friendship, so since fighting began they are like last year's almanacs, and a new way of thinking has begun.", "supporting_paragraphs": ["d03-p065", "d03-p068"] },
+        { "id": "c0007-p2", "prompt": "Why does the author say that what is done now matters so much for the future?", "answer": "The cause concerns a whole continent and posterity, not a city or a single age. This is the seed time of continental union, so even a small fracture now will grow with time, like a name cut into the bark of a young oak that widens as the tree grows.", "supporting_paragraphs": ["d03-p067"] }
+      ]
+    },
+    {
+      "id": "c0008",
+      "section": "s0008",
+      "prompts": [
+        { "id": "c0008-p1", "prompt": "How does the author answer the claim that because America flourished under Britain, it needs the connection to flourish in future?", "answer": "He calls the reasoning fallacious, like saying a child raised on milk must never eat meat. He adds that America would have flourished as much or more with no European power involved, because it trades in necessities of life that Europe will always buy.", "supporting_paragraphs": ["d03-p070"] },
+        { "id": "c0008-p2", "prompt": "Why does the author say Britain's protection of America is no reason for gratitude?", "answer": "Britain protected America for her own interest, for trade and dominion, not out of attachment, and at America's expense. She defended America against her own enemies, who had no quarrel with Americans except as British subjects; without the connection America would be at peace with France and Spain.", "supporting_paragraphs": ["d03-p071", "d03-p072", "d03-p073"] },
+        { "id": "c0008-p3", "prompt": "Why does the author reject calling Britain the parent or mother country of America?", "answer": "If it were true it would only shame Britain, since even brutes do not devour their young. But it is false: Europe, not England, is America's parent country, because America has been a refuge for the persecuted from every part of Europe, and fewer than a third even of his province are of English descent. Just as an Englishman abroad comes to treat men from other towns and counties as countrymen, all Europeans meeting in America are countrymen.", "supporting_paragraphs": ["d03-p074", "d03-p076"] }
+      ]
+    },
+    {
+      "id": "c0009",
+      "section": "s0009",
+      "prompts": [
+        { "id": "c0009-p1", "prompt": "What harm does the author say the connection with Britain does to American trade and peace?", "answer": "It drags America into Europe's wars and quarrels and makes enemies of nations that would otherwise seek its friendship; whenever Britain goes to war, American trade is ruined. A neutral America devoted to commerce, a free port that all Europe has an interest in, would keep the peace and friendship of all Europe.", "supporting_paragraphs": ["d03-p079", "d03-p081", "d03-p082"] },
+        { "id": "c0009-p2", "prompt": "What signs in nature and history does the author say show that Britain was never meant to rule America?", "answer": "The great distance at which the Almighty placed the two countries; the time of America's discovery, just before the Reformation, as if to open a sanctuary for the persecuted; and the way the continent was peopled. Besides, British authority must end sooner or later, so it cannot secure anything for posterity.", "supporting_paragraphs": ["d03-p082", "d03-p083"] }
+      ]
+    },
+    {
+      "id": "c0010",
+      "section": "s0010",
+      "prompts": [
+        { "id": "c0010-p1", "prompt": "Into what kinds of people does the author sort those who favor reconciliation, and which kind does he think does the most harm?", "answer": "Interested men who cannot be trusted, weak men who cannot see, prejudiced men who will not see, and moderate men who think better of Europe than it deserves. The moderate men, by their ill-judged deliberation, will cause more calamities than the other three together.", "supporting_paragraphs": ["d03-p085"] },
+        { "id": "c0010-p2", "prompt": "What test does the author ask those who hope to be friends with Britain again to apply, and what does he conclude?", "answer": "To try reconciliation by natural feeling: could they still love, honour and faithfully serve the power that brought fire and sword into their land? If not, a renewed connection would be forced and unnatural and soon relapse into something worse; and anyone who has suffered such losses and still shakes hands with the murderers has the heart of a coward.", "supporting_paragraphs": ["d03-p087"] },
+        { "id": "c0010-p3", "prompt": "Why does the author say peaceful methods and hopes of reconciliation have failed, and what does he urge instead?", "answer": "Every quiet method has failed: petitions were rejected with disdain, and repeated petitioning only feeds the vanity and obstinacy of kings. Reconciliation is now a fallacious dream, since nature has deserted the connection and no plan short of separation can promise even a year's security. So he urges a final separation now, rather than leave the next generation to fight.", "supporting_paragraphs": ["d03-p089", "d03-p090"] }
+      ]
+    },
+    {
+      "id": "c0011",
+      "section": "s0011",
+      "prompts": [
+        { "id": "c0011-p1", "prompt": "What practical reasons does the author give for saying Britain cannot govern America?", "answer": "Britain is too distant from America and too ignorant of it to manage its growing, complicated business: crossing three or four thousand miles with a petition and waiting months for an answer will soon look foolish. And it is absurd for an island to govern a continent; nature never makes a satellite larger than its planet, so England belongs to Europe and America to itself.", "supporting_paragraphs": ["d03-p092", "d03-p093"] },
+        { "id": "c0011-p2", "prompt": "Why does the author say it would not be worth fighting merely to get the British acts repealed?", "answer": "Because what is fought for should bear a just proportion to its cost. With the whole continent in arms and millions spent, the repeal of the acts or the removal of a ministry is too small a prize. And since independence was bound to come sooner or later, fighting was only worthwhile if they meant to be in earnest.", "supporting_paragraphs": ["d03-p096"] }
+      ]
+    },
+    {
+      "id": "c0012",
+      "section": "s0012",
+      "prompts": [
+        { "id": "c0012-p1", "prompt": "If the quarrel were patched up and the King kept his present powers, what does the author say would happen to lawmaking in America, and why?", "answer": "The King, an enemy of liberty who is jealous of America's growth, would keep a veto over all its laws and allow only those that suit him, keeping the continent as low as possible. That veto is far more dangerous in America than in England: England is his home and he would never refuse it a law for its defence, but he would refuse America one. He might even repeal the acts now only to regain by craft what he cannot win by force.", "supporting_paragraphs": ["d03-p098", "d03-p099", "d03-p100"] },
+        { "id": "c0012-p2", "prompt": "Why does the author think even the best terms of reconciliation would leave the colonies unsettled?", "answer": "They could only be a temporary expedient, a kind of guardianship lasting until the colonies come of age, so the government would hang by a thread. Emigrants with property would not come to such a country, and many present inhabitants would sell their effects and leave.", "supporting_paragraphs": ["d03-p101"] },
+        { "id": "c0012-p3", "prompt": "How does the author answer the fear that independence would lead to civil wars among the colonies?", "answer": "He argues the reverse: a reconciliation is more likely to be followed by a revolt, because those already ruined by Britain will not submit, and Britain's power would be only on paper. The colonies have shown good order under continental government, and where there are no distinctions there is no temptation to seek superiority; republics stay at peace, while monarchies are never long at rest.", "supporting_paragraphs": ["d03-p102", "d03-p103", "d03-p104", "d03-p105"] }
+      ]
+    },
+    {
+      "id": "c0013",
+      "section": "s0013",
+      "prompts": [
+        { "id": "c0013-p1", "prompt": "What form of government does the author suggest for the united colonies?", "answer": "Annual assemblies in each colony, with only a president, dealing with domestic business under the authority of a Continental Congress. Each colony would be divided into districts sending delegates to Congress; the president of Congress would be chosen in rotation from a colony drawn by lot, and a law would need three fifths of the Congress to pass.", "supporting_paragraphs": ["d03-p107", "d03-p108"] },
+        { "id": "c0013-p2", "prompt": "Who does the author say should draw up the continental charter, and what should the charter do?", "answer": "A Continental Conference standing between Congress and the people, made up of members of Congress, members of each colony's assembly or convention, and representatives chosen by the people, so that knowledge and power are united. It would frame a charter fixing how members of Congress and the assemblies are chosen and what each may do, securing freedom and property to all and above all freedom of religion, and then dissolve.", "supporting_paragraphs": ["d03-p109", "d03-p110", "d03-p111"] },
+        { "id": "c0013-p3", "prompt": "When asked where the King of America is, what does the author reply, and what ceremony does he propose?", "answer": "He reigns above, in heaven. On earth, a day should be set apart to proclaim the charter, placed on the word of God with a crown on it, so the world knows that in America the law is king; afterwards the crown should be broken up and scattered among the people, whose right it is.", "supporting_paragraphs": ["d03-p113"] }
+      ]
+    },
+    {
+      "id": "c0014",
+      "section": "s0014",
+      "prompts": [
+        { "id": "c0014-p1", "prompt": "Why does the author urge Americans to form their own government now rather than leave it to time and chance?", "answer": "A government of their own is their natural right, and it is wiser and safer to frame a constitution calmly while they can. If they wait, some popular adventurer may gather the desperate and discontented, seize power and sweep away their liberties; and if America returned to British rule, its unsettled state would tempt such a man, with Britain too far away to help.", "supporting_paragraphs": ["d03-p114"] },
+        { "id": "c0014-p2", "prompt": "Why does the author say Britain and America can never truly be reconciled?", "answer": "There are injuries nature cannot forgive. Reason forbids trust, the remaining ties of kinship wear thinner every day while the causes of quarrel grow, and the continent can no more forgive Britain's murders than a lover can forgive the ravisher of his mistress. Such feelings were implanted for good purposes: without them the guilty would escape and justice would vanish.", "supporting_paragraphs": ["d03-p115", "d03-p116"] }
+      ]
+    },
+    {
+      "id": "c0015",
+      "section": "s0015",
+      "prompts": [
+        { "id": "c0015-p1", "prompt": "What does the author say about the colonies' present numbers and strength, as they bear on independence?", "answer": "Their great strength lies in unity rather than numbers, yet their numbers already suffice: they have the largest body of armed and disciplined men of any power, and are at the point where no single colony can stand alone but all united can succeed. They are not so crowded that they would have more seaports to defend and lose, and their numbers fit their needs so that no one need be idle.", "supporting_paragraphs": ["d03-p121", "d03-p122"] },
+        { "id": "c0015-p2", "prompt": "Why does the author say Americans should not fear running into debt for independence?", "answer": "A debt that leaves posterity a settled, independent government is cheap at any price, while spending millions only to get some acts repealed would leave posterity the work still to do and a debt besides. A national debt is a national bond and no grievance if it bears no interest; Britain's huge debt has bought her a navy, and for a twentieth of that debt America could have a navy as large again.", "supporting_paragraphs": ["d03-p123", "d03-p124"] }
+      ]
+    },
+    {
+      "id": "c0016",
+      "section": "s0016",
+      "prompts": [
+        { "id": "c0016-p1", "prompt": "Why does the author say America is especially well placed to build a navy, and why does he call a fleet a good investment?", "answer": "America produces tar, timber, iron and cordage itself and needs nothing from abroad, and shipbuilding is its natural manufacture and greatest pride. A fleet is a branch of commerce that unites trade and protection and is worth more than it costs: ships not needed can be sold for gold and silver.", "supporting_paragraphs": ["d03-p130", "d03-p131"] },
+        { "id": "c0016-p2", "prompt": "Why does the author reject relying on Britain for naval protection after a reconciliation?", "answer": "The power that has tried to subdue America is the least fit to defend it, and conquest can come under the pretence of friendship. Unless British warships were kept in American harbours, a navy three or four thousand miles away would be of little use in an emergency; if America must protect itself, it should do so for itself, not for another.", "supporting_paragraphs": ["d03-p133"] },
+        { "id": "c0016-p3", "prompt": "Why does the author think a much smaller American navy could stand up to Britain's?", "answer": "Only a small part of Britain's listed ships are fit for service, and those are spread over many distant stations. America claims no foreign dominion, so its whole force would stay on its own coast, with a two-to-one advantage over ships that must sail thousands of miles to attack and back to refit; and Britain's West Indies trade lies at America's mercy.", "supporting_paragraphs": ["d03-p134"] }
+      ]
+    },
+    {
+      "id": "c0017",
+      "section": "s0017",
+      "prompts": [
+        { "id": "c0017-p1", "prompt": "Why does the author treat the colonies' youth as an argument for independence now rather than later?", "answer": "As a country grows in people and trade, men become absorbed in commerce and afraid to lose what they have, so their patriotic and military spirit declines; and a growing variety of interests would make it hard to unite the colonies later. Now they are young and their union has been strengthened by shared distress, so the present is the time to establish it.", "supporting_paragraphs": ["d03-p138", "d03-p139"] },
+        { "id": "c0017-p2", "prompt": "What opportunity does the author say comes to a nation only once, and what lesson does he draw from other nations?", "answer": "The chance to form itself into a government. Most nations let it slip and had to take laws from conquerors, getting a king first and a form of government afterwards. America should frame its charter first and then delegate men to carry it out, or some fortunate ruffian may seize power, as William the Conqueror did in England.", "supporting_paragraphs": ["d03-p140", "d03-p141"] }
+      ]
+    },
+    {
+      "id": "c0018",
+      "section": "s0018",
+      "prompts": [
+        { "id": "c0018-p1", "prompt": "What role does the author give government in religion, and why does he welcome many religious denominations?", "answer": "Government's only business with religion is to protect everyone who practises it conscientiously. He believes diversity of religious opinion is the will of the Almighty because it gives a wider field for Christian kindness, and he sees the denominations as children of one family differing only in their Christian names.", "supporting_paragraphs": ["d03-p142"] },
+        { "id": "c0018-p2", "prompt": "Why does the author insist on a large and equal representation, and what doubt does he raise about how members of Congress are chosen?", "answer": "Too few electors or too few representatives are dangerous, and unequal representation more so: in Pennsylvania two counties could have governed the whole province. Choosing Congress through the colonial assemblies was proper in an emergency, but expedience and right differ, and he asks whether the powers of representation and of election are too great for one body to hold.", "supporting_paragraphs": ["d03-p144", "d03-p145"] }
+      ]
+    },
+    {
+      "id": "c0019",
+      "section": "s0019",
+      "prompts": [
+        { "id": "c0019-p1", "prompt": "What reasons does the author give for an open and determined declaration of independence?", "answer": "While America calls itself Britain's subject, no other power can offer to mediate; France and Spain will not help merely to repair the connection with Britain; and foreign nations must regard Americans as rebels. A manifesto to foreign courts setting out their grievances and offering peace and trade would do more good than any petitions to Britain, and only by independence can they be received abroad and take rank with other nations.", "supporting_paragraphs": ["d03-p148", "d03-p149", "d03-p150", "d03-p151", "d03-p152"] }
+      ]
+    },
+    {
+      "id": "c0020",
+      "section": "s0020",
+      "prompts": [
+        { "id": "c0020-p1", "prompt": "What effect does the author say the King's Speech had on its readers, and how does he judge the Speech?", "answer": "Instead of frightening people it prepared the way for independence, because they read it in a spirit of revenge. He calls it a wilful libel against truth, the common good and mankind, whose one good quality is that it cannot deceive: its brutality and tyranny are plain on its face.", "supporting_paragraphs": ["d03-p155", "d03-p156"] },
+        { "id": "c0020-p2", "prompt": "Why does the author say it now matters little what the King of England says or does?", "answer": "The King has broken every moral and human obligation and earned universal hatred, so it is now America's interest to provide for herself: to look after her own large, young family rather than give away her property to support such a power.", "supporting_paragraphs": ["d03-p158"] }
+      ]
+    },
+    {
+      "id": "c0021",
+      "section": "s0021",
+      "prompts": [
+        { "id": "c0021-p1", "prompt": "Why does the author say America cannot become great while it depends on Britain?", "answer": "No nation that depends on a foreign power, with its commerce limited and its lawmaking cramped, can reach any real eminence; America's progress so far is only childhood compared with what it could reach with lawmaking in its own hands. England benefits from America's commerce, not its conquest, and that trade would largely continue after independence.", "supporting_paragraphs": ["d03-p161"] },
+        { "id": "c0021-p2", "prompt": "How does the author answer those who say the break with Britain would have been easier forty or fifty years later?", "answer": "The colonies' military ability comes from experience gained in the last war, which would be gone in fifty years, leaving no generals or officers. At the end of that war they had experience but not numbers; later they would have numbers without experience. The right moment lies between, when enough experience remains and numbers have grown, and that moment is now.", "supporting_paragraphs": ["d03-p164"] },
+        { "id": "c0021-p3", "prompt": "How does the author propose the colonies could pay off their debt, and why would a settlement with Britain prevent it?", "answer": "By selling the back lands and reserving a quit-rent on them, which would sink the debt without burdening anyone and in time pay the yearly cost of government. If Britain stayed sovereign, those lands, which some provinces have lost through the unjust extension of Canada's limits, would be out of reach, and with them the means of paying the debt.", "supporting_paragraphs": ["d03-p166", "d03-p167"] }
+      ]
+    },
+    {
+      "id": "c0022",
+      "section": "s0022",
+      "prompts": [
+        { "id": "c0022-p1", "prompt": "How does the author describe America's present condition, and why does he think it is dangerous to leave it so?", "answer": "It has no law and no government, only power granted by courtesy, and is held together only by shared feeling that secret enemies are trying to dissolve. No property is secure and there is no such thing as treason, so everyone acts as he pleases, and the union is too loosely held; if nothing is done in time, neither reconciliation nor independence will be possible.", "supporting_paragraphs": ["d03-p170", "d03-p171"] },
+        { "id": "c0022-p2", "prompt": "Why does the author say a return to the footing of 1763 would not satisfy America?", "answer": "Britain cannot and will not offer it, and even if granted there would be no way to hold a corrupt, faithless court to it, since a later parliament could repeal it and nations cannot be taken to law. A true return would also need the burnt towns rebuilt, private losses made good and war debts paid. It might have won the continent a year ago; now it is too late.", "supporting_paragraphs": ["d03-p173"] },
+        { "id": "c0022-p3", "prompt": "What does the author say justifies taking up arms, and from what moment should America's independence be dated?", "answer": "Not the repeal of a money law, which is too trifling a cause for men's lives, but the violence done to persons, the destruction of property and the invasion of the country by armed force. From the moment such defence became necessary, subjection to Britain should have ended, so independence should date from the first musket fired against America.", "supporting_paragraphs": ["d03-p174"] }
+      ]
+    },
+    {
+      "id": "c0023",
+      "section": "s0023",
+      "prompts": [
+        { "id": "c0023-p1", "prompt": "In what three ways does the author say independence might come about, and why does he prefer the first?", "answer": "By the legal voice of the people in Congress, by a military power, or by a mob. Through Congress, Americans would have every chance to form the noblest, purest constitution on earth and begin the world over again, whereas soldiers may not always be citizens nor crowds reasonable, and virtue is neither hereditary nor permanent.", "supporting_paragraphs": ["d03-p175"] },
+        { "id": "c0023-p2", "prompt": "How does the author say independence would help America in dealing with Britain and with other nations?", "answer": "Independence is the only bond that can keep the colonies together. Britain's pride would suffer less in treating for peace with American states than with those it calls rebellious subjects, and delay only encourages her to hope for conquest. Once independent, America could offer to reopen trade, which the commercial part of England would support, and if refused could apply to other courts.", "supporting_paragraphs": ["d03-p177"] }
+      ]
+    }
+  ],
+  "x_drafter": { "model": "claude-opus-5-5", "date": "2026-11-19" },
+  "x_changes": []
+}

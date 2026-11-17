@@ -1,0 +1,154 @@
+{
+  "format": "rsvp-validation",
+  "version": 1,
+  "tool": {
+    "name": "tools.prep",
+    "version": "1.0.0",
+    "word_rules_version": 1,
+    "epubcheck_version": "5.3.0"
+  },
+  "created": "2026-11-19T18:11:04Z",
+  "original": {
+    "file": "paine-essays.epub",
+    "sha256": "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561"
+  },
+  "prepared": {
+    "file": "paine-essays.prepared.epub",
+    "sha256": "7a243558c6582aceeb44f4c23ced123a2dc188f3304835e7ccde4d3916af3455"
+  },
+  "draft": {
+    "file": "draft.json",
+    "sha256": "012a1fe9d513c4f8370c62025b3a79b965a141268c122ecb201c1b6dbfb4823d"
+  },
+  "coverage_mode": "draft",
+  "passed": true,
+  "checks": [
+    {
+      "name": "open",
+      "title": "Both files open as EPUBs and every spine document parses",
+      "status": "pass",
+      "failures": [],
+      "details": []
+    },
+    {
+      "name": "source-hash",
+      "title": "The checkpoint file names the original's SHA-256, and the original was not changed",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "source_sha256 matches the original (96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561)",
+        "the original is byte-identical before and after validation"
+      ]
+    },
+    {
+      "name": "checkpoint-item",
+      "title": "The package declares rsvp/checkpoints.json exactly once, as application/json",
+      "status": "pass",
+      "failures": [],
+      "details": []
+    },
+    {
+      "name": "checkpoint-file",
+      "title": "The checkpoint file passes its schema and cross-reference rules (unique ids, plain text)",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "23 sections, 23 checkpoints, 58 prompts"
+      ]
+    },
+    {
+      "name": "firmware-limits",
+      "title": "The checkpoint file is within the firmware's limits",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "39227 bytes"
+      ]
+    },
+    {
+      "name": "anchors",
+      "title": "Every section's two anchors exist once, in its chapter, as empty spans, in order, without overlap",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "23 of 23 sections resolved to two anchors in their chapter"
+      ]
+    },
+    {
+      "name": "word-boundaries",
+      "title": "Every anchor sits between two words, outside tables and code blocks",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "46 anchors checked"
+      ]
+    },
+    {
+      "name": "coverage",
+      "title": "Sections cover the body text; everything else is footnotes or listed excluded matter",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "exclusions from the draft",
+        "text/titlepage.xhtml: words 0--1 excluded by the draft: Front matter: title page (an image only).",
+        "text/titlepage.xhtml: 0 of 0 words in sections, 0 in footnotes",
+        "text/imprint.xhtml: words 0-191 excluded by the draft: Front matter: the publisher's imprint.",
+        "text/imprint.xhtml: 0 of 192 words in sections, 0 in footnotes",
+        "text/common-sense.xhtml: 19335 of 19335 words in sections, 0 in footnotes",
+        "text/the-republican-proclamation.xhtml: words 0-656 excluded by the draft: Another essay of this collection (The Republican Proclamation), not prepared: only Common Sense is prepared in this edition.",
+        "text/the-republican-proclamation.xhtml: 0 of 657 words in sections, 0 in footnotes",
+        "text/anti-monarchal-essay.xhtml: words 0-2562 excluded by the draft: Another essay of this collection (Anti-Monarchal Essay), not prepared: only Common Sense is prepared in this edition.",
+        "text/anti-monarchal-essay.xhtml: 0 of 2563 words in sections, 0 in footnotes",
+        "text/declaration-of-rights.xhtml: words 0-846 excluded by the draft: Another essay of this collection (Declaration of Rights), not prepared: only Common Sense is prepared in this edition.",
+        "text/declaration-of-rights.xhtml: 0 of 847 words in sections, 0 in footnotes",
+        "text/dissertation-on-first-principles-of-government.xhtml: words 0-8703 excluded by the draft: Another essay of this collection (Dissertation on First Principles of Government), not prepared: only Common Sense is prepared in this edition.",
+        "text/dissertation-on-first-principles-of-government.xhtml: 0 of 8704 words in sections, 0 in footnotes",
+        "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml: words 0-9623 excluded by the draft: Another essay of this collection (The Decline and Fall of the English System of Finance), not prepared: only Common Sense is prepared in this edition.",
+        "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml: 0 of 9624 words in sections, 0 in footnotes",
+        "text/agrarian-justice.xhtml: words 0-8075 excluded by the draft: Another essay of this collection (Agrarian Justice), not prepared: only Common Sense is prepared in this edition.",
+        "text/agrarian-justice.xhtml: 0 of 8076 words in sections, 0 in footnotes",
+        "text/endnotes.xhtml: 0 of 2279 words in sections, 2279 in footnotes",
+        "text/colophon.xhtml: words 0-163 excluded by the draft: Back matter: the publisher's colophon.",
+        "text/colophon.xhtml: 0 of 164 words in sections, 0 in footnotes",
+        "text/uncopyright.xhtml: words 0-344 excluded by the draft: Back matter: the publisher's licence statement (Uncopyright).",
+        "text/uncopyright.xhtml: 0 of 345 words in sections, 0 in footnotes"
+      ]
+    },
+    {
+      "name": "word-counts",
+      "title": "Every section's word_count equals the words between its anchors",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "23 sections counted"
+      ]
+    },
+    {
+      "name": "text-unchanged",
+      "title": "Every spine document has the original's words, flags, markers and footnote marks",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "12 spine documents compared word for word"
+      ]
+    },
+    {
+      "name": "archive-unchanged",
+      "title": "Only the anchors, one manifest line and the checkpoint file differ from the original",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "31 original members; changed: epub/content.opf, epub/text/common-sense.xhtml"
+      ]
+    },
+    {
+      "name": "epubcheck",
+      "title": "EPUBCheck reports no errors",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "EPUBCheck 5.3.0: 0 errors, 0 warnings"
+      ]
+    }
+  ]
+}
