@@ -85,6 +85,20 @@ def not_reached_help(ui: UI, detail: str) -> None:
     ui.say("is known about entering download mode by hand. Do not try button combinations at random.")
 
 
+def kit_missing_help(ui: UI, reasons, work: str) -> None:
+    """Say where the kit comes from when there is no flash plan (the tool was started outside a kit folder)."""
+    if not any(str(r).startswith("no flash plan at ") for r in reasons):
+        return
+    ui.say("")
+    ui.say("This folder has no 'kit' folder. The flash plan and the four images are not in the")
+    ui.say("repository: they are in the device kit, picco-2slot-<version>.zip, on the project's")
+    ui.say("release page. Nothing is wrong with the Picco, and nothing was written.")
+    ui.say("  1. Download the kit and extract it (docs/DEVICE_SESSION.md, \"Get the kit\").")
+    ui.say("  2. Copy your work folder into the extracted kit folder, so that the identify and backup")
+    ui.say("     results come with it: %s" % os.path.abspath(work))
+    ui.say("  3. Open PowerShell in the kit folder and type the command again there.")
+
+
 def restore_instructions(ui: UI, ctx: "Context", backup_path: Optional[str], sha: Optional[str]) -> None:
     ui.say("")
     ui.say("=" * 78)

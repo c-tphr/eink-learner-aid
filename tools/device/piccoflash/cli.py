@@ -15,7 +15,8 @@ from typing import Callable, List, Optional
 
 from . import PINNED_ESPTOOL_VERSION, __version__, backup, flash, guard, identify, monitor, plan as planmod, ports
 from . import restore, summary, workdir
-from .common import ALREADY_CONVERTED, NOT_REACHED, OK, STOP, Context, EXIT_NAMES, PortProblem, not_reached_help
+from .common import (ALREADY_CONVERTED, NOT_REACHED, OK, STOP, Context, EXIT_NAMES, PortProblem, kit_missing_help,
+                     not_reached_help)
 from .device import Device, DeviceError, DeviceNotReached
 from .ui import UI
 
@@ -174,6 +175,7 @@ def _plan(ctx: Context) -> int:
         ui.say("REFUSED: the flash plan cannot be used:")
         for r in exc.reasons:
             ui.say("  - %s" % r)
+        kit_missing_help(ui, exc.reasons, ctx.work)
         return STOP
     for line in planmod.format_plan_header(plan) + [""] + planmod.format_table(plan):
         ui.say(line)

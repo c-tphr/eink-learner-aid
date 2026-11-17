@@ -125,6 +125,25 @@ def test_missing_plan(tmp_path):
     assert code == common.STOP and "no flash plan" in out
 
 
+def test_missing_plan_says_where_the_kit_comes_from(tmp_path):
+    """Started from the repository's tools/device (no kit folder), as after the early check."""
+    work = tmp_path / "work"
+    for command in (["plan"], ["flash"], ["flash", "--dry-run"]):
+        code, out = run_cli(command + ["--plan", str(tmp_path / "kit"), "--work-dir", str(work)])
+        assert code == common.STOP, command
+        assert "no flash plan" in out, command
+        assert "picco-2slot-<version>.zip" in out and "nothing was written" in out, command
+        assert "Copy your work folder into the extracted kit folder" in out and str(work) in out, command
+
+
+def test_a_broken_plan_does_not_get_the_missing_kit_text(kit):
+    doc = load_doc(kit)
+    doc["partition_table"][2]["size"] = "0x7F0000"
+    save_doc(kit, doc)
+    code, out = run_cli(["plan", "--plan", kit])
+    assert code == common.STOP and "picco-2slot-<version>.zip" not in out
+
+
 def _make(tmp_path, sources, *extra):
     out = str(tmp_path / "kit")
     code, text = run_cli(["make-plan", "--bootloader", sources["bootloader"], "--partitions",
