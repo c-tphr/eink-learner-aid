@@ -109,6 +109,21 @@ Each scenario that involves input has a pass by touch and a pass by the two side
 | Updates after the first flash without a cable | `docs/TWO_SLOT.md`; scenario `update_entries_hidden_keys`; `lib/UpdatePolicy` host tests. Not run on hardware |
 | The device kit and the session | `docs/RELEASING.md` (one build, the guard on every image, a dry run of the unpacked kit on Windows under both shells); `docs/DEVICE_SESSION.md` with tests that hold every quoted command and message to the tool's real output |
 
+## The release
+
+The device kit is the draft release **v2.0.1**, made by the manual workflow `.github/workflows/release-kit.yml` on `main` at `2e1aadbc` (this report's commit plus nothing else; the firmware sources equal `935fa9dd`). A draft is visible to the owner when signed in; publishing it is the owner's step (`docs/RELEASING.md`).
+
+| Check | Result |
+| --- | --- |
+| Workflow run with `publish=false`, kind `final` ([run 44169984007](https://github.com/c-tphr/eink-learner-aid/actions/runs/44169984007)) | preflight, build and assemble, windows (powershell), windows (pwsh): green |
+| Workflow run with `publish=true`, kind `final` ([run 44171702393](https://github.com/c-tphr/eink-learner-aid/actions/runs/44171702393)) | the same four jobs and `draft release`: green (second version check, build provenance attestation, draft created, five assets uploaded and read back) |
+| The draft as GitHub stores it | "v2.0.1", draft, not a pre-release, target `2e1aadbc`; no tag exists until it is published |
+| Assets, downloaded from the draft by the orchestrator | `picco-2slot-2.0.1.zip` (13,568,382 bytes, SHA-256 `2dfbf900…1269`) and `eink-learner-aid-v2.0.1-picco2.bin` (5,655,616 bytes, SHA-256 `3eebc331…3848`) match their `.sha256` files; plus `kit-info.json` |
+| The kit, unpacked | 78 files; `MANIFEST.sha256` verifies (77 entries); `kit/` holds `flash-plan.json` and the four images at 0x0, 0x8000, 0x15000 and 0x20000 with firmware version `2.0.1-picco2`; `sd-card/update.bin` and the Wi-Fi asset equal `kit/firmware.bin`; `sd-card/books/` holds the fixture book, the prepared fixture book, Paine's *Essays* and its prepared copy; `docs/` holds `DEVICE_SESSION.md` with its 36 pictures and `DEVICE_EARLY_CHECK.md`; `session.ps1`, `piccoflash/` and `DEVICE_SESSION.md` are byte-identical to `main` |
+| The same kit on Windows (workflow) | "Extract All" and `tar.exe` into paths with a space, `MANIFEST.sha256` verified in both, `session.ps1 setup`, `plan` and `flash -DryRun` end with `DRY RUN RESULT: READY` under Windows PowerShell 5.1 and PowerShell 7 |
+
+Every item of the kit in `docs/PLAN.md` section 10 is present. The results come back in issue #110, "Device session results".
+
 ## Not proven, and where each will be answered
 
 Nothing below can be answered without the device. `docs/DEVICE_SESSION.md` Appendix C lists where the owner records each.
