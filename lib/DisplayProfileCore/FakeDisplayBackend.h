@@ -43,10 +43,13 @@ class FakeClock final : public rsvp::Clock {
 
 struct FakeEvent {
   enum Kind { SELECT, UPDATE, CLEAR } kind = UPDATE;
+  // SELECT: the profile now selected. UPDATE: the profile whose word waveform ran (STOCK for a
+  // screen update, or when the allow rule refused the selected trial). CLEAR: the selected profile.
   ProfileId profile = ProfileId::STOCK;
   uint32_t startMs = 0;
   uint32_t endMs = 0;
-  ModelledCall call;  // UPDATE and CLEAR only
+  ModelledCall call;         // UPDATE and CLEAR only
+  RefreshDecision decision;  // UPDATE and CLEAR only: what was asked, and why it ran as it did
 };
 
 namespace fake_detail {
@@ -60,7 +63,9 @@ struct Parts {
       ++(kind == RefreshKind::UPDATE ? updates : clears);
       clock.advance(kind == RefreshKind::UPDATE ? realUpdateMs : realClearMs);
     }
+    bool inverted() const override { return invertedScreen; }
     FakeClock& clock;
+    bool invertedScreen = false;
     uint32_t realUpdateMs = 0;
     uint32_t realClearMs = 0;
     uint32_t updates = 0;
@@ -97,19 +102,27 @@ class FakeDisplayBackend final : private fake_detail::Parts, public ModelledBack
     fakePresenter.realUpdateMs = updateMs;
     fakePresenter.realClearMs = clearMs;
   }
+  // The screen's inversion, as the allow rule sees it.
+  void setInverted(const bool inverted) { fakePresenter.invertedScreen = inverted; }
   uint32_t sleeps() const { return fakeSleeper.calls; }
   uint64_t sleptMs() const { return fakeSleeper.totalMs; }
 
   std::vector<FakeEvent> events;
 
  protected:
-  void onSelect(const ProfileId id) override { events.push_back({FakeEvent::SELECT, id, clock.now, clock.now, {}}); }
-  uint32_t presentUpdate() override { return record(FakeEvent::UPDATE, ModelledBackend::presentUpdate()); }
-  uint32_t presentClear() override { return record(FakeEvent::CLEAR, ModelledBackend::presentClear()); }
+  void onSelect(const ProfileId id) override {
+    events.push_back({FakeEvent::SELECT, id, clock.now, clock.now, {}, {}});
+  }
+  uint32_t presentUpdate(const ProfileId waveform) override {
+    return record(FakeEvent::UPDATE, waveform, ModelledBackend::presentUpdate(waveform));
+  }
+  uint32_t presentClear() override {
+    return record(FakeEvent::CLEAR, profile(), ModelledBackend::presentClear());
+  }
 
  private:
-  uint32_t record(const FakeEvent::Kind kind, const uint32_t ms) {
-    events.push_back({kind, profile(), clock.now - ms, clock.now, lastCall()});
+  uint32_t record(const FakeEvent::Kind kind, const ProfileId id, const uint32_t ms) {
+    events.push_back({kind, id, clock.now - ms, clock.now, lastCall(), lastDecision()});
     return ms;
   }
 
@@ -118,14 +131,18 @@ class FakeDisplayBackend final : private fake_detail::Parts, public ModelledBack
 
 // The device backend's hardware side, faked: each refresh advances the fake clock by a transfer
 // time and a BUSY time, and a refresh started "elsewhere" can be left pending for finishPending()
-// to wait out. The log records the order of the calls.
+// to wait out. The log records the order of the calls, and for each refresh which table (if any)
+// was loaded when it started, so tests can check that no table is ever loaded across a clear or a
+// stock refresh.
 class FakeRefreshPort final : public RefreshPort {
  public:
-  enum class Op : uint8_t { FINISH_PENDING, TRANSFER_START, BUSY_END };
+  enum class Op : uint8_t { FINISH_PENDING, TRANSFER_START, BUSY_END, LOAD_TABLE, RELEASE_TABLE };
   struct Entry {
     Op op;
     RefreshKind kind;
     uint32_t atMs;
+    const uint8_t* table = nullptr;  // TRANSFER_START: the table loaded then; LOAD_TABLE: the table
+    bool ui = false;                 // TRANSFER_START: refreshUi() (reader flag off)
   };
 
   explicit FakeRefreshPort(FakeClock& clock) : clock(clock) {}
@@ -135,12 +152,25 @@ class FakeRefreshPort final : public RefreshPort {
     clock.advance(pendingMs);
     pendingMs = 0;
   }
-  void refresh(const RefreshKind kind) override {
-    log.push_back({Op::TRANSFER_START, kind, clock.now});
-    const bool update = kind == RefreshKind::UPDATE;
-    clock.advance(update ? updateTransferMs : clearTransferMs);
-    clock.advance(update ? updateBusyMs : clearBusyMs);
-    log.push_back({Op::BUSY_END, kind, clock.now});
+  void refresh(const RefreshKind kind) override { run(kind, false); }
+  void refreshUi() override { run(RefreshKind::UPDATE, true); }
+  void loadTable(const uint8_t* table) override {
+    log.push_back({Op::LOAD_TABLE, RefreshKind::UPDATE, clock.now, table});
+    loaded = table;
+  }
+  void releaseTable() override {
+    log.push_back({Op::RELEASE_TABLE, RefreshKind::UPDATE, clock.now});
+    loaded = nullptr;
+  }
+  bool inverted() const override { return invertedScreen; }
+
+  // The entries of one kind, in order.
+  std::vector<Entry> only(const Op op) const {
+    std::vector<Entry> out;
+    for (const Entry& e : log) {
+      if (e.op == op) out.push_back(e);
+    }
+    return out;
   }
 
   FakeClock& clock;
@@ -149,7 +179,18 @@ class FakeRefreshPort final : public RefreshPort {
   uint32_t clearTransferMs = 0;
   uint32_t clearBusyMs = 0;
   uint32_t pendingMs = 0;  // the rest of a refresh started elsewhere, waited out once
+  bool invertedScreen = false;
+  const uint8_t* loaded = nullptr;  // the table the "driver" would run on the next FAST refresh
   std::vector<Entry> log;
+
+ private:
+  void run(const RefreshKind kind, const bool ui) {
+    log.push_back({Op::TRANSFER_START, kind, clock.now, loaded, ui});
+    const bool update = kind == RefreshKind::UPDATE;
+    clock.advance(update ? updateTransferMs : clearTransferMs);
+    clock.advance(update ? updateBusyMs : clearBusyMs);
+    log.push_back({Op::BUSY_END, kind, clock.now});
+  }
 };
 
 }  // namespace displayprofile

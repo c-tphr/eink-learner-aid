@@ -30,10 +30,19 @@
 #include "DisplayProfiles.h"
 #include "DisplayStats.h"
 #include "DisplayTiming.h"
+#include "TrialExposure.h"
+#include "TrialUnlock.h"
 
 namespace displayprofile {
 
 enum class RefreshKind : uint8_t { UPDATE, CLEAR };
+
+// What an update() presents. Only WORD may run a trial waveform; the default is SCREEN, so a caller
+// that does not mark its updates never gets one.
+enum class UpdateKind : uint8_t {
+  SCREEN,  // any screen redraw: the pause screen, a highlight move, "Preparing..."
+  WORD,    // a word frame during playback (ProfileDisplaySink::showFrame marks its updates so)
+};
 
 class DisplayBackend {
  public:
@@ -42,20 +51,28 @@ class DisplayBackend {
   // The panel the display driver found (PanelId::SIMULATED in the simulator).
   virtual PanelId panel() const = 0;
 
-  // Whether `id` may be used on this panel now. Stock is always allowed; see
-  // defaultProfileAllowed(). D2 overrides this on the device (panel, inversion, device-test menu).
-  virtual bool allows(ProfileId id) const { return defaultProfileAllowed(id, panel()); }
+  // The allow rule, profileAllowed() (DisplayProfiles.h), with this backend's panel, the screen's
+  // inversion now, and the unlocked trials. Stock is always allowed.
+  bool allows(ProfileId id) const;
 
-  // Makes `id` the profile of later update() and clear() calls. Returns false, and keeps the
-  // current profile, when allows(id) is false. Refreshes nothing: the caller runs clear() before
-  // the first update() of a playback (S2, section 8). Initially STOCK.
+  // The trials the owner has unlocked (TrialUnlock.h; initially none, so only Stock is allowed).
+  // If the selected profile is no longer allowed, the selection falls back to STOCK.
+  void setUnlockedTrials(TrialMask mask);
+  TrialMask unlockedTrials() const { return unlocked; }
+
+  // Makes `id` the profile of later word updates. When allows(id) is false (or `id` is not a
+  // profile) the selection falls back to STOCK and this returns false: it never fails open.
+  // Refreshes nothing. Initially STOCK.
   bool select(ProfileId id);
   ProfileId profile() const { return current; }
   const ProfileInfo& info() const { return profileInfo(current); }
 
-  // Presents the frame buffer as one word update and blocks until it has finished. Returns the
-  // call's duration (ms) and adds it to stats().updates.
-  uint32_t update();
+  // Presents the frame buffer and blocks until the refresh has finished. A WORD update runs the
+  // selected profile's word waveform if the allow rule still accepts it, otherwise the stock one;
+  // the exposure rules (TrialExposure.h) may run it as a clearing refresh instead. Returns the
+  // call's duration (ms) and adds it to stats().updates, or to stats().clears when it ran as a
+  // clearing refresh.
+  uint32_t update(UpdateKind kind = UpdateKind::SCREEN);
 
   // Runs one clearing refresh of the frame buffer and blocks until it has finished. Returns the
   // call's duration (ms) and adds it to stats().clears.
@@ -65,12 +82,20 @@ class DisplayBackend {
   const DisplayStats& stats() const { return statistics; }
   void resetStats() { statistics.reset(); }
 
+  // The exposure state (TrialExposure.h) and what the last update() or clear() ran.
+  const TrialExposure& exposure() const { return guard; }
+  const RefreshDecision& lastDecision() const { return decision; }
+
  protected:
-  // Called by select() after the profile changed hands (device: prepare or release a waveform).
+  // Called by select() and setUnlockedTrials() after the profile changed hands.
   virtual void onSelect(ProfileId /*id*/) {}
-  // Perform the refresh for the current profile, block until it has finished, return its
-  // duration (ms). Called only from update() and clear().
-  virtual uint32_t presentUpdate() = 0;
+  // Whether the screen is inverted now (night mode). Trials are refused while it is (S2 section 6:
+  // the inverted path drives every pixel on every update).
+  virtual bool inverted() const { return false; }
+  // Perform the refresh, block until it has finished, return its duration (ms). Called only from
+  // update() and clear(). presentUpdate() runs the word update of `waveform` (STOCK, or the trial
+  // the exposure rules let through).
+  virtual uint32_t presentUpdate(ProfileId waveform) = 0;
   virtual uint32_t presentClear() = 0;
   // Counts a call that present*() classed as timed out (stats().updates/clears.timeouts). The
   // call's duration is still recorded when present*() returns it.
@@ -79,7 +104,12 @@ class DisplayBackend {
   }
 
  private:
+  uint32_t run(RefreshRequest request);
+
   ProfileId current = ProfileId::STOCK;
+  TrialMask unlocked = NO_TRIALS;
+  TrialExposure guard;
+  RefreshDecision decision;
   DisplayStats statistics;
 };
 
@@ -89,6 +119,8 @@ class Presenter {
   virtual ~Presenter() = default;
   // Presents the frame buffer (UPDATE: a fast refresh; CLEAR: a clearing refresh). Blocks until done.
   virtual void present(RefreshKind kind) = 0;
+  // Whether the screen is inverted now (the simulator asks its HalDisplay).
+  virtual bool inverted() const { return false; }
 };
 
 // Sleeps the calling task. The simulator uses delay() (a thread sleep); tests advance a fake clock.
@@ -123,11 +155,14 @@ class ModelledBackend : public DisplayBackend {
   const ModelledCall& lastCall() const { return last; }
 
  protected:
-  uint32_t presentUpdate() override { return run(RefreshKind::UPDATE); }
-  uint32_t presentClear() override { return run(RefreshKind::CLEAR); }
+  bool inverted() const override { return presenter.inverted(); }
+  // A word update lasts the modelled time of the waveform that runs (a screen update during a
+  // trial runs stock's); a clearing refresh the selected profile's clear time.
+  uint32_t presentUpdate(ProfileId waveform) override { return run(RefreshKind::UPDATE, waveform); }
+  uint32_t presentClear() override { return run(RefreshKind::CLEAR, profile()); }
 
  private:
-  uint32_t run(RefreshKind kind);
+  uint32_t run(RefreshKind kind, ProfileId timingOf);
 
   Presenter& presenter;
   rsvp::Clock& clock;

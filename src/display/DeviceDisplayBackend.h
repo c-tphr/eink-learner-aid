@@ -1,16 +1,19 @@
 #pragma once
 
-// The device backend (task D1): the stock profile's real refresh on the panel. The decisions
-// (timing window, timeouts, statistics) are in the portable TimedBackend (lib/DisplayProfileCore);
-// this file only supplies the two hardware calls and the log lines. What each call does on each
-// panel, with the SDK source lines, is in src/display/README.md ("Device backend").
+// The device backend (tasks D1 and D2): the stock and trial profiles' real refreshes on the panel.
+// The decisions (allow rule, exposure limits, which table, timing window, timeouts, statistics)
+// are in the portable DisplayBackend and TimedBackend (lib/DisplayProfileCore); this file only
+// supplies the hardware calls and the log lines. What each call does on each panel, with the SDK
+// source lines, is in src/display/README.md ("Device backend").
 //
 //   word update      renderer.displayBuffer(FAST_REFRESH) with HalDisplay::setReaderRefresh(true):
 //                    CrossPoint's book-page refresh, the panel's reading waveform
-//   clearing refresh renderer.displayBuffer(HALF_REFRESH), likewise
+//   trial table      HalDisplay::setCustomLut(true, table), the same FAST refresh, then
+//                    setCustomLut(false)
+//   trial UI path    renderer.displayBuffer(FAST_REFRESH) with the reader flag off (SE0400NQW47)
+//   clearing refresh setCustomLut(false), renderer.displayBuffer(HALF_REFRESH) with the reader flag
 //
-// Both block until the driver's BUSY wait has ended. Only the stock profile is allowed here
-// (defaultProfileAllowed()); task D2 adds the trial waveforms and their allow rule.
+// All block until the driver's BUSY wait has ended.
 
 #include "RsvpFeature.h"
 
@@ -33,6 +36,10 @@ struct Parts {
     explicit HalRefreshPort(GfxRenderer& renderer) : renderer(renderer) {}
     void finishPending() override;
     void refresh(RefreshKind kind) override;
+    void refreshUi() override;
+    void loadTable(const uint8_t* table) override;
+    void releaseTable() override;
+    bool inverted() const override;
 
    private:
     GfxRenderer& renderer;
@@ -51,7 +58,7 @@ class DeviceDisplayBackend final : private device_detail::Parts, public TimedBac
   explicit DeviceDisplayBackend(GfxRenderer& renderer);
 
  protected:
-  uint32_t presentUpdate() override;
+  uint32_t presentUpdate(ProfileId waveform) override;
   uint32_t presentClear() override;
 
  private:

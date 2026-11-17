@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include <Logging.h>
 
+#include <cstdio>
+
 #if defined(SIMULATOR)
 #include "SimulatorDisplayBackend.h"
 #else
@@ -34,17 +36,39 @@ DisplayBackend& firmwareBackend(GfxRenderer& renderer) {
   return backend;
 }
 
+namespace {
+
+// What the last call ran, appended to the per-call line only when it differs from what was asked
+// (a request run as a clearing refresh, or a word update that ran another profile's waveform than
+// the selected one). Stock-only runs print exactly the lines of tasks E3 and D1.
+void appendDecision(const DisplayBackend& backend, char* out, const size_t size) {
+  out[0] = '\0';
+  const RefreshDecision& d = backend.lastDecision();
+  if (d.promotion != Promotion::NONE) {
+    snprintf(out, size, " for=%s promoted=%s", d.request == RefreshRequest::WORD ? "word" : "screen",
+             promotionName(d.promotion));
+  } else if (d.action != RefreshAction::CLEAR && d.waveform != backend.profile()) {
+    snprintf(out, size, " ran=%s", profileInfo(d.waveform).key);
+  }
+}
+
+}  // namespace
+
 // The count printed is the call's own number: stats are updated after present*() returns.
 void logRefresh(const DisplayBackend& backend, const RefreshKind kind, const uint32_t ms) {
-  LOG_DBG("DSP", "%s n=%lu profile=%s ms=%lu", kindName(kind), static_cast<unsigned long>(countOf(backend, kind) + 1),
-          backend.info().key, static_cast<unsigned long>(ms));
+  char extra[48];
+  appendDecision(backend, extra, sizeof(extra));
+  LOG_DBG("DSP", "%s n=%lu profile=%s ms=%lu%s", kindName(kind), static_cast<unsigned long>(countOf(backend, kind) + 1),
+          backend.info().key, static_cast<unsigned long>(ms), extra);
 }
 
 void logModelledRefresh(const DisplayBackend& backend, const ModelledCall& call) {
-  LOG_DBG("DSP", "%s n=%lu profile=%s ms=%lu model=%lu real=%lu slept=%lu", kindName(call.kind),
+  char extra[48];
+  appendDecision(backend, extra, sizeof(extra));
+  LOG_DBG("DSP", "%s n=%lu profile=%s ms=%lu model=%lu real=%lu slept=%lu%s", kindName(call.kind),
           static_cast<unsigned long>(countOf(backend, call.kind) + 1), backend.info().key,
           static_cast<unsigned long>(call.totalMs), static_cast<unsigned long>(call.modelMs),
-          static_cast<unsigned long>(call.realMs), static_cast<unsigned long>(call.sleptMs));
+          static_cast<unsigned long>(call.realMs), static_cast<unsigned long>(call.sleptMs), extra);
 }
 
 namespace {
@@ -80,9 +104,10 @@ void runDisplayProfileLinkCheck() {
   NullPainter painter;
   ModelledBackend backend(presenter, clock, sleeper, TimingModel());
   ProfileDisplaySink sink(backend, painter);
+  backend.setUnlockedTrials(ALL_TRIALS);  // a throwaway backend with no glass behind it
   const bool selected = backend.select(ProfileId::TRIAL_C);
+  sink.clearingRefresh();  // a trial run starts from a clear
   sink.showFrame(rsvp::Frame{});
-  sink.clearingRefresh();
   DisplayBackend& (*volatile build)(GfxRenderer&) = &firmwareBackend;
   LOG_DBG("DSP", "Link check: %u profiles, %s selected %d, updates %lu (%lu ms), clears %lu, build backend %s",
           static_cast<unsigned>(PROFILE_COUNT), backend.info().key, selected ? 1 : 0,

@@ -24,6 +24,8 @@ void Parts::RendererPresenter::present(const RefreshKind kind) {
   LOG_DBG("DSP", "presented %s n=%lu", kind == RefreshKind::UPDATE ? "update" : "clear", count);
 }
 
+bool Parts::RendererPresenter::inverted() const { return display.isInverted(); }
+
 void Parts::DelaySleeper::sleepMs(const uint32_t ms) { delay(ms); }
 
 }  // namespace sim_detail
@@ -72,8 +74,8 @@ SimulatorDisplayBackend::SimulatorDisplayBackend(GfxRenderer& renderer)
     : Parts(renderer),
       ModelledBackend(simPresenter, simClock, simSleeper, loadSimulatorTimingModel(), PanelId::SIMULATED) {}
 
-uint32_t SimulatorDisplayBackend::presentUpdate() {
-  const uint32_t ms = ModelledBackend::presentUpdate();
+uint32_t SimulatorDisplayBackend::presentUpdate(const ProfileId waveform) {
+  const uint32_t ms = ModelledBackend::presentUpdate(waveform);
   logModelledRefresh(*this, lastCall());
   return ms;
 }

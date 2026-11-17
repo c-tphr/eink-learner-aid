@@ -1,9 +1,11 @@
-# Host tests for lib/DisplayProfileCore (tasks E3 and D1): the profile table and clearing limits, the
+# Host tests for lib/DisplayProfileCore (tasks E3, D1 and D2): the profile table and clearing limits, the
 # simulator timing model (defaults < timings file < environment), statistics and their percentiles,
 # the modelled backend ("sleep the remainder") through the fake, the device backend's timing and
 # timeout logic (TimedBackend) through a fake refresh port, the per-panel record, and the real
-# rsvp::Scheduler driven through ProfileDisplaySink. test_display_timings.py checks the timings-file validator and generator
-# (scripts/display_timings.py) that the simulator build runs.
+# rsvp::Scheduler driven through ProfileDisplaySink; the trial profiles' allow rule, unlock value,
+# waveform tables (checked against the pinned SDK header) and exposure limits (task D2).
+# test_display_timings.py checks the timings-file validator and generator (scripts/display_timings.py)
+# that the simulator build runs.
 
 set(DISPLAY_PROFILE_DIR ${REPO_ROOT}/lib/DisplayProfileCore)
 set(RSVP_CORE_DIR ${REPO_ROOT}/lib/RsvpCore)
@@ -15,6 +17,9 @@ set(DISPLAY_PROFILE_SOURCES
   ${DISPLAY_PROFILE_DIR}/ProfileDisplaySink.cpp
   ${DISPLAY_PROFILE_DIR}/PanelRecords.cpp
   ${DISPLAY_PROFILE_DIR}/TimedBackend.cpp
+  ${DISPLAY_PROFILE_DIR}/TrialUnlock.cpp
+  ${DISPLAY_PROFILE_DIR}/TrialWaveforms.cpp
+  ${DISPLAY_PROFILE_DIR}/TrialExposure.cpp
 )
 
 add_executable(DisplayProfileTest
@@ -25,6 +30,9 @@ add_executable(DisplayProfileTest
   SchedulerThroughProfileTest.cpp
   TimedBackendTest.cpp
   PanelRecordsTest.cpp
+  TrialRulesTest.cpp
+  TrialWaveformsTest.cpp
+  TrialExposureTest.cpp
   ${DISPLAY_PROFILE_SOURCES}
   ${RSVP_CORE_DIR}/RsvpText.cpp
   ${RSVP_CORE_DIR}/WordClassifier.cpp
