@@ -1,0 +1,188 @@
+# The checkpoint screens by touch only (task C3a; docs/spikes/S4-control-map.md rows 17-29, touch
+# tokens of section 9). The temporary simulator entry (CROSSPOINT_SIM_CHECKPOINT,
+# src/activities/checkpoint/CheckpointSimEntry.h) opens six checkpoints of the prepared fixture one
+# after another, each once the reader is back in front: c0001 (one prompt), then c0002 (three
+# prompts) five times. Every action of the three screens is done once by a tap:
+#
+#   A c0001             Reveal, Correct                                        -> finished
+#   B c0002             p1 Reveal, Incorrect, Continue; p2 Skip question;
+#                       p3 Skip checkpoint (prompt screen)                     -> skipped
+#   C c0002             p1 ("recorded earlier: Incorrect") Reveal, tap the one-part answer box
+#                       (nothing to page), Skip question (answer screen);
+#                       p2 Reveal, Skip checkpoint (answer screen)             -> skipped
+#   D c0002             p1 Reveal, Incorrect (already recorded: nothing saved),
+#                       Skip question (after Incorrect); p2 Reveal, Incorrect,
+#                       Skip checkpoint (after Incorrect)                      -> skipped
+#   E c0002             p1 Reveal, Incorrect, Reread in RSVP                   -> reread-rsvp
+#   F c0002,rsvp        p1 Reveal, Incorrect: the default is now Reread in RSVP;
+#                       Reread in page view                                    -> reread-page
+#
+# Every screen is shot. The fixture's c0002 is section s0004, chapter 2 words 311-607, so reading
+# resumes at chapter 3 word 0. Grades in the file at the end: p1 Incorrect (A's second answer and D's
+# did not overwrite it), p2 Incorrect, c0001-p1 Correct; p3 was only skipped and stays ungraded.
+description = "Checkpoint screens by touch: every action of the prompt, answer and after-Incorrect screens once, defaults, grades saved"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0", CROSSPOINT_SIM_CHECKPOINT = "c0001;c0002;c0002;c0002;c0002;c0002,rsvp" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # A: c0001, one prompt.
+  { wait_log = "\\[CPT\\] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=made" },
+  { wait_log = "\\[CPT\\] open checkpoint=c0001 prompts=1 section=s0001 mode=page .* state=missing grades=0 " },
+  { wait_log = "\\[CPT\\] saved after=start prompt=- grade=none active=c0001 prompt_index=0 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear" },
+  { screen_has = "Checkpoint · question 1 of 1 | How could sailors tell the | Gannet Rock light apart | from the other lights on the | coast? | Reveal answer | Skip checkpoint | Skip question" },
+  { shot = "a_prompt" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Prompt select=Reveal" },
+  { wait_log = "\\[CPT\\] event=reveal prompt=c0001-p1 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/1 prompt=c0001-p1 recorded=none focus=AnswerBox part=1/1 lines=\\d+ refresh=clear" },
+  { screen_has = "| Every light had " },
+  { shot = "a_answer" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [120, 620], note = "Correct" },
+  { wait_log = "\\[CTL\\] Answer select=Correct" },
+  { wait_log = "\\[CPT\\] event=correct prompt=c0001-p1 accepted=1 refusal=0 state=finished grade_recorded=1 save=now" },
+  { wait_log = "\\[CPT\\] saved after=correct prompt=c0001-p1 grade=correct active=none prompt_index=0 position=1:\\d+:page ok=1" },
+  { wait_log = "\\[CPT\\] end result=finished prompt=0 ch=1 word=\\d+ mode=page saved=1" },
+
+  # B: c0002. Incorrect, Continue; Skip question on the prompt; Skip checkpoint on the prompt.
+  { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=page resume_ch=3 resume_word=0 state=read grades=1 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal " },
+  { shot = "b_prompt1" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/3 prompt=c0002-p1 recorded=none focus=AnswerBox " },
+  { shot = "b_answer1" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CTL\\] Answer select=Incorrect" },
+  { wait_log = "\\[CPT\\] saved after=incorrect prompt=c0002-p1 grade=incorrect active=c0002 prompt_index=0 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=RereadPage ", note = "the default is the reread in the mode in use: page view" },
+  { screen_has = "Question 1 of 3 · marked Incorrect | Reread the section, then try again." },
+  { shot = "b_incorrect_page" },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 440], note = "Continue" },
+  { wait_log = "\\[CTL\\] Incorrect select=Continue" },
+  { wait_log = "\\[CPT\\] saved after=continue prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { shot = "b_prompt2" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [364, 712], note = "Skip question" },
+  { wait_log = "\\[CTL\\] Prompt select=SkipPrompt" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CTL\\] Prompt select=SkipCheckpoint" },
+  { wait_log = "\\[CPT\\] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=3:0:page ok=1" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=2 ch=3 word=0 mode=page saved=1" },
+
+  # C: Skip question on the answer screen, Skip checkpoint on the answer screen.
+  { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=page .* grades=2 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { screen_has = "Recorded earlier: Incorrect" },
+  { shot = "c_prompt1_recorded" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/3 prompt=c0002-p1 recorded=incorrect focus=AnswerBox part=1/1 " },
+  { screen_has = "Question 1 of 3 · recorded: Incorrect" },
+  { shot = "c_answer1_recorded" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [240, 340], note = "the answer box: one part, nothing to page" },
+  { wait_log = "\\[CTL\\] Answer select=AnswerBox" },
+  { wait_log = "\\[CPT\\] answer part=1/1 move=cycle changed=0" },
+  { tap = [364, 712], note = "Skip question" },
+  { wait_log = "\\[CTL\\] Answer select=SkipPrompt" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=2/3 prompt=c0002-p2 " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CTL\\] Answer select=SkipCheckpoint" },
+  { wait_log = "\\[CPT\\] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=3:0:page ok=1" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=1 ch=3 word=0 mode=page saved=1" },
+
+  # D: Skip question and Skip checkpoint after Incorrect.
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/3 prompt=c0002-p1 " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect, again: the first grade is already recorded" },
+  { wait_log = "\\[CPT\\] event=incorrect prompt=c0002-p1 accepted=1 refusal=0 state=incorrect-choice grade_recorded=0 save=no" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=RereadPage " },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [364, 712], note = "Skip question" },
+  { wait_log = "\\[CTL\\] Incorrect select=SkipPrompt" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=2/3 prompt=c0002-p2 " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CPT\\] saved after=incorrect prompt=c0002-p2 grade=incorrect active=c0002 prompt_index=1 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=2/3 prompt=c0002-p2 recorded=incorrect focus=RereadPage " },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CTL\\] Incorrect select=SkipCheckpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=1 ch=3 word=0 mode=page saved=1" },
+
+  # E: Reread in RSVP.
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/3 prompt=c0002-p1 " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=RereadPage " },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 256], note = "Reread in RSVP" },
+  { wait_log = "\\[CTL\\] Incorrect select=RereadRsvp" },
+  { wait_log = "\\[CPT\\] saved after=reread-rsvp prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1" },
+  { wait_log = "\\[CPT\\] end result=reread-rsvp prompt=0 ch=2 word=311 mode=rsvp saved=1", note = "the section's first word, in RSVP" },
+
+  # F: the checkpoint came from RSVP: Reread in RSVP is the default; Reread in page view.
+  { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=rsvp " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/3 prompt=c0002-p1 " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=RereadRsvp " },
+  { shot = "f_incorrect_rsvp" },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 348], note = "Reread in page view" },
+  { wait_log = "\\[CTL\\] Incorrect select=RereadPage" },
+  { wait_log = "\\[CPT\\] end result=reread-page prompt=0 ch=2 word=311 mode=page saved=1" },
+  { quit = true },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/book_sha256", equals = "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0001-p1/first", equals = "correct" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "incorrect" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p2/first", equals = "incorrect" },
+  { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_screens_touch/state.schema.json", note = "exactly three grades: c0002-p3 was only skipped" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "page" } },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint", equals = { id = "c0002", prompt_index = 0, resume = { chapter = 3, word = 0, mode = "rsvp" }, reread = { mode = "page", chapter = 2, word = 311 } } },
+  { expect_file = ".crosspoint/epub_*/rsvp/checkpoints-*-2805.json", contains = "\"rsvp-checkpoints\"" },
+  { compare = "a_prompt" },
+  { compare = "a_answer" },
+  { compare = "b_prompt1" },
+  { compare = "b_answer1" },
+  { compare = "b_incorrect_page" },
+  { compare = "b_prompt2" },
+  { compare = "c_prompt1_recorded" },
+  { compare = "c_answer1_recorded" },
+  { compare = "f_incorrect_rsvp" },
+]
