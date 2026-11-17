@@ -66,7 +66,8 @@ TimingModel loadSimulatorTimingModel() {
 }
 
 SimulatorDisplayBackend::SimulatorDisplayBackend(GfxRenderer& renderer)
-    : Parts(renderer), ModelledBackend(simPresenter, simClock, simSleeper, loadSimulatorTimingModel(), PanelId::SIMULATED) {}
+    : Parts(renderer),
+      ModelledBackend(simPresenter, simClock, simSleeper, loadSimulatorTimingModel(), PanelId::SIMULATED) {}
 
 uint32_t SimulatorDisplayBackend::presentUpdate() {
   const uint32_t ms = ModelledBackend::presentUpdate();

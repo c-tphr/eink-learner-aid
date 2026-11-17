@@ -65,7 +65,14 @@ enum class OverrideError : uint8_t { NONE, BAD_UPDATE, BAD_CLEAR };
 OverrideError parseOverrides(const char* updateText, const char* clearText, TimingOverrides& out);
 
 // Why a compiled-in timings file is refused (the build validates it first; this is a second check).
-enum class FileError : uint8_t { NONE, NO_STOCK, DUPLICATE_PROFILE, UNKNOWN_PROFILE, UPDATE_OUT_OF_RANGE, CLEAR_OUT_OF_RANGE };
+enum class FileError : uint8_t {
+  NONE,
+  NO_STOCK,
+  DUPLICATE_PROFILE,
+  UNKNOWN_PROFILE,
+  UPDATE_OUT_OF_RANGE,
+  CLEAR_OUT_OF_RANGE
+};
 FileError checkTimingFile(const TimingFile& file);
 const char* fileErrorText(FileError error);
 

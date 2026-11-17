@@ -50,9 +50,11 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `scripts/net-smoke.sh`, `scripts/net_smoke.py` | Added | Network smoke test (task F2) |
 | `scripts/patch_simulator.py`, `scripts/simulator_patches/` | Added | Patches applied to the fetched simulator library (see "Simulator" below) (task F2) |
 | `docs/net-smoke-report.md`, `docs/evidence/f2/` | Added | Smoke test report and evidence (task F2) |
-| `test/CMakeLists.txt` | **Modified, three lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a) and `add_subdirectory(word_index)` (task R3), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
+| `test/CMakeLists.txt` | **Modified, four lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a), `add_subdirectory(word_index)` (task R3) and `add_subdirectory(display_profile)` (task E3), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
 | `platformio.ini` | **Modified, three lines added**: `-DCROSSPOINT_RSVP=1` at the end of `build_flags` in `[env:picco]`, `[env:picco-gh_release]` and `[env:picco-gh_release_rc]` | The RSVP feature flag, on for the Picco targets only (task F4). `simulator_picco` sets it in `platformio.project.ini`. See `docs/ARCHITECTURE-RSVP.md` |
 | `src/main.cpp` | **Modified, two lines added**: `#include "reading/RsvpLinkCheck.h"` and `runRsvpLinkCheck();` in `setup()`, after the "Starting CrossPoint version" log line | Temporary start-up check that links RsvpCore and CheckpointCore; an empty inline function without the flag (task F4). Task C2 replaces it with ReadingSession |
+| `src/main.cpp` | **Modified, two more lines added**: `#include "display/DisplaySelfTest.h"` (after `components/UITheme.h`) and `runDisplaySelfTestIfRequested(renderer);` in `loop()`, right after `activityManager.loop();` | Temporary simulator-only display self-test (task E3, `src/display/DisplaySelfTest.h`): runs only when `CROSSPOINT_SIM_DISPLAY_SELFTEST` is set; an empty inline function on the device and on every build without the RSVP flag. Removed when the RSVP activity exercises DisplayProfile |
+| `scripts/display_timings.py`, `scripts/gen_display_timings.py` | Added | The display timings file's validator and header generator, and the `simulator_picco` pre-script that runs it (task E3; `lib/DisplayProfileCore/README.md`, "Timing model") |
 | `src/RsvpFeature.h`, `src/reading/`, `src/activities/rsvp/`, `src/activities/checkpoint/`, `src/display/`, `src/activities/devicetest/`, `docs/ARCHITECTURE-RSVP.md` | Added | Feature flag header and the module skeletons, compiled only with the flag (task F4) |
 | `.gitignore` | Two negation lines after `.claude/*` so `.claude/commands/` and `.claude/agents/` are tracked | The `/prep-book` command and the checker subagent live there (P4) |
 | `.github/workflows/project-ci.yml`, `.github/scripts/check-format.sh`, `sim-smoke.sh`, `firmware-size.sh`, `no_skips.py`, `device_session_fixture.py`, `docs/CI.md` | Added | This project's CI (task F3); `docs/CI.md` describes it |
@@ -123,7 +125,7 @@ git merge-base --is-ancestor 490813ff4541e74e654f54f66ece9efc908361a0 HEAD && ec
 git submodule status
 
 # 3. Outside docs/ and README.md, the only upstream files modified are platformio.ini (four lines),
-#    test/CMakeLists.txt (three lines), src/main.cpp (two lines), .gitignore (two lines) and five
+#    test/CMakeLists.txt (four lines), src/main.cpp (four lines), .gitignore (two lines) and five
 #    .github/workflows files (job conditions), all in the table above;
 #    everything else listed is an added file from the table above
 git diff --stat --diff-filter=MD 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'

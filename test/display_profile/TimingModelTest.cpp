@@ -37,8 +37,8 @@ TEST(OverrideParsing, AcceptsPlainDecimalMilliseconds) {
 }
 
 TEST(OverrideParsing, RejectsAnythingElseAndLeavesTheValue) {
-  for (const char* bad : {"", "-1", "+5", " 200", "200 ", "200ms", "2.5", "1e3", "0x10", "60001", "99999",
-                          "100000", "4294967296", "abc"}) {
+  for (const char* bad : {"", "-1", "+5", " 200", "200 ", "200ms", "2.5", "1e3", "0x10", "60001", "99999", "100000",
+                          "4294967296", "abc"}) {
     uint32_t ms = 7;
     EXPECT_FALSE(parseOverrideMs(bad, ms)) << '"' << bad << '"';
     EXPECT_EQ(ms, 7u) << bad;
@@ -145,8 +145,8 @@ TEST(TimingPrecedence, EachOverrideIsIndependent) {
   ASSERT_EQ(parseOverrides(nullptr, "0", env), OverrideError::NONE);
   TimingModel model;
   ASSERT_TRUE(model.resolve(fileOf(STOCK_ONLY, 1), env));
-  EXPECT_EQ(model.timing(ProfileId::STOCK).updateMs, 420u);  // file
-  EXPECT_EQ(model.timing(ProfileId::STOCK).clearMs, 0u);     // env: no added delay
+  EXPECT_EQ(model.timing(ProfileId::STOCK).updateMs, 420u);    // file
+  EXPECT_EQ(model.timing(ProfileId::STOCK).clearMs, 0u);       // env: no added delay
   EXPECT_EQ(model.timing(ProfileId::TRIAL_B).updateMs, 258u);  // default
   EXPECT_EQ(model.timing(ProfileId::TRIAL_B).clearMs, 0u);
 }

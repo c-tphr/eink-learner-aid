@@ -96,7 +96,8 @@ Result play(const ProfileId profile, const uint16_t wpm, const uint8_t wordsPerF
   rsvp::FrameBuilder builder(reference);
   builder.setWpm(wpm);
   builder.setWordsPerFrame(wordsPerFrame);
-  for (const rsvp::Frame& f : rsvptest::allFrames(builder)) result.expectedActiveMs += std::max(f.holdMs, timing.updateMs + DWELL);
+  for (const rsvp::Frame& f : rsvptest::allFrames(builder))
+    result.expectedActiveMs += std::max(f.holdMs, timing.updateMs + DWELL);
   result.expectedActiveMs += uint64_t{backend.stats().clears.count} * timing.clearMs;
 
   uint32_t run = 0;

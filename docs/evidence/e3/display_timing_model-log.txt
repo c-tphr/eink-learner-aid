@@ -1,0 +1,33 @@
+# [DSP] lines of 'python3 -m tools.simtest run --all' (second run), display_timing_model then display_timing_model_zero.
+# Columns: harness seconds, [firmware millis()], level, tag, message.
+   0.093 [9] [DBG] [DSP] Link check: 5 profiles, trial-c selected 1, updates 1 (14 ms), clears 1, build backend linked
+   0.818 [734] [DBG] [DSP] No timings file (docs/device/picco-timings.json): built-in defaults
+   0.818 [734] [DBG] [DSP] Simulator model stock: update 200 ms (env), clear 400 ms (env)
+   0.818 [734] [DBG] [DSP] Simulator model trial-a: update 200 ms (env), clear 400 ms (env)
+   0.818 [734] [DBG] [DSP] Simulator model trial-b: update 200 ms (env), clear 400 ms (env)
+   0.818 [734] [DBG] [DSP] Simulator model trial-c: update 200 ms (env), clear 400 ms (env)
+   0.818 [734] [DBG] [DSP] Simulator model trial-d: update 200 ms (env), clear 400 ms (env)
+   0.818 [734] [DBG] [DSP] Self-test: 5 updates and 1 clear, profile stock
+   1.018 [935] [DBG] [DSP] update n=1 profile=stock ms=201 model=200 real=11 slept=189
+   1.225 [1136] [DBG] [DSP] update n=2 profile=stock ms=200 model=200 real=5 slept=195
+   1.420 [1336] [DBG] [DSP] update n=3 profile=stock ms=200 model=200 real=5 slept=195
+   1.620 [1536] [DBG] [DSP] update n=4 profile=stock ms=200 model=200 real=6 slept=194
+   1.819 [1736] [DBG] [DSP] update n=5 profile=stock ms=200 model=200 real=6 slept=194
+   2.220 [2136] [DBG] [DSP] clear n=1 profile=stock ms=400 model=400 real=5 slept=395
+   2.220 [2136] [DBG] [DSP] stats profile=stock panel=simulator updates=5 min=200 max=201 mean=200 last=200 clears=1 min=400 max=400 mean=400 last=400
+   2.220 [2136] [DBG] [DSP] Self-test done
+
+   0.062 [1] [DBG] [DSP] Link check: 5 profiles, trial-c selected 1, updates 1 (14 ms), clears 1, build backend linked
+   0.774 [710] [DBG] [DSP] No timings file (docs/device/picco-timings.json): built-in defaults
+   0.774 [710] [DBG] [DSP] Simulator model stock: update 0 ms (env), clear 0 ms (env)
+   0.774 [710] [DBG] [DSP] Simulator model trial-a: update 0 ms (env), clear 0 ms (env)
+   0.774 [710] [DBG] [DSP] Simulator model trial-b: update 0 ms (env), clear 0 ms (env)
+   0.774 [710] [DBG] [DSP] Simulator model trial-c: update 0 ms (env), clear 0 ms (env)
+   0.774 [710] [DBG] [DSP] Simulator model trial-d: update 0 ms (env), clear 0 ms (env)
+   0.774 [710] [DBG] [DSP] Self-test: 3 updates and 1 clear, profile stock
+   0.781 [718] [DBG] [DSP] update n=1 profile=stock ms=8 model=0 real=8 slept=0
+   0.786 [723] [DBG] [DSP] update n=2 profile=stock ms=5 model=0 real=5 slept=0
+   0.789 [728] [DBG] [DSP] update n=3 profile=stock ms=5 model=0 real=5 slept=0
+   0.794 [733] [DBG] [DSP] clear n=1 profile=stock ms=5 model=0 real=5 slept=0
+   0.794 [733] [DBG] [DSP] stats profile=stock panel=simulator updates=3 min=5 max=8 mean=6 last=5 clears=1 min=5 max=5 mean=5 last=5
+   0.794 [733] [DBG] [DSP] Self-test done
