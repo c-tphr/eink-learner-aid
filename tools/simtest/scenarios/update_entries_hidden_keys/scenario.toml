@@ -13,8 +13,10 @@ steps = [
   { wait_screen = "Settings | dev-simulator | System" },
   { press = "ENTER", note = "System is selected first" },
   { wait_screen = "System | Language" },
+  { shot = "settings_system" },
   { screen_has = "Clock | Display Refresh | About", note = "the whole list fits on one screen" },
   { screen_lacks = "Check for Updates" },
   { screen_lacks = "SD Card Firmware Update" },
   { quit = true },
+  { compare = "settings_system" },
 ]
