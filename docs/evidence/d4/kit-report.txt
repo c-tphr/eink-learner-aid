@@ -14,19 +14,19 @@ partitions.bin, parsed:
   MD5 entry present: True, correct: True
   equal to the two-slot table row for row: yes
 app offset (ota_0 of the built table, as the platform uses it): 0x20000
-CROSSPOINT_VERSION: 2.0.0-picco2   build id: bca88740988b
+CROSSPOINT_VERSION: 2.0.0-picco2   build id: 75b807045d5d-dirty
 
 == make-plan (the guard checks every image)
-$ python -m piccoflash make-plan --bootloader .pio/build/picco_2slot/bootloader.bin --partitions .pio/build/picco_2slot/partitions.bin --boot-app0 <core_dir>/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin --app .pio/build/picco_2slot/firmware.bin --version 2.0.0-picco2 --build-id bca88740988b -o build/device-kit/kit --expect-offset bootloader=0x0 --expect-offset partition_table=0x8000 --expect-offset boot_app0=0x15000 --expect-offset app=0x20000
+$ python -m piccoflash make-plan --bootloader .pio/build/picco_2slot/bootloader.bin --partitions .pio/build/picco_2slot/partitions.bin --boot-app0 <core_dir>/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin --app .pio/build/picco_2slot/firmware.bin --version 2.0.0-picco2 --build-id 75b807045d5d-dirty -o build/device-kit/kit --expect-offset bootloader=0x0 --expect-offset partition_table=0x8000 --expect-offset boot_app0=0x15000 --expect-offset app=0x20000
   Flash plan: build/device-kit/kit/flash-plan.json
-  Firmware version: 2.0.0-picco2   build: bca88740988b   created: 2026-11-17T07:36:30Z
+  Firmware version: 2.0.0-picco2   build: 75b807045d5d-dirty   created: 2026-11-17T12:06:00Z
   Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
   
   Region           Offset     Erase end        Size  File            SHA-256 (first 16)
   bootloader       0x00000000 0x00004FFF      18720  bootloader.bin  15f88ae11793eddc
   partition_table  0x00008000 0x00008FFF       3072  partitions.bin  0d3fad517e642121
   boot_app0        0x00015000 0x00016FFF       8192  boot_app0.bin   f94c5d786a7a8fab
-  app              0x00020000 0x0055BFFF    5487824  firmware.bin    c1da249424676caa
+  app              0x00020000 0x0055CFFF    5489888  firmware.bin    4b4c6c9c97e69c66
   app uses 66.5% of its 0x7E0000-byte slot
   
   Plan written and verified: build/device-kit/kit/flash-plan.json
@@ -36,14 +36,14 @@ $ python -m piccoflash make-plan --bootloader .pio/build/picco_2slot/bootloader.
 $ python -m piccoflash plan --plan build/device-kit/kit
   piccoflash 1.0.0 (Python 3.13.18, esptool 5.6.0 pinned)
   Flash plan: build/device-kit/kit/flash-plan.json
-  Firmware version: 2.0.0-picco2   build: bca88740988b   created: 2026-11-17T07:36:30Z
+  Firmware version: 2.0.0-picco2   build: 75b807045d5d-dirty   created: 2026-11-17T12:06:00Z
   Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
   
   Region           Offset     Erase end        Size  File            SHA-256 (first 16)
   bootloader       0x00000000 0x00004FFF      18720  bootloader.bin  15f88ae11793eddc
   partition_table  0x00008000 0x00008FFF       3072  partitions.bin  0d3fad517e642121
   boot_app0        0x00015000 0x00016FFF       8192  boot_app0.bin   f94c5d786a7a8fab
-  app              0x00020000 0x0055BFFF    5487824  firmware.bin    c1da249424676caa
+  app              0x00020000 0x0055CFFF    5489888  firmware.bin    4b4c6c9c97e69c66
   app uses 66.5% of its 0x7E0000-byte slot
   
   Plan verified: exactly the four allowed images, at their only allowed offsets, every file's
@@ -52,7 +52,7 @@ $ python -m piccoflash plan --plan build/device-kit/kit
   [exit 0]
 
 == SD-card update file
-update.bin = firmware.bin, 5487824 bytes, SHA-256 c1da249424676caac3b110509192ead9ff3d3a1ef728eb66da6d0549363fa615
+update.bin = firmware.bin, 5489888 bytes, SHA-256 4b4c6c9c97e69c667357735f146d3d401649ce0a47178b1b0e04b88e8345760a
 
 == Rehearsal: flash --dry-run with the real kit, against a FAKE device's work folder
 (identify and backup of a synthetic stock Picco, run in-process by tools/device/tests/helpers.py)
@@ -62,21 +62,21 @@ $ python -m piccoflash flash --dry-run --port COM5 --work-dir build/device-kit/r
   Flash: replace Onyx with the two-slot firmware
   ----------------------------------------------
   Flash plan: build/device-kit/kit/flash-plan.json
-  Firmware version: 2.0.0-picco2   build: bca88740988b   created: 2026-11-17T07:36:30Z
+  Firmware version: 2.0.0-picco2   build: 75b807045d5d-dirty   created: 2026-11-17T12:06:00Z
   Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
   
   Region           Offset     Erase end        Size  File            SHA-256 (first 16)
   bootloader       0x00000000 0x00004FFF      18720  bootloader.bin  15f88ae11793eddc
   partition_table  0x00008000 0x00008FFF       3072  partitions.bin  0d3fad517e642121
   boot_app0        0x00015000 0x00016FFF       8192  boot_app0.bin   f94c5d786a7a8fab
-  app              0x00020000 0x0055BFFF    5487824  firmware.bin    c1da249424676caa
+  app              0x00020000 0x0055CFFF    5489888  firmware.bin    4b4c6c9c97e69c66
   app uses 66.5% of its 0x7E0000-byte slot
   Guard: the plan and all four files pass (bootloader, partition_table, boot_app0, app).
   
   Preconditions in the work folder build/device-kit/rehearsal
   ------------------------------------------------------------------------------
-  [ok]   identify passed for MAC 24:58:7c:12:34:56 (identify-20261117T073630.795Z.json)
-  [ok]   verified backup picco-backup-24587c123456-20261117T073630.856Z.bin, SHA-256 re-checked: 175e8fce3c05ff2f82dd5dd03120a810cdd7ee655776c36f236b6b6d9951caca
+  [ok]   identify passed for MAC 24:58:7c:12:34:56 (identify-20261117T120600.833Z.json)
+  [ok]   verified backup picco-backup-24587c123456-20261117T120600.870Z.bin, SHA-256 re-checked: 175e8fce3c05ff2f82dd5dd03120a810cdd7ee655776c36f236b6b6d9951caca
   [ok]   owner confirmed the backup copy
   
   DRY RUN: the device is not contacted and nothing is written
@@ -86,7 +86,7 @@ $ python -m piccoflash flash --dry-run --port COM5 --work-dir build/device-kit/r
     the stock partition table                 0x008000-0x008FFF
     the stock otadata (which Onyx app boots)  0x015000-0x016FFF
     the vendor recovery app 'safeboot'        0x020000-0x0DFFFF
-    the start of the Onyx main app            0x0E0000-0x55BFFF
+    the start of the Onyx main app            0x0E0000-0x55CFFF
     (the rest of the Onyx app and its spiffs data stay as unused bytes; NVS 0x9000-0x14FFF is kept)
   A real run would then:
     1. ask you to type exactly: REPLACE ONYX
@@ -97,10 +97,10 @@ $ python -m piccoflash flash --dry-run --port COM5 --work-dir build/device-kit/r
     3. re-identify read-only: same MAC as the backup, still the stock table, bootloader and table
        equal to the backup (reads 0x0+0x8000, 0x8000+0xC00, 0x15000+0x2000)
     4. write and verify, in this order, stopping at the first failure:
-       [1/4] app -> 0x20000 (erases 0x20000-0x55BFFF); guard: APPROVED (5487824 bytes, sha256 c1da249424676caa...)
-             esptool.cmds.write_flash(esp, [(0x20000, <5487824 bytes, sha256 c1da249424676caa...>)], flash_freq='keep', flash_mode='keep', flash_size='keep', erase_all=False, encrypt=False, force=False)
+       [1/4] app -> 0x20000 (erases 0x20000-0x55CFFF); guard: APPROVED (5489888 bytes, sha256 4b4c6c9c97e69c66...)
+             esptool.cmds.write_flash(esp, [(0x20000, <5489888 bytes, sha256 4b4c6c9c97e69c66...>)], flash_freq='keep', flash_mode='keep', flash_size='keep', erase_all=False, encrypt=False, force=False)
              CLI: esptool --chip esp32s3 --port COM5 --baud 115200 --before default-reset --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep 0x20000 firmware.bin
-             then esptool.cmds.read_flash(esp, 0x20000, 0x53C000, output=None, flash_size='keep', no_progress=False) and compare SHA-256
+             then esptool.cmds.read_flash(esp, 0x20000, 0x53D000, output=None, flash_size='keep', no_progress=False) and compare SHA-256
        [2/4] boot_app0 -> 0x15000 (erases 0x15000-0x16FFF); guard: APPROVED (8192 bytes, sha256 f94c5d786a7a8fab...)
              esptool.cmds.write_flash(esp, [(0x15000, <8192 bytes, sha256 f94c5d786a7a8fab...>)], flash_freq='keep', flash_mode='keep', flash_size='keep', erase_all=False, encrypt=False, force=False)
              CLI: esptool --chip esp32s3 --port COM5 --baud 115200 --before default-reset --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep 0x15000 boot_app0.bin
@@ -117,7 +117,7 @@ $ python -m piccoflash flash --dry-run --port COM5 --work-dir build/device-kit/r
   
   DRY RUN RESULT: READY. A real run would ask for the phrase and then write the 4 images above.
   [exit 0: OK]
-  Log: build/device-kit/rehearsal/logs/flash-dryrun-20261117T073631.116Z.log
+  Log: build/device-kit/rehearsal/logs/flash-dryrun-20261117T120601.092Z.log
   [exit 0]
 
 KIT MADE: build/device-kit

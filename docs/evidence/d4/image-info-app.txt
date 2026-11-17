@@ -1,6 +1,6 @@
 $ esptool --chip esp32s3 image-info .pio/build/picco_2slot/firmware.bin   (esptool 5.6.0)
 esptool v5.6.0
-Image size: 5487824 bytes
+Image size: 5489888 bytes
 
 ESP32-S3 Image Header
 =====================
@@ -23,25 +23,25 @@ Segments Information
 ====================
 Segment   Length   Load addr   File offs  Memory types
 -------  -------  ----------  ----------  ------------
-      0  0x27a96c  0x3c2a0020  0x00000018  DROM
-      1  0x05684  0x3fc9e200  0x0027a98c  BYTE_ACCESSIBLE, MEM_INTERNAL, DRAM
-      2  0x29f5c8  0x42000020  0x00280018  IROM
-      3  0x024c0  0x3fca3884  0x0051f5e8  BYTE_ACCESSIBLE, MEM_INTERNAL, DRAM
-      4  0x1a164  0x40374000  0x00521ab0  MEM_INTERNAL, IRAM
-      5  0x00020  0x5000179c  0x0053bc1c  RTC_DATA
-      6  0x00060  0x600fe000  0x0053bc44  RTC_DRAM, RTC_IRAM
+      0  0x27ab7c  0x3c2a0020  0x00000018  DROM
+      1  0x05474  0x3fc9e200  0x0027ab9c  BYTE_ACCESSIBLE, MEM_INTERNAL, DRAM
+      2  0x29fbc0  0x42000020  0x00280018  IROM
+      3  0x026d0  0x3fca3674  0x0051fbe0  BYTE_ACCESSIBLE, MEM_INTERNAL, DRAM
+      4  0x1a164  0x40374000  0x005222b8  MEM_INTERNAL, IRAM
+      5  0x00020  0x5000179c  0x0053c424  RTC_DATA
+      6  0x00060  0x600fe000  0x0053c44c  RTC_DRAM, RTC_IRAM
 
 ESP32-S3 Image Footer
 =====================
-Checksum: 0x7e (valid)
-Validation hash: 04afe86b7dd173ca18a02a84992d732b5fe821f05ddcb6ffce04f34ad6d3a978 (valid)
+Checksum: 0x55 (valid)
+Validation hash: 4e1db50c941dd46db0af77e4f5e55226db064d2d44c2b6ff63b899122d6f8edf (valid)
 
 Application Information
 =======================
 Project name: arduino-lib-builder
 App version: ee57070
 Compile time: Jul 20 2026 10:51:03
-ELF file SHA256: 5947aa74d5defea79c7b05337142c03293aec3f4804fbf237b9edee10abdaa63
+ELF file SHA256: 0f08a97eaf46d565ae83d41083280211c07c3bb8968bd4cba4d1b59c622ffcbf
 ESP-IDF: v5.5.5
 Minimal eFuse block revision: 0.0
 Maximal eFuse block revision: 1.99
