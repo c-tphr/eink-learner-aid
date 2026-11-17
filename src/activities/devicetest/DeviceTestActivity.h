@@ -84,6 +84,8 @@ class DeviceTestActivity final : public Activity, private devicetest::SeriesPain
   void drawScreen(bool clearing);
   void paintList(const char* title, const char* subtitle, const char* const* labels, uint8_t lineCount);
   void paintControls();
+  // Draws `text` from `y`, wrapped to the screen width, not below `bottom`; returns the next line's y.
+  int drawWrapped(const char* text, int y, int bottom);
   void runClearingRefresh();
   void stepSeries();
   static int measure(void* context, uint8_t font, std::string_view text);

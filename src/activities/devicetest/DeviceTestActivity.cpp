@@ -60,8 +60,8 @@ constexpr int16_t BORDER = 2;
 constexpr int16_t LINE_GAP = 6;
 
 // Controls check: the newest events, oldest first, above the Finish button.
-constexpr int16_t EVENTS_Y = 200;
-constexpr int CONTROLS_EVENT_LINES = 16;
+constexpr int16_t EVENTS_Y = 236;
+constexpr int CONTROLS_EVENT_LINES = 9;
 constexpr uint32_t CONTROLS_FLUSH_IDLE_MS = 2000;
 
 // The render task has not seen the main loop for this long: another screen (the light panel) covers
@@ -124,10 +124,34 @@ const char* ratingText(const Rating rating) {
   return tr(STR_DT_NOT_RATED);
 }
 
+// The step in a few words, for a subtitle.
+void shortStepText(const StepSpec& s, char* out, size_t size);
+
 // "120 WPM, 1 word per update"
 void paceText(const StepSpec& s, char* out, const size_t size) {
   snprintf(out, size, "%u %s, %u %s", s.wpm, tr(STR_RSVP_WPM), s.wordsPerUpdate,
            s.wordsPerUpdate == 1 ? tr(STR_RSVP_WORD_PER_UPDATE) : tr(STR_RSVP_WORDS_PER_UPDATE));
+}
+
+void shortStepText(const StepSpec& s, char* out, const size_t size) {
+  switch (s.kind) {
+    case StepKind::WORD_BAND:
+      snprintf(out, size, "%s", tr(STR_DT_WORD_BAND));
+      return;
+    case StepKind::FULL_SCREEN:
+      snprintf(out, size, "%s", tr(STR_DT_FULL_SCREEN));
+      return;
+    case StepKind::CLEARING:
+      snprintf(out, size, "%s", tr(STR_DT_CLEARING));
+      return;
+    case StepKind::ENDURANCE:
+      snprintf(out, size, "%s", tr(STR_DT_ENDURANCE));
+      return;
+    case StepKind::PLAYBACK:
+      paceText(s, out, size);
+      return;
+  }
+  out[0] = '\0';
 }
 
 void stepText(const StepSpec& s, char* out, const size_t size) {
@@ -458,10 +482,47 @@ void DeviceTestActivity::paintList(const char* title, const char* subtitle, cons
   const int small = renderer.getLineHeight(UI_10_FONT_ID);
   int y = s.zones[s.count - 1].y + s.zones[s.count - 1].h + 12;
   for (uint8_t i = 0; i < lineCount && y + small <= HINT_Y; ++i) {
-    renderer.drawText(UI_10_FONT_ID, MARGIN, y, info[i]);
-    y += small + LINE_GAP;
+    y = drawWrapped(info[i], y, HINT_Y) + LINE_GAP;
   }
   renderer.drawCenteredText(UI_10_FONT_ID, HINT_Y + (HINT_H - small) / 2, tr(STR_RSVP_KEY_HINT));
+}
+
+int DeviceTestActivity::drawWrapped(const char* text, int y, const int bottom) {
+  // Breaks at spaces to the screen width; continuation lines are indented. No allocation.
+  const int small = renderer.getLineHeight(UI_10_FONT_ID);
+  const int maxWidth = renderer.getScreenWidth() - 2 * MARGIN;
+  constexpr int INDENT = 24;
+  char line[LINE_BYTES];
+  const char* p = text;
+  bool first = true;
+  while (*p != '\0' && y + small <= bottom) {
+    size_t used = 0;
+    const char* lineEnd = p;
+    for (const char* q = p; *q != '\0';) {
+      const char* wordEnd = q;
+      while (*wordEnd != '\0' && *wordEnd != ' ') ++wordEnd;
+      const size_t length = static_cast<size_t>(wordEnd - p);
+      if (length >= sizeof(line)) break;
+      memcpy(line, p, length);
+      line[length] = '\0';
+      if (used > 0 && renderer.getTextWidth(UI_10_FONT_ID, line) > maxWidth - (first ? 0 : INDENT)) break;
+      used = length;
+      lineEnd = wordEnd;
+      q = *wordEnd == ' ' ? wordEnd + 1 : wordEnd;
+    }
+    if (used == 0) {  // one word wider than the screen, or longer than the buffer: cut it
+      used = strnlen(p, sizeof(line) - 1);
+      lineEnd = p + used;
+    }
+    memcpy(line, p, used);
+    line[used] = '\0';
+    renderer.drawText(UI_10_FONT_ID, MARGIN + (first ? 0 : INDENT), y, line);
+    y += small;
+    first = false;
+    p = lineEnd;
+    while (*p == ' ') ++p;
+  }
+  return y;
 }
 
 void DeviceTestActivity::drawScreen(const bool clearing) {
@@ -547,7 +608,7 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
     case Screen::Stopped: {
       const StepSpec& spec = sweep.stepSpec();
       char what[LINE_BYTES - 16];
-      stepText(spec, what, sizeof(what));
+      shortStepText(spec, what, sizeof(what));
       snprintf(subtitle, sizeof(subtitle), "%s · %s", profileInfo(sweep.profile().id).name, what);
       if (s == Screen::Rating) {
         title = tr(STR_DT_RATE_TITLE);
@@ -573,14 +634,14 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
         line("%s %lu.%lu WPM · %lu / %u · %s", tr(STR_DT_DELIVERED),
              static_cast<unsigned long>(p.deliveredWpmTenths / 10), static_cast<unsigned long>(p.deliveredWpmTenths % 10),
              static_cast<unsigned long>(p.wordsDrawn), spec.count, p.inOrder ? "order ok" : "ORDER VIOLATED");
-        line("%s %lu ms · %s %lu", tr(STR_DT_MEDIAN), static_cast<unsigned long>(r.figures.updates.medianMs),
-             tr(STR_DT_CLEARING), static_cast<unsigned long>(r.figures.clears.count));
+        line("%s %lu ms · %s: %lu", tr(STR_DT_MEDIAN), static_cast<unsigned long>(r.figures.updates.medianMs),
+             tr(STR_DT_CLEARING_REFRESH), static_cast<unsigned long>(r.figures.clears.count));
       }
       break;
     }
     case Screen::ProfileSummary: {
       const ProfileRecord& p = sweep.profile();
-      title = profileInfo(p.id).name;
+      title = tr(STR_DT_BENCHMARK);
       snprintf(subtitle, sizeof(subtitle), "%s · %s", profileInfo(p.id).name,
                p.status == ProfileStatus::DONE ? tr(STR_DT_PROFILE_DONE) : tr(STR_DT_PROFILE_SKIPPED));
       const ProfileRecord* next = sweep.nextProfile();
@@ -610,7 +671,15 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
           continue;
         }
         const StepFigures& f = r.figures;
-        const char* stopped = r.status == StepStatus::STOPPED ? tr(STR_DT_STOPPED) : "";
+        const char* stopped = "";
+        if (r.status == StepStatus::STOPPED) {
+          // How far the series got before the owner stopped it.
+          const uint32_t done = spec.kind == StepKind::CLEARING  ? f.clears.count
+                                : spec.kind == StepKind::PLAYBACK ? f.playback.wordsShown
+                                                                  : f.updates.count;
+          line("%s: %s %lu / %u", label, tr(STR_DT_STOPPED), static_cast<unsigned long>(done), spec.count);
+          continue;
+        }
         switch (spec.kind) {
           case StepKind::WORD_BAND:
             line("%s: %s %lu, p95 %lu, max %lu ms %s", label, tr(STR_DT_MEDIAN),
@@ -702,11 +771,11 @@ void DeviceTestActivity::paintControls() {
       if (w > 0) used += static_cast<size_t>(w);
     }
     if (used < sizeof(text) && text[used - 1] == ',') text[used - 1] = '\0';
-    y += LINE_GAP;
-    renderer.drawText(UI_10_FONT_ID, MARGIN, y, text);
-    y += small;
+    y = drawWrapped(text, y + LINE_GAP, EVENTS_Y);
   }
 
+  // The newest events, oldest first, each on up to two lines above Finish.
+  const controls::Zone& finishZone = controls::CONTROLS_CHECK_ZONES[0];
   y = EVENTS_Y;
   if (count == 0) renderer.drawText(UI_10_FONT_ID, MARGIN, y, tr(STR_DT_NO_EVENTS));
   const size_t first = count > CONTROLS_EVENT_LINES ? count - CONTROLS_EVENT_LINES : 0;
@@ -715,8 +784,7 @@ void DeviceTestActivity::paintControls() {
     describeEvent(controlsRecord.events[i], described, sizeof(described));
     char text[LINE_BYTES];
     snprintf(text, sizeof(text), "%u. %s", static_cast<unsigned>(i + 1), described);
-    renderer.drawText(UI_10_FONT_ID, MARGIN, y, text);
-    y += small + 4;
+    y = drawWrapped(text, y, finishZone.y - 4) + 4;
   }
 
   const controls::Zone& z = controls::CONTROLS_CHECK_ZONES[0];
@@ -1326,8 +1394,10 @@ void DeviceTestActivity::fillHeader(RecordHeader& h) {
   h.conditions.uptimeMs = static_cast<uint32_t>(millis());
   tm t{};
   if (halClock.isAvailable() && halClock.localTime(t) && t.tm_year + 1900 >= 2024) {
-    snprintf(h.conditions.clock, sizeof(h.conditions.clock), "%04d-%02d-%02dT%02d:%02d:%02d", t.tm_year + 1900,
-             t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
+    snprintf(h.conditions.clock, sizeof(h.conditions.clock), "%04u-%02u-%02uT%02u:%02u:%02u",
+             static_cast<unsigned>(t.tm_year + 1900) % 10000u, static_cast<unsigned>(t.tm_mon + 1) % 100u,
+             static_cast<unsigned>(t.tm_mday) % 100u, static_cast<unsigned>(t.tm_hour) % 100u,
+             static_cast<unsigned>(t.tm_min) % 100u, static_cast<unsigned>(t.tm_sec) % 100u);
   }
 #if defined(SIMULATOR)
   h.simulatorTimeScale = static_cast<uint16_t>(clock.scale());
