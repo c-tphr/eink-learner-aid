@@ -1,0 +1,149 @@
+{
+  "format": "rsvp-validation",
+  "version": 1,
+  "tool": {
+    "name": "tools.prep",
+    "version": "1.0.0",
+    "word_rules_version": 1,
+    "epubcheck_version": "5.3.0"
+  },
+  "created": "2026-11-19T18:26:04Z",
+  "original": {
+    "file": "paine-essays.epub",
+    "sha256": "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561"
+  },
+  "prepared": {
+    "file": "paine-essays.prepared.epub",
+    "sha256": "c9afc99966c698b85c7755670264daaf2b32e1f331c932092bb02887ea23ca50"
+  },
+  "draft": {
+    "file": "draft.json",
+    "sha256": "1e3cb5aa6211b56b9a8d56570192c63e311f06a200936f55d028cb62584e0549"
+  },
+  "coverage_mode": "draft",
+  "passed": true,
+  "checks": [
+    {
+      "name": "open",
+      "title": "Both files open as EPUBs and every spine document parses",
+      "status": "pass",
+      "failures": [],
+      "details": []
+    },
+    {
+      "name": "source-hash",
+      "title": "The checkpoint file names the original's SHA-256, and the original was not changed",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "source_sha256 matches the original (96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561)",
+        "the original is byte-identical before and after validation"
+      ]
+    },
+    {
+      "name": "checkpoint-item",
+      "title": "The package declares rsvp/checkpoints.json exactly once, as application/json",
+      "status": "pass",
+      "failures": [],
+      "details": []
+    },
+    {
+      "name": "checkpoint-file",
+      "title": "The checkpoint file passes its schema and cross-reference rules (unique ids, plain text)",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "55 sections, 55 checkpoints, 130 prompts"
+      ]
+    },
+    {
+      "name": "firmware-limits",
+      "title": "The checkpoint file is within the firmware's limits",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "91475 bytes"
+      ]
+    },
+    {
+      "name": "anchors",
+      "title": "Every section's two anchors exist once, in its chapter, as empty spans, in order, without overlap",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "55 of 55 sections resolved to two anchors in their chapter"
+      ]
+    },
+    {
+      "name": "word-boundaries",
+      "title": "Every anchor sits between two words, outside tables and code blocks",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "110 anchors checked"
+      ]
+    },
+    {
+      "name": "coverage",
+      "title": "Sections cover the body text; everything else is footnotes or listed excluded matter",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "exclusions from the draft",
+        "text/titlepage.xhtml: words 0--1 excluded by the draft: Front matter: title page (an image only).",
+        "text/titlepage.xhtml: 0 of 0 words in sections, 0 in footnotes",
+        "text/imprint.xhtml: words 0-191 excluded by the draft: Front matter: the publisher's imprint.",
+        "text/imprint.xhtml: 0 of 192 words in sections, 0 in footnotes",
+        "text/common-sense.xhtml: 19335 of 19335 words in sections, 0 in footnotes",
+        "text/the-republican-proclamation.xhtml: 657 of 657 words in sections, 0 in footnotes",
+        "text/anti-monarchal-essay.xhtml: 2563 of 2563 words in sections, 0 in footnotes",
+        "text/declaration-of-rights.xhtml: 847 of 847 words in sections, 0 in footnotes",
+        "text/dissertation-on-first-principles-of-government.xhtml: 8704 of 8704 words in sections, 0 in footnotes",
+        "text/the-decline-and-fall-of-the-english-system-of-finance.xhtml: 9624 of 9624 words in sections, 0 in footnotes",
+        "text/agrarian-justice.xhtml: words 0-647 excluded by the draft: Front matter of this essay: its title heading followed by the Editor's Introduction (publication history written by the edition's editor, not by the author); the author's own text begins at the Author's Inscription (d09-p006).",
+        "text/agrarian-justice.xhtml: 7428 of 8076 words in sections, 0 in footnotes",
+        "text/endnotes.xhtml: 0 of 2279 words in sections, 2279 in footnotes",
+        "text/colophon.xhtml: words 0-163 excluded by the draft: Back matter: the publisher's colophon.",
+        "text/colophon.xhtml: 0 of 164 words in sections, 0 in footnotes",
+        "text/uncopyright.xhtml: words 0-344 excluded by the draft: Back matter: the publisher's licence statement (Uncopyright).",
+        "text/uncopyright.xhtml: 0 of 345 words in sections, 0 in footnotes"
+      ]
+    },
+    {
+      "name": "word-counts",
+      "title": "Every section's word_count equals the words between its anchors",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "55 sections counted"
+      ]
+    },
+    {
+      "name": "text-unchanged",
+      "title": "Every spine document has the original's words, flags, markers and footnote marks",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "12 spine documents compared word for word"
+      ]
+    },
+    {
+      "name": "archive-unchanged",
+      "title": "Only the anchors, one manifest line and the checkpoint file differ from the original",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "31 original members; changed: epub/content.opf, epub/text/agrarian-justice.xhtml, epub/text/anti-monarchal-essay.xhtml, epub/text/common-sense.xhtml, epub/text/declaration-of-rights.xhtml, epub/text/dissertation-on-first-principles-of-government.xhtml, epub/text/the-decline-and-fall-of-the-english-system-of-finance.xhtml, epub/text/the-republican-proclamation.xhtml"
+      ]
+    },
+    {
+      "name": "epubcheck",
+      "title": "EPUBCheck reports no errors",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "EPUBCheck 5.3.0: 0 errors, 0 warnings"
+      ]
+    }
+  ]
+}
