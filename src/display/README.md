@@ -191,6 +191,18 @@ Times are waveform only (S2 section 4); the frame transfer (at least 38.4 ms) an
 | D on YRD0426 / OPM040B3 | The time (80 ms only if FR code 1 is 40 ms per frame); a 2-frame waveform is expected to ghost the most |
 | D on SE0400NQW47 | Which table ran (mode 3 or the reading table; the first FAST after a clear always runs the reading table because of the driver's `_afterReader` rule, `Ssd2677Driver.cpp:196-197`, and a large word may exceed 1/8 of the frame bytes); every SE0400 duration |
 
+## Who selects a profile (task D3a)
+
+The stored byte `rsvpDisplayProfile` (CrossPoint's settings file; `TrialUnlock.h` encoding) says which
+trials are unlocked and which profile is chosen. `RsvpActivity::onEnter()` applies it before playback:
+`setUnlockedTrials(unlocked)`, `select(chosen)`, then the scheduler takes `info().clearing`. With
+nothing stored that is Stock, as before. The device test's benchmark (`src/activities/devicetest/`)
+unlocks the trials it runs, selects each profile in turn, and on leaving re-selects the chosen one; it
+never changes `chosen` (task D3b's "Choose a profile" does). It uses the backend as RSVP does:
+`update(UpdateKind::WORD)` for word frames and its full-screen series, `update()` for prompts,
+`clear()` for clearing refreshes, `resetStats()` before each series and `exposure().promotions()` to
+count promotions. No accessor was added.
+
 ## Environment variables (simulator only)
 
 | Variable | Meaning |
@@ -198,6 +210,7 @@ Times are waveform only (S2 section 4); the frame transfer (at least 38.4 ms) an
 | `CROSSPOINT_SIM_UPDATE_MS` | Modelled word-update time for every profile, 0 to 60,000 ms; `0` adds no delay. Beats the timings file and the defaults |
 | `CROSSPOINT_SIM_CLEAR_MS` | The same for clearing refreshes |
 | `CROSSPOINT_SIM_DISPLAY_SELFTEST` | Run the self-test with this many updates (1 to 100) |
+| `CROSSPOINT_SIM_BENCH_TIME_SCALE` | Task D3a: the device test benchmark's clock runs this many times faster (1 to 1,000), so a scenario's paced passages take seconds (`src/activities/devicetest/README.md`). Not read by the backend |
 
 A malformed value stops the simulator with an error line. The scenarios `display_timing_model` and
 `display_timing_model_zero` (`tools/simtest/scenarios/`) use all three.
