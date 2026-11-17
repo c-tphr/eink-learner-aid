@@ -16,6 +16,8 @@ The project's firmware code sits beside upstream CrossPoint, not inside it (`doc
 | `src/activities/checkpoint/` | CheckpointActivity | Prompt, reveal, grade, reread choice, skip | C3 (#27), C4 |
 | `src/display/` | DisplayProfile | Millisecond clock, simulator backend (modelled timing), placeholder device backend, a temporary simulator self-test | E3 (done), D1, D2 |
 | `src/activities/devicetest/` | DeviceTestActivity | Benchmark sweep, ratings, guided acceptance, results files | D3a (#32), D3b |
+| `lib/UpdatePolicy/` | (two-slot build) | Self-update slot policy and the Wi-Fi updater's release source, asset name and version rule. Portable, host-tested (`test/update_policy`) | D4 (done) |
+| `src/update/` | (two-slot build) | Reads the running partition table through ESP-IDF and gates the update menus, the boot recovery picker and every update write; points the Wi-Fi updater at this repository | D4 (done) |
 | `src/RsvpFeature.h` | (all) | The feature flag test, below | F4 |
 
 Each `src/` directory has a README naming its component and task. Until that task lands it holds a one-symbol placeholder `.cpp`. `src/reading/RsvpLinkCheck.cpp` is a temporary start-up check that links every source file of RsvpCore and CheckpointCore, and DisplayProfile's profiles, adapter, statistics and device backend, into the firmware; ReadingSession replaces it.
@@ -28,6 +30,7 @@ The libraries in `lib/` stay free of Arduino, ESP-IDF, HAL and SDK code, so the 
 | --- | --- |
 | `-DCROSSPOINT_RSVP=1` for `picco`, `picco-gh_release`, `picco-gh_release_rc` | `platformio.ini`, one line in each environment's `build_flags` |
 | `-DCROSSPOINT_RSVP=1` for `simulator_picco` | `platformio.project.ini`, `[env:simulator_picco]` `build_flags` |
+| `-DCROSSPOINT_RSVP=1` for `picco_2slot` | `platformio.project.ini`, `[env:picco_2slot]` `build_flags` (the same list as `[env:picco]`; the build fails if they drift) |
 | The one place code tests it | `src/RsvpFeature.h`: `CROSSPOINT_RSVP_ENABLED` (always defined, 0 or 1) and `RSVP_FEATURE_ENABLED` (`constexpr bool`) |
 
 No other environment defines the flag, so every other CrossPoint device builds as before. Rules:
@@ -59,6 +62,11 @@ Registration points so far:
 | `src/CrossPointSettings.h`, `src/SettingsList.cpp` | `LONG_PRESS_BUTTON_BEHAVIOR::SPEED_READ = 3`; its label "Speed Read" offered in RSVP builds | R4a |
 | `src/main.cpp` | `#include "controls/ControlDefaults.h"` and `seedRsvpControlDefaults();` before `SETTINGS.loadFromFile()`: the Speed read long press is the default in RSVP builds | R4a |
 | `lib/I18n/translations/english.yaml` | The RSVP screens' strings | R4a |
+| `src/main.cpp` | Boot recovery picker condition: `update_gate::updateMenusVisible(!BoardConfig::isPicco())` | D4 |
+| `src/activities/settings/SettingsActivity.cpp` | "Check for updates" and "SD Card Firmware Update" shown when `update_gate::updateMenusVisible(!BoardConfig::isPicco())` | D4 |
+| `src/network/FirmwareFlasher.cpp` | `update_gate::mayWriteUpdateSlot` before the SD update erases the next slot | D4 |
+| `src/network/OtaUpdater.cpp` | Release URL, asset name and version rule through `update_gate`; `selfUpdateAllowed` before checking; `mayWriteUpdateSlot` before `esp_ota_begin` | D4 |
+| `test/CMakeLists.txt` | `add_subdirectory(update_policy)` | D4 |
 
 ## Simulator
 
@@ -67,3 +75,12 @@ Registration points so far:
 ### Display timing model
 
 The simulator redraws instantly, so DisplayProfile's simulator backend (`src/display/SimulatorDisplayBackend.h`) draws each word update and clearing refresh through the renderer and then sleeps for the rest of a modelled time, so playback in the simulator slows down as it will on the panel. The modelled times come from built-in defaults (540 and 1,960 ms for stock, plan section 9), then `docs/device/picco-timings.json` once the device session has written it (compiled in by the `simulator_picco` pre-script `scripts/gen_display_timings.py`; a malformed file stops the build), then `CROSSPOINT_SIM_UPDATE_MS` / `CROSSPOINT_SIM_CLEAR_MS` (`0`: no added delay). Only calls made through DisplayProfile are slowed; the rest of the simulator is unchanged. Details: `lib/DisplayProfileCore/README.md`, "Timing model".
+
+## The two Picco builds and self-update
+
+| Environment | Partition table | How it reaches the device | Updates from the reader |
+| --- | --- | --- | --- |
+| `picco` | stock `partitions_picco.csv` (factory `safeboot` + one `ota_0` slot) | Not flashed by this project (upstream's `upload` target is unsafe, `docs/BASE.md`) | Never: the slot policy answers `NonOtaApp`, so the menus and the recovery picker stay hidden and every write is refused |
+| `picco_2slot` | `partitions_picco_2slot.csv` (two 0x7E0000 slots) | Once, by `tools/device` (`session.ps1 flash`) from the kit of `scripts/make_device_kit.py`; it has no `upload` target | SD card (`update.bin`, Settings > SD Card Firmware Update) and Wi-Fi (Settings > Check for updates), from either slot |
+
+Self-update is allowed only when the running table has exactly two `ota_N` app slots, no factory or test app, one otadata of at least 0x2000 bytes, the firmware runs from one of the slots, and the next update slot is the other slot and at least as large (`lib/UpdatePolicy/SlotPolicy.h`). Both update paths check the target partition again right before erasing it. The Wi-Fi updater asks `https://api.github.com/repos/c-tphr/eink-learner-aid/releases/latest` and installs the asset `eink-learner-aid-<tag_name>-picco2.bin` only if the tag's `MAJOR.MINOR.PATCH` is greater than the running `CROSSPOINT_VERSION`'s (equal counts when the running build is an `-rc`); details and the release workflow's contract: `docs/TWO_SLOT.md`.

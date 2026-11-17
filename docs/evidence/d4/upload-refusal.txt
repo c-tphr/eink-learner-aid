@@ -1,0 +1,37 @@
+$ pio run -e picco_2slot -t upload
+Processing picco_2slot (board: esp32-s3-devkitc1-n16r8; platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.311/platform-espressif32.zip; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+
+*** picco_2slot has no upload, erase or debug target. ***
+This build is flashed exactly once, with the guarded tool in tools/device/
+(session.ps1 flash, from the kit made by scripts/make_device_kit.py), and later updated
+from the device itself (SD card or Wi-Fi). Nothing was built, no serial port was opened
+and no tool was started. See docs/TWO_SLOT.md.
+Refused target(s): upload
+========================== [FAILED] Took 1.04 seconds ==========================
+
+Environment    Status    Duration
+-------------  --------  ------------
+picco_2slot    FAILED    00:00:01.043
+==================== 1 failed, 0 succeeded in 00:00:01.043 ====================
+[exit 1]
+
+$ pio run -e picco_2slot -t erase
+Processing picco_2slot (board: esp32-s3-devkitc1-n16r8; platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.311/platform-espressif32.zip; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+
+*** picco_2slot has no upload, erase or debug target. ***
+This build is flashed exactly once, with the guarded tool in tools/device/
+(session.ps1 flash, from the kit made by scripts/make_device_kit.py), and later updated
+from the device itself (SD card or Wi-Fi). Nothing was built, no serial port was opened
+and no tool was started. See docs/TWO_SLOT.md.
+Refused target(s): erase
+========================== [FAILED] Took 0.95 seconds ==========================
+
+Environment    Status    Duration
+-------------  --------  ------------
+picco_2slot    FAILED    00:00:00.954
+==================== 1 failed, 0 succeeded in 00:00:00.954 ====================
+[exit 1]

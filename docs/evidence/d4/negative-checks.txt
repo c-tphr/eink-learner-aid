@@ -1,0 +1,15 @@
+Build-time checks of scripts/picco_2slot_pre.py and picco_2slot_post.py, exercised with a temporary
+platformio.local.ini (deleted afterwards) and `pio run -e picco_2slot -t envdump`.
+
+1. platformio.local.ini: [env:picco_2slot] board_upload.arduino.boot_app0 = 0xe000
+picco_2slot: FLASH_EXTRA_IMAGES is [('0x0', 'bootloader.bin'), ('0x8000', 'partitions.bin'), ('0xE000', 'boot_app0.bin')], expected [('0x0', 'bootloader.bin'), ('0x8000', 'partitions.bin'), ('0x15000', 'boot_app0.bin')]
+========================= [FAILED] Took 22.40 seconds =========================
+[exit 1]
+
+2. platformio.local.ini: [env:picco_2slot] build_flags = ${env:picco.build_flags} plus -DEXTRA_FLAG=1
+picco_2slot build_flags differ from [env:picco] beyond CROSSPOINT_VERSION:
+  missing: []
+  extra: ['-DEXTRA_FLAG=1']
+Keep the two lists the same (platformio.project.ini).
+========================== [FAILED] Took 1.01 seconds ==========================
+[exit 1]

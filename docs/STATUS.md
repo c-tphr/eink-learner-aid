@@ -4,20 +4,18 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 ## Where we are
 
-_Updated 2026-11-19 (after a container restart; see "How to resume")._
+_Updated 2026-11-19._
 
-- **Milestones:** M0 complete (F1 to F4 merged, Project CI green). M1: E1 and E2 merged, E3 in progress. M2 complete (S1 to S4 merged and written into the plan). M3: P1, P2a, P2b, P3, P4, P6 merged. M4: R1, R2, R3 merged (libraries); the UI tasks start after E3. M5: C1a, C1b merged (library). M6: D5 and the early-check sheet merged; D4 in progress. M7: P5 in progress.
-- **Merged since the last update:** #12 S4 (PR #66) and its plan change (#67), #6 E2 (#68), #17 P4 (#69), #5 F4 (#70), #7 E1 (#71), #4 F3 (#64).
-- **Merged since:** #38 P5 (PR #74): the real book, Paine's *Essays*, READY after two rounds (55 sections, 130 prompts).
-- **Assigned, in progress:** #75 P7 (preparation workflow fixes found by P5), and:
-  - #8 E3: DisplayProfile and simulator timing model (branch `task/8-display-profile-sim-timing`).
-  - #34 D4: `picco_2slot` target, size gate, update policy (branch `task/34-picco-2slot-target`).
-- **Next when dependencies merge:** #21 R4a (needs E3), then #22 R4b, #23 R5, #26 C2; #30 D1 (needs R4a); #37 A0 release workflow (needs D4); #36 D6 checklist; #72 housekeeping.
+- **Milestones:** M0, M1 and M2 complete. M3 complete (P1, P2a, P2b, P3, P4, P6; plus P7 fixes). M4: libraries merged (R1, R2, R3); **R4a in progress**, then R4b, R5. M5: libraries merged (C1a, C1b); C2 to C5 follow R5. M6: D4 and D5 merged, the early-check sheet merged, **A0 in progress**; D1, D2, D3a, D3b, D6 open. M7: P5 merged (the real book is READY); A1 open.
+- **Merged since the last update:** #38 P5 (PR #74), fork preamble in `AGENTS.md` (#76), #75 P7 (#77), #8 E3 (#78), #34 D4 (#79).
+- **Assigned, in progress:**
+  - #21 R4a: RsvpActivity playback and pause screen, control map, word index on demand, seven scenarios (branch `task/21-rsvp-activity`).
+  - #37 A0: release workflow and kit packaging (branch `task/37-release-workflow`).
+- **Next when dependencies merge:** after R4a: #22 R4b, #30 D1; then #23 R5, #26 C2, #31 D2, #32 D3a. #36 D6 needs D3b. #72 housekeeping any time.
 - **Blockers:** none.
 - **Waiting on the owner:**
   1. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md`. Return only the summary file.
   2. Optional: try the simulator in a Codespace (`docs/SIMULATOR.md`); it has never run in a real Codespace.
-  3. (Done 2026-11-19: the owner chose a preamble in `AGENTS.md`/`CLAUDE.md` stating that this fork's workflow overrides upstream's agent rules on pull requests and handoff.)
 
 ## Last decisions
 
@@ -50,6 +48,10 @@ _Updated 2026-11-19 (after a container restart; see "How to resume")._
 - 2026-11-19: Control scheme from S4 adopted (short press moves the highlight, 0.7 s hold activates; hold a side key in page view to enter RSVP); bindings in `src/controls/ControlMap.h`.
 - 2026-11-19: CI is pinned to `ubuntu-24.04` (GCC 15 on the newer image breaks two files; issue #72). Upstream workflows are restricted to the upstream repository.
 
+- 2026-11-19: D4: `picco_2slot` builds the four images (boot data at 0x15000); its upload target refuses; the app image is not reproducible between builds, so a kit and its plan hashes must come from one build. Wi-Fi updates look at this repo's latest published release for `eink-learner-aid-<tag>-picco2.bin` and install only a higher `MAJOR.MINOR.PATCH`; the first release must be above 2.0.0. The boot recovery picker is enabled on the two-slot table only.
+- 2026-11-19: P7: `validate` has a 13th check (`exclusions`); instructions are version 1.1 (already prepared books stay valid); the checker writes its result through one guarded write. The guarded write has not yet been observed in a real Claude Code run (needs a session started after the merge); a checker that does not deliver through it fails the round.
+- 2026-11-19: E3: the simulator models update time through `DisplayProfile` (540 ms update, 1,960 ms clear by default; `CROSSPOINT_SIM_UPDATE_MS` / `CROSSPOINT_SIM_CLEAR_MS`, 0 = none); a real `docs/device/picco-timings.json` is compiled in at build time when present.
+
 ## Issue map
 
 | ID | Issue | Milestone | State |
@@ -61,7 +63,7 @@ _Updated 2026-11-19 (after a container restart; see "How to resume")._
 | F4 | #5 | M0 | merged |
 | E2 | #6 | M1 | merged |
 | E1 | #7 | M1 | merged |
-| E3 | #8 | M1 | in progress |
+| E3 | #8 | M1 | merged |
 | S1 | #9 | M2 | merged |
 | S2 | #10 | M2 | merged |
 | S3 | #11 | M2 | merged |
@@ -75,7 +77,7 @@ _Updated 2026-11-19 (after a container restart; see "How to resume")._
 | R1 | #18 | M4 | merged |
 | R2 | #19 | M4 | merged |
 | R3 | #20 | M4 | merged |
-| R4a | #21 | M4 | open |
+| R4a | #21 | M4 | in progress |
 | R4b | #22 | M4 | open |
 | R5 | #23 | M4 | open |
 | C1a | #24 | M5 | merged |
@@ -88,16 +90,16 @@ _Updated 2026-11-19 (after a container restart; see "How to resume")._
 | D2 | #31 | M6 | open |
 | D3a | #32 | M6 | open |
 | D3b | #33 | M6 | open |
-| D4 | #34 | M6 | in progress |
+| D4 | #34 | M6 | merged |
 | D5 | #35 | M6 | merged |
 | D6a | #60 | M7 | merged (early read-only check sheet) |
 | D6 | #36 | M6 | open |
-| A0 | #37 | M6 | open |
+| A0 | #37 | M6 | in progress |
 | P5 | #38 | M7 | merged |
 | A1 | #39 | M7 | open |
 | A2 | #40 | M8 | open |
 | H1 | #72 | M7 | open (housekeeping) |
-| P7 | #75 | M7 | in progress (preparation workflow fixes) |
+| P7 | #75 | M7 | merged |
 
 ## Facts learned so far
 
@@ -107,7 +109,8 @@ _Updated 2026-11-19 (after a container restart; see "How to resume")._
 - Host tests upstream are CMake and GoogleTest under `test/`: 924 pass at the pinned commit (about 5 minutes to build on 4 cores).
 - Cloud builds: run `./scripts/cloud-setup.sh` first in every session (about 3 minutes from empty caches, seconds afterwards). A plain `pio run` on empty caches fails with `CERTIFICATE_VERIFY_FAILED` because pioarduino replaces the CA settings; worse, its `idf_tools.py` falls back to unverified downloads, which the setup script treats as a failure. Building a `custom_sdkconfig` environment (upstream `default`) in the same core directory triggers a reinstall that hits the TLS problem again; re-run the setup script. `picco` builds in about 5.5 minutes: flash 5,449,518 B of the 7,431,782 B two-slot budget, RAM 34.4%.
 - Upload hazard confirmed by `pio run -e picco -t envdump`: `UPLOADERFLAGS` holds 0x0, 0x8000 and 0xe000 images although `FLASH_EXTRA_IMAGES` is empty.
-- Host suite on `main`: 1,209 tests (924 upstream, RsvpCore, CheckpointCore, WordIndex incl. renderer parity). Python: `python3 -m pytest tools/prep -q` (617, several minutes because EPUBCheck runs) and `python -m pytest tools/device -q` (190, in a virtualenv from `tools/device/requirements-test.txt`).
+- Host suite on `main`: 1,280 tests. Python: `tools/prep` 686 tests, `tools/device` 190, `tools/simtest` 81 plus 6 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
+- The session disk is small: finished implementers' working copies keep build output under `.claude/worktrees/agent-*/.pio` and `build`; delete those folders (not the working copies of running tasks) when `df` shows little free space.
 - Simulator: `pio run -e simulator_picco` applies `scripts/simulator_patches/` automatically; headless run: `xvfb-run -a .pio/build/simulator_picco/program` with `CROSSPOINT_SIM_INPUT_SCRIPT="0:WAIT:Entering activity: Home;1500:SHOT:home;2500:QUIT"` (SHOT writes a BMP at the given path).
 - Upstream renderer quirks found by the parity test (not ours, not fixed): the last word of a table caption is never drawn; rows of a grid table split across pages are drawn line by line. Neither affects RSVP positions or anchors.
 - The flash tool has never run on Windows or on a device; `docs/DEVICE_EARLY_CHECK.md` is the first real run. Never post backups or `.bin` blobs: the repo is public.

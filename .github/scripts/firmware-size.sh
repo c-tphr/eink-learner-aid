@@ -8,8 +8,9 @@
 # firmware.bin, bootloader.bin and partitions.bin, the ELF section sizes, and
 # the headroom of firmware.bin against the two-slot app budget
 # (APP_SLOT_BUDGET_BYTES, default 7,431,782 bytes: docs/PLAN.md section 11,
-# spike S3). With --gate, an image over the budget fails (exit 1); without it
-# the comparison is informational.
+# spike S3). With --gate it also prints "size gate: PASS" or "size gate: FAIL",
+# and an image over the budget fails (exit 1); without it the comparison is
+# informational.
 
 set -euo pipefail
 
@@ -40,7 +41,11 @@ APP="$(stat -c %s "$DIR/firmware.bin")"
 HEADROOM=$((BUDGET - APP))
 printf 'size gate: firmware.bin %d bytes, budget %d bytes, headroom %d bytes (%.1f%% used)\n' \
   "$APP" "$BUDGET" "$HEADROOM" "$(awk -v a="$APP" -v b="$BUDGET" 'BEGIN { print 100 * a / b }')"
-if [[ $GATE -eq 1 && $APP -gt $BUDGET ]]; then
-  echo "::error::$ENV_NAME firmware.bin is $APP bytes, over the two-slot budget of $BUDGET bytes by $((APP - BUDGET))"
-  exit 1
+if [[ $GATE -eq 1 ]]; then
+  if [[ $APP -gt $BUDGET ]]; then
+    echo "size gate: FAIL"
+    echo "::error::$ENV_NAME firmware.bin is $APP bytes, over the two-slot budget of $BUDGET bytes by $((APP - BUDGET))"
+    exit 1
+  fi
+  echo "size gate: PASS"
 fi
