@@ -14,12 +14,12 @@ partitions.bin, parsed:
   MD5 entry present: True, correct: True
   equal to the two-slot table row for row: yes
 app offset (ota_0 of the built table, as the platform uses it): 0x20000
-CROSSPOINT_VERSION: 2.0.0-picco2   build id: 75b807045d5d-dirty
+CROSSPOINT_VERSION: 2.0.0-picco2   build id: 815ebe28b801
 
 == make-plan (the guard checks every image)
-$ python -m piccoflash make-plan --bootloader .pio/build/picco_2slot/bootloader.bin --partitions .pio/build/picco_2slot/partitions.bin --boot-app0 <core_dir>/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin --app .pio/build/picco_2slot/firmware.bin --version 2.0.0-picco2 --build-id 75b807045d5d-dirty -o build/device-kit/kit --expect-offset bootloader=0x0 --expect-offset partition_table=0x8000 --expect-offset boot_app0=0x15000 --expect-offset app=0x20000
+$ python -m piccoflash make-plan --bootloader .pio/build/picco_2slot/bootloader.bin --partitions .pio/build/picco_2slot/partitions.bin --boot-app0 <core_dir>/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin --app .pio/build/picco_2slot/firmware.bin --version 2.0.0-picco2 --build-id 815ebe28b801 -o build/device-kit/kit --expect-offset bootloader=0x0 --expect-offset partition_table=0x8000 --expect-offset boot_app0=0x15000 --expect-offset app=0x20000
   Flash plan: build/device-kit/kit/flash-plan.json
-  Firmware version: 2.0.0-picco2   build: 75b807045d5d-dirty   created: 2026-11-17T12:06:00Z
+  Firmware version: 2.0.0-picco2   build: 815ebe28b801   created: 2026-11-17T12:06:40Z
   Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
   
   Region           Offset     Erase end        Size  File            SHA-256 (first 16)
@@ -36,7 +36,7 @@ $ python -m piccoflash make-plan --bootloader .pio/build/picco_2slot/bootloader.
 $ python -m piccoflash plan --plan build/device-kit/kit
   piccoflash 1.0.0 (Python 3.13.18, esptool 5.6.0 pinned)
   Flash plan: build/device-kit/kit/flash-plan.json
-  Firmware version: 2.0.0-picco2   build: 75b807045d5d-dirty   created: 2026-11-17T12:06:00Z
+  Firmware version: 2.0.0-picco2   build: 815ebe28b801   created: 2026-11-17T12:06:40Z
   Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
   
   Region           Offset     Erase end        Size  File            SHA-256 (first 16)
@@ -62,7 +62,7 @@ $ python -m piccoflash flash --dry-run --port COM5 --work-dir build/device-kit/r
   Flash: replace Onyx with the two-slot firmware
   ----------------------------------------------
   Flash plan: build/device-kit/kit/flash-plan.json
-  Firmware version: 2.0.0-picco2   build: 75b807045d5d-dirty   created: 2026-11-17T12:06:00Z
+  Firmware version: 2.0.0-picco2   build: 815ebe28b801   created: 2026-11-17T12:06:40Z
   Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
   
   Region           Offset     Erase end        Size  File            SHA-256 (first 16)
@@ -75,8 +75,8 @@ $ python -m piccoflash flash --dry-run --port COM5 --work-dir build/device-kit/r
   
   Preconditions in the work folder build/device-kit/rehearsal
   ------------------------------------------------------------------------------
-  [ok]   identify passed for MAC 24:58:7c:12:34:56 (identify-20261117T120600.833Z.json)
-  [ok]   verified backup picco-backup-24587c123456-20261117T120600.870Z.bin, SHA-256 re-checked: 175e8fce3c05ff2f82dd5dd03120a810cdd7ee655776c36f236b6b6d9951caca
+  [ok]   identify passed for MAC 24:58:7c:12:34:56 (identify-20261117T120641.443Z.json)
+  [ok]   verified backup picco-backup-24587c123456-20261117T120641.479Z.bin, SHA-256 re-checked: 175e8fce3c05ff2f82dd5dd03120a810cdd7ee655776c36f236b6b6d9951caca
   [ok]   owner confirmed the backup copy
   
   DRY RUN: the device is not contacted and nothing is written
@@ -117,7 +117,7 @@ $ python -m piccoflash flash --dry-run --port COM5 --work-dir build/device-kit/r
   
   DRY RUN RESULT: READY. A real run would ask for the phrase and then write the 4 images above.
   [exit 0: OK]
-  Log: build/device-kit/rehearsal/logs/flash-dryrun-20261117T120601.092Z.log
+  Log: build/device-kit/rehearsal/logs/flash-dryrun-20261117T120641.698Z.log
   [exit 0]
 
 KIT MADE: build/device-kit
