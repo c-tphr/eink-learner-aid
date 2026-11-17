@@ -26,8 +26,14 @@ book and layout. RSVP opens on the pause screen with Play highlighted, at the wo
 rule below; it never starts by itself.
 
 When a book opens and its state file (`src/reading/BookStateFile.h`) says it was left in RSVP mode,
-the reader opens RSVP by itself once its first page is shown (`rsvpentry::openedInRsvp()`,
-`resumeSpeedRead` in the reader).
+the reader opens RSVP by itself once its first page is shown (`readingsession::restoreOnOpen()`, which
+calls `rsvpentry::openedInRsvp()` for a book without checkpoint data; `resumeSpeedRead` in the reader).
+Since task C5 the mode comes from the restore plan first (`src/reading/README.md`, "Opening a book"): a
+reread in progress in RSVP opens RSVP at the reread place even when `position` (the place before the
+break) says page view; a prompt in progress opens the prompt, not RSVP, and RSVP follows only when the
+checkpoint ends (it fired in RSVP) or a reread in RSVP is chosen. In those cases the page drawn under
+RSVP first is the one holding RSVP's word, never a page after a break the reader has not passed, and it
+is not taken as the reread's place.
 
 ### Where RSVP opens
 
@@ -62,7 +68,7 @@ The position written is always "the next word": the word Play would show first.
 | Home gesture during playback | Nothing: it pauses (S4 section 6), and the pause saves | Unchanged |
 | Sleep (power hold, auto-sleep cannot fire while playing) | chapter, word, `rsvp` (`prepareForSleep()`) | Saved the same way as for the Home gesture |
 | Power-off | The firmware has no power-off hook besides sleep: the last pause or chapter change | The last route above, or the page RSVP was entered from |
-| A pause (any reason: key, touch, end of book, display timeout) | chapter, word, `rsvp` | Unchanged; rule 1 restores from the state file |
+| A pause (any reason: key, touch, end of book, display timeout) | chapter, word, `rsvp`, written before the pause screen is drawn (task C5) | Unchanged; rule 1 restores from the state file |
 | An image, table or code block ("Non-prose items" below) | chapter, the first prose word after the item, `rsvp` | The reader shows the item's page; its render saves that page |
 | Banner: Continue | Unchanged (that word, `rsvp`) | Unchanged |
 | Banner: Stay, Back, or a page-turn swipe | chapter, the same word, `page` | The item's page, or the page the swipe turns to |
@@ -291,7 +297,7 @@ are decimal, times in ms.
 | --- | --- |
 | `state <missing\|read\|invalid\|unreadable\|no-memory> book_wpm=<w> book_words=<k> default_wpm=<w> default_words=<k> wpm=<w> words_per_update=<k> position=<none\|rsvp\|page> ch=<c> word=<w>` | RSVP read the state file: the book's overrides (0: none), the global default, the values used, the saved position |
 | `enter ch=<spine> page_offset=<o> word=<w> chapter_words=<n> activity_bytes=<b> from=<page\|saved\|resumed\|continue\|reread\|checkpoint>` | RSVP opened at word `w`, by which rule ("Where RSVP opens"; `continue`: Continue on the banner; `reread`: the session's reread place; `checkpoint`: after the break of a checkpoint that ended in page view, task C4) |
-| `book state <read\|invalid\|unreadable\|no-memory> mode=<none\|rsvp\|page> ch=<c> word=<w>` | A book with a state file opened (`openedInRsvp()`) |
+| `book state <read\|invalid\|unreadable\|no-memory> mode=<none\|rsvp\|page> ch=<c> word=<w>` | A book with a state file opened (`openedInRsvp()`, or the session's restore for a prepared book; task C5) |
 | `play ch=<spine> word=<w> wpm=<t> words_per_update=<k>` | Play |
 | `frame ch=<spine> first=<i> last=<j> words=<k> hold=<ideal ms> ms=<update ms> text="<text>"` | After every frame shown; `ms` is the backend's measured update time |
 | `clear ch=<spine> ms=<ms>` | A clearing refresh during playback (clearing policy) |

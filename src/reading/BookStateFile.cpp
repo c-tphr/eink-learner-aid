@@ -16,7 +16,7 @@ namespace {
 // StateSink into an open file, through a small buffer (encodeState() writes many short pieces).
 class FileStateSink final : public checkpoint::StateSink {
  public:
-  explicit FileStateSink(HalFile& file) : file(file) {}
+  explicit FileStateSink(HalFile& out) : file(out) {}
 
   bool write(const char* data, size_t length) override {
     while (length > 0) {
@@ -49,12 +49,16 @@ class FileStateSink final : public checkpoint::StateSink {
 
 std::string bookStatePath(const std::string& bookPath) { return bookPath + ".rsvp-state.json"; }
 
-StateLoad loadBookState(const std::string& bookPath, const BookIdentity& book, checkpoint::BookState& out) {
+bool bookStateExists(const std::string& bookPath) {
+  const std::string path = bookStatePath(bookPath);
+  return Storage.exists(path.c_str()) || Storage.exists((path + ".tmp").c_str());
+}
+
+namespace {
+
+StateLoad loadStateFile(const std::string& path, const BookIdentity& book, checkpoint::BookState& out) {
   out.reset();
   StateLoad load;
-  const std::string path = bookStatePath(bookPath);
-  if (!Storage.exists(path.c_str())) return load;  // Missing
-
   HalFile file;
   if (!Storage.openFileForRead("RSVP", path, file)) {
     load.source = StateSource::Unreadable;
@@ -88,7 +92,31 @@ StateLoad loadBookState(const std::string& bookPath, const BookIdentity& book, c
             static_cast<unsigned>(size));
     return load;
   }
-  load = decodeForUse(bytes.get(), size, book.sha256, book.index, out);
+  return decodeForUse(bytes.get(), size, book.sha256, book.index, out);
+}
+
+}  // namespace
+
+StateLoad loadBookState(const std::string& bookPath, const BookIdentity& book, checkpoint::BookState& out) {
+  out.reset();
+  const std::string path = bookStatePath(bookPath);
+  if (!Storage.exists(path.c_str())) {
+    // A cut between the old file's removal and the rename leaves only the new file, complete, as .tmp.
+    // A .tmp beside a missing file can also be a first write cut short: only a valid one is used.
+    const std::string tmp = path + ".tmp";
+    if (!Storage.exists(tmp.c_str())) return StateLoad{};  // Missing
+    StateLoad recovered = loadStateFile(tmp, book, out);
+    if (recovered.source == StateSource::NoMemory) return recovered;  // the edit then leaves both alone
+    if (recovered.source != StateSource::Read) {
+      LOG_ERR("RSVP", "state %s missing; %s not usable (%s)", path.c_str(), tmp.c_str(),
+              stateSourceName(recovered.source));
+      out.reset();
+      return StateLoad{};  // Missing: the next write replaces the .tmp
+    }
+    LOG_INF("RSVP", "state %s recovered from %s", path.c_str(), tmp.c_str());
+    return recovered;
+  }
+  const StateLoad load = loadStateFile(path, book, out);
   if (load.source == StateSource::Invalid) {
     LOG_ERR("RSVP", "state %s: %s, using defaults", path.c_str(), checkpoint::decodeStatusName(load.status));
   } else if (load.shaMismatch) {
@@ -115,7 +143,11 @@ bool editBookState(const std::string& bookPath, const BookIdentity& book, const 
     }
   }
   edit(*state, context);
+  return writeBookState(bookPath, *state);
+}
 
+bool writeBookState(const std::string& bookPath, const checkpoint::BookState& state) {
+  const std::string path = bookStatePath(bookPath);
   const std::string tmp = path + ".tmp";
   {
     HalFile file;
@@ -124,7 +156,7 @@ bool editBookState(const std::string& bookPath, const BookIdentity& book, const 
       return false;
     }
     FileStateSink sink(file);
-    if (!checkpoint::encodeState(*state, sink) || !sink.flush()) {
+    if (!checkpoint::encodeState(state, sink) || !sink.flush()) {
       LOG_ERR("RSVP", "state %s: short write", tmp.c_str());
       file.close();
       Storage.remove(tmp.c_str());
@@ -132,9 +164,14 @@ bool editBookState(const std::string& bookPath, const BookIdentity& book, const 
     }
     file.flush();
     // Closed here: SdFat does not rename a file that is still open.
+    if (!file.close()) {
+      LOG_ERR("RSVP", "state %s: close failed", tmp.c_str());
+      Storage.remove(tmp.c_str());
+      return false;
+    }
   }
   // SdFat's rename does not replace, so the old file goes first (as ProgressFile::writeAtomic does).
-  // A cut between the two leaves no file, which reads as Missing; never a half-written one.
+  // A cut between the two leaves only the new file, complete, as .tmp: loadBookState() reads it.
   Storage.remove(path.c_str());
   if (!Storage.rename(tmp.c_str(), path.c_str())) {
     LOG_ERR("RSVP", "state %s: rename failed", path.c_str());

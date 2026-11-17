@@ -132,6 +132,88 @@ bool rereadStepStays(const checkpoint::SectionRange& range, const uint32_t to) {
   return to >= range.start && to < range.end;
 }
 
+bool BookIndexLayout::chapterWordCount(const uint16_t chapter, uint32_t& count) {
+  if (chapter >= chapters) return false;
+  wordindex::WordIndexReader* reader = openFn(fnContext, chapter);
+  if (reader == nullptr) return false;
+  count = reader->wordCount();
+  return true;
+}
+
+bool BookIndexLayout::sectionRange(const uint16_t section, checkpoint::SectionRange& out) {
+  const int spine = spineFn(fnContext, section);
+  if (spine < 0 || spine >= chapters) return false;
+  wordindex::WordIndexReader* reader = openFn(fnContext, static_cast<uint16_t>(spine));
+  if (reader == nullptr) return false;
+  ChapterLayout chapter(checkpoints, chapters, static_cast<uint16_t>(spine), *reader);
+  return chapter.sectionRange(section, out);
+}
+
+OpenAction openActionFor(const checkpoint::RestorePlan& plan) {
+  OpenAction action;
+  action.at = plan.place;
+  switch (plan.view) {
+    case checkpoint::OpenView::Reread:
+      // The page under RSVP holds the reread word too, so no page after the section shows first.
+      action.show = OpenAction::Show::Reread;
+      action.jump = true;
+      action.speedRead = plan.place.mode == checkpoint::ReadingMode::Rsvp;
+      break;
+    case checkpoint::OpenView::Prompt:
+      action.show = OpenAction::Show::Prompt;
+      break;
+    case checkpoint::OpenView::Position:
+      // A dropped checkpoint's resume (or the position before its break): page view goes there, RSVP
+      // opens there by its own rule (the saved word).
+      action.jump = plan.place.mode == checkpoint::ReadingMode::Page;
+      action.speedRead = plan.place.mode == checkpoint::ReadingMode::Rsvp;
+      break;
+    case checkpoint::OpenView::BookStart:
+      action.at = checkpoint::Place{};
+      break;
+  }
+  return action;
+}
+
+const char* openViewName(const checkpoint::OpenView view) {
+  switch (view) {
+    case checkpoint::OpenView::Reread:
+      return "reread";
+    case checkpoint::OpenView::Prompt:
+      return "prompt";
+    case checkpoint::OpenView::Position:
+      return "position";
+    case checkpoint::OpenView::BookStart:
+      return "book-start";
+  }
+  return "?";
+}
+
+void restoreNoteNames(const uint16_t notes, char* out, const size_t size) {
+  static const struct {
+    uint16_t bit;
+    const char* name;
+  } NAMES[] = {
+      {checkpoint::NOTE_NO_CHECKPOINT_DATA, "no-checkpoint-data"},
+      {checkpoint::NOTE_UNKNOWN_CHECKPOINT, "unknown-checkpoint"},
+      {checkpoint::NOTE_PROMPT_OUT_OF_RANGE, "prompt-out-of-range"},
+      {checkpoint::NOTE_SECTION_UNRESOLVED, "section-unresolved"},
+      {checkpoint::NOTE_RESUME_OUTSIDE_BOOK, "resume-outside-book"},
+      {checkpoint::NOTE_REREAD_OUTSIDE_SECTION, "reread-outside-section"},
+      {checkpoint::NOTE_POSITION_OUTSIDE_BOOK, "position-outside-book"},
+  };
+  if (size == 0) return;
+  out[0] = '\0';
+  size_t used = 0;
+  for (const auto& n : NAMES) {
+    if ((notes & n.bit) == 0) continue;
+    const int w = snprintf(out + used, size - used, "%s%s", used > 0 ? "+" : "", n.name);
+    if (w < 0 || static_cast<size_t>(w) >= size - used) return;
+    used += static_cast<size_t>(w);
+  }
+  if (used == 0) snprintf(out, size, "none");
+}
+
 }  // namespace reading
 
 #endif  // CROSSPOINT_RSVP_ENABLED

@@ -1,0 +1,35 @@
+{
+  "description": "cp_kill_in_reread after the second kill: c0002 in progress at question 2, its reread in RSVP at a word of section s0004 (chapter 2 words 311-607), resume after the break in RSVP; the first grades of pass 1.",
+  "type": "object",
+  "required": ["version", "book_sha256", "overrides", "position", "grades", "active_checkpoint"],
+  "properties": {
+    "book_sha256": { "const": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+    "grades": {
+      "type": "object",
+      "required": ["c0002-p1", "c0002-p2"],
+      "additionalProperties": false,
+      "properties": {
+        "c0002-p1": { "type": "object", "required": ["first"], "properties": { "first": { "const": "correct" } } },
+        "c0002-p2": { "type": "object", "required": ["first"], "properties": { "first": { "const": "incorrect" } } }
+      }
+    },
+    "active_checkpoint": {
+      "type": "object",
+      "required": ["id", "prompt_index", "resume", "reread"],
+      "properties": {
+        "id": { "const": "c0002" },
+        "prompt_index": { "const": 1 },
+        "resume": { "const": { "chapter": 3, "word": 0, "mode": "rsvp" } },
+        "reread": {
+          "type": "object",
+          "required": ["mode", "chapter", "word"],
+          "properties": {
+            "mode": { "const": "rsvp" },
+            "chapter": { "const": 2 },
+            "word": { "type": "integer", "minimum": 311, "maximum": 607 }
+          }
+        }
+      }
+    }
+  }
+}

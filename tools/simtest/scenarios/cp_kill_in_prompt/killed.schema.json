@@ -1,0 +1,22 @@
+{
+  "description": "cp_kill_in_prompt after each kill: c0002 in progress at question 2 with no reread (the revealed answer is not saved); p1 graded correct, p2 and p3 never graded in pass 1.",
+  "type": "object",
+  "required": ["version", "book_sha256", "overrides", "position", "grades", "active_checkpoint"],
+  "properties": {
+    "book_sha256": { "const": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+    "overrides": { "const": { "wpm": 1000 } },
+    "grades": {
+      "type": "object",
+      "required": ["c0002-p1"],
+      "properties": {
+        "c0002-p1": { "type": "object", "required": ["first"], "properties": { "first": { "const": "correct" } } }
+      }
+    },
+    "active_checkpoint": {
+      "type": "object",
+      "required": ["id", "prompt_index", "resume"],
+      "not": { "required": ["reread"] },
+      "properties": { "id": { "const": "c0002" }, "prompt_index": { "const": 1 } }
+    }
+  }
+}

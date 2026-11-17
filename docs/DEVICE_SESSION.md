@@ -598,7 +598,7 @@ Each step has two screens.
 
 *Simulator picture of the summary. The real screen is e-ink.*
 
-The twelve steps use the books `fixture.prepared.epub` (steps 1 to 10) and `fixture.epub` (steps 11 and 12) in the `books` folder. The full text of each step is in [Appendix A](#appendix-a-the-twelve-steps-of-part-b). Pictures of the reading screens you will meet are in [Appendix B](#appendix-b-screens-you-meet-in-part-b).
+The twelve steps use the books `fixture.prepared.epub` (steps 1 to 10) and `fixture.epub` (steps 11 and 12) in the `books` folder. If you leave a book, or the Picco sleeps, while a question or a reread shows, the book opens again on the same question (with the answer hidden) or in the same reread: this is what steps 9 and 10 check, and it can also happen between steps. The full text of each step is in [Appendix A](#appendix-a-the-twelve-steps-of-part-b). Pictures of the reading screens you will meet are in [Appendix B](#appendix-b-screens-you-meet-in-part-b).
 
 ---
 
@@ -815,15 +815,15 @@ Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 
 Instructions: Hold Down: Reread in RSVP. Hold Down: Play. Let it play to the end of the section. You may raise the WPM first to make it shorter.
 
-Expected: The reread starts at "The Visitor from the Mainland". The pause screen has a row "Back to the question". After "to put out the lamp." question 2 of 3 shows again, with the answer hidden. Reveal it, then mark Incorrect again.
+Expected: The top line starts with "Rereading". Under Exit, Menu and Page view is a wide row "Back to the question". Play is highlighted. Near the bottom: "The Visitor from the Mainland On the". After "to put out the lamp." question 2 of 3 shows again, answer hidden, "Recorded earlier: Incorrect". Hold Down: Reveal answer. Press Down twice, then hold: Incorrect.
 
 Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 
 **Step 6 of 12: Reread in page view, return early, retry** <!--step:reread-page-early-->
 
-Instructions: Use touch. Tap Reread in page view. Turn one page. Tap "Back to the question" at the top.
+Instructions: Use touch. Tap Reread in page view. Swipe to turn one page. At the bottom of the screen, where the battery and page number usually are, a strip shows "Rereading" and a small framed button "Back to the question". Tap the button. It is small: if it is hard to hit, write that in the notes and hold a side key instead, then hold again on "Back to the question".
 
-Expected: Question 2 of 3 shows again, with the answer hidden. Tap Reveal answer, then Correct. Question 3 of 3 shows.
+Expected: Page view first shows the page with the heading "The Visitor from the Mainland". The strip covers no line of text. After the tap or the hold, question 2 of 3 shows again, with the answer hidden and "Recorded earlier: Incorrect". Tap Reveal answer, then Correct. Question 3 of 3 shows.
 
 Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 
@@ -847,7 +847,7 @@ Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 
 Instructions: Open Select Chapter and choose The Lamp Room. Turn pages until question 1 of 1 shows. Swipe up from the bottom edge: Home. Open fixture.prepared.epub again.
 
-Expected: The book opens at question 1 of 1, with the answer hidden. Tap Skip checkpoint. Page view shows the page after the break.
+Expected: The book opens directly at question 1 of 1, with the answer hidden and "Recorded earlier: Correct". No page of the book shows first. Tap Skip checkpoint. Page view shows the page with "did the same." and the text after it. No question shows.
 
 Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 
@@ -855,7 +855,7 @@ Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 
 Instructions: Open Select Chapter and choose The Lamp Room. Turn pages until question 1 of 1 shows. Tap Reveal answer, then Incorrect, then Reread in page view. Turn one page. Hold the power button until the device sleeps. Wake it. If the book is not open, open fixture.prepared.epub.
 
-Expected: Page view is in the reread, on the same page, with "Back to the question" at the top. Tap it. Question 1 of 1 shows with the answer hidden. Tap Skip checkpoint. Page view shows the page after the break.
+Expected: Page view is in the reread, on the same page. At the bottom, the strip shows "Rereading" and the "Back to the question" button. Tap the button (or hold a side key, then hold again). Question 1 of 1 shows, answer hidden, "Recorded earlier: Correct". Tap Skip checkpoint. Page view shows the page with "did the same." again. No question shows.
 
 Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 
@@ -888,6 +888,18 @@ Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 <img src="evidence/c3a/cp_screens_touch-c_prompt1_recorded.png" alt="Recorded earlier" width="240">
 
 *Simulator picture of a question from an earlier pass, with "Recorded earlier". The real screen is e-ink.*
+
+<img src="evidence/c4/cp_reread_rsvp_end-t_rsvp_reread_pause.png" alt="RSVP reread pause screen" width="240">
+
+*Simulator picture of the pause screen during a reread in RSVP (step 5). The top line starts with "Rereading"; "Back to the question" is the wide row under Exit, Menu and Page view. The real screen is e-ink.*
+
+<img src="evidence/c4/cp_reread_page_early-t_page_reread_bar.png" alt="Page view reread strip" width="240">
+
+*Simulator picture of page view during a reread (steps 6 and 10). The strip at the bottom shows "Rereading" and the small "Back to the question" button, where the battery and page number usually are. The real screen is e-ink.*
+
+<img src="evidence/c4/cp_reread_page_early-k_reread_list.png" alt="Rereading this section list" width="240">
+
+*Simulator picture of the list a side-key hold opens during a page-view reread: "Back to the question" is highlighted. The real screen is e-ink.*
 
 <img src="evidence/r5/image-banner.png" alt="Picture banner" width="240">
 

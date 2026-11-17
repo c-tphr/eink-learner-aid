@@ -1,0 +1,109 @@
+# A damaged or stale checkpoint in progress (task C5; lib/CheckpointCore/README.md, "Opening a book":
+# planRestore() drops what cannot be restored and says why). Four copies of the prepared fixture, each
+# with a hand-written state file that also holds a first grade (c0002-p1 correct), which must survive:
+#   a-unknown:        active_checkpoint c0099, a checkpoint the book does not have; resume 3:0:page
+#   b-prompt-range:   c0002 with prompt_index 7 (it has 3 prompts); resume 3:0:rsvp
+#   c-reread-outside: c0002 at prompt 2 with a reread at chapter 2 word 100, outside s0004 (311-607)
+#   d-other-edition:  c0002 at prompt 2, but book_sha256 names another edition
+# Each opens at the best remaining view without a crash or a loop, one log line names the reason, and
+# the file is cleaned before anything shows: a and b continue after the checkpoint's break (page view at
+# chapter 3; RSVP at chapter 3 word 0), c shows question 2 of 3 with its answer hidden and no reread, d
+# opens as a book read for the first time (position and checkpoint dropped, the grade kept).
+description = "Damaged or stale checkpoint in progress (unknown id, prompt out of range, reread outside its section, another edition): the book opens at the best remaining view, the log names the reason, the file is cleaned and no grade is lost"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/a-unknown.epub" },
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/b-prompt-range.epub" },
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/c-reread-outside.epub" },
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/d-other-edition.epub" },
+  { json = { openEpubPath = "/books/a-unknown.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"book_sha256\": \"9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c\", \"overrides\": {\"wpm\": 1000}, \"position\": {\"chapter\": 2, \"word\": 490, \"mode\": \"page\"}, \"grades\": {\"c0002-p1\": {\"first\": \"correct\"}}, \"active_checkpoint\": {\"id\": \"c0099\", \"prompt_index\": 0, \"resume\": {\"chapter\": 3, \"word\": 0, \"mode\": \"page\"}}}\n", dst = "books/a-unknown.epub.rsvp-state.json" },
+  { text = "{\"version\": 1, \"book_sha256\": \"9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c\", \"overrides\": {\"wpm\": 1000}, \"position\": {\"chapter\": 2, \"word\": 607, \"mode\": \"rsvp\"}, \"grades\": {\"c0002-p1\": {\"first\": \"correct\"}}, \"active_checkpoint\": {\"id\": \"c0002\", \"prompt_index\": 7, \"resume\": {\"chapter\": 3, \"word\": 0, \"mode\": \"rsvp\"}}}\n", dst = "books/b-prompt-range.epub.rsvp-state.json" },
+  { text = "{\"version\": 1, \"book_sha256\": \"9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c\", \"overrides\": {\"wpm\": 1000}, \"position\": {\"chapter\": 2, \"word\": 490, \"mode\": \"page\"}, \"grades\": {\"c0002-p1\": {\"first\": \"correct\"}}, \"active_checkpoint\": {\"id\": \"c0002\", \"prompt_index\": 1, \"resume\": {\"chapter\": 3, \"word\": 0, \"mode\": \"page\"}, \"reread\": {\"mode\": \"page\", \"chapter\": 2, \"word\": 100}}}\n", dst = "books/c-reread-outside.epub.rsvp-state.json" },
+  { text = "{\"version\": 1, \"book_sha256\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\", \"overrides\": {\"wpm\": 1000}, \"position\": {\"chapter\": 2, \"word\": 490, \"mode\": \"page\"}, \"grades\": {\"c0002-p1\": {\"first\": \"correct\"}}, \"active_checkpoint\": {\"id\": \"c0002\", \"prompt_index\": 1, \"resume\": {\"chapter\": 3, \"word\": 0, \"mode\": \"page\"}}}\n", dst = "books/d-other-edition.epub.rsvp-state.json" },
+]
+
+steps = [
+  # a: an unknown checkpoint id. The firmware boots into this book.
+  { wait_log = "\\[CPT\\] restore view=position checkpoint=c0099 prompt=1/- place=3:0:page resume=none notes=unknown-checkpoint " },
+  { wait_log = "\\[CPT\\] restore dropped checkpoint=c0099 prompt=1 reason=unknown-checkpoint saved=1" },
+  { wait_log = "\\[CPT\\] restore open show=reading speed_read=0 jump=1 ch=3 offset=\\d+" },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0", note = "page view after the dropped checkpoint's break" },
+  { shot = "a_unknown_after_break" },
+  { kill = true },
+  { expect_schema = "books/a-unknown.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_restore_damaged/cleaned.schema.json" },
+  { expect_json = "books/a-unknown.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "page" } },
+
+  # b: a prompt index past the checkpoint's three prompts; it fired in RSVP.
+  { start = true },
+  { wait_screen = "Browse Files" },
+  { press = "DOWN", note = "from the continue-reading card to Browse Files" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "ENTER" },
+  { wait_screen = "SD card | books" },
+  { press = "ENTER" },
+  { wait_screen = "a-unknown | .epub" },
+  { press = "DOWN" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "ENTER", note = "b-prompt-range.epub" },
+  { wait_log = "\\[CPT\\] restore view=position checkpoint=c0002 prompt=8/- place=3:0:rsvp resume=none notes=prompt-out-of-range " },
+  { wait_log = "\\[CPT\\] restore dropped checkpoint=c0002 prompt=8 reason=prompt-out-of-range saved=1" },
+  { wait_log = "\\[CPT\\] restore open show=reading speed_read=1 jump=0 " },
+  { wait_log = "\\[RSVP\\] enter ch=3 page_offset=\\d+ word=0 ", note = "RSVP, the mode it fired in, after its break" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { kill = true },
+  { expect_schema = "books/b-prompt-range.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_restore_damaged/cleaned.schema.json" },
+  { expect_json = "books/b-prompt-range.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "rsvp" } },
+
+  # c: a reread outside its section: the prompt shows instead.
+  { start = true },
+  { wait_screen = "Browse Files" },
+  { press = "DOWN" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "ENTER" },
+  { wait_screen = "SD card | books" },
+  { press = "ENTER" },
+  { wait_screen = "a-unknown | .epub" },
+  { press = "DOWN" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "DOWN" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "ENTER", note = "c-reread-outside.epub" },
+  { wait_log = "\\[CPT\\] restore view=prompt checkpoint=c0002 prompt=2/3 place=3:0:page resume=3:0:page notes=reread-outside-section " },
+  { wait_log = "\\[CPT\\] restore dropped checkpoint=c0002 prompt=2 reason=reread-outside-section saved=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal ", note = "the prompt, answer hidden" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { shot = "c_prompt_instead_of_reread" },
+  { kill = true },
+  { expect_json = "books/c-reread-outside.epub.rsvp-state.json", pointer = "/active_checkpoint", equals = { id = "c0002", prompt_index = 1, resume = { chapter = 3, word = 0, mode = "page" } }, note = "the reread is gone, the prompt stays in progress" },
+  { expect_json = "books/c-reread-outside.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "correct" },
+
+  # d: another edition's file.
+  { start = true },
+  { wait_screen = "Browse Files" },
+  { press = "DOWN" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "ENTER" },
+  { wait_screen = "SD card | books" },
+  { press = "ENTER" },
+  { wait_screen = "a-unknown | .epub" },
+  { press = "DOWN" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "DOWN" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "DOWN" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "ENTER", note = "d-other-edition.epub" },
+  { wait_log = "\\[RSVP\\] state /books/d-other-edition.epub.rsvp-state.json: written for another edition; position dropped" },
+  { wait_log = "\\[CPT\\] restore dropped reason=other-edition grades=1 saved=1" },
+  { wait_log = "\\[RSVP\\] book state read mode=none " },
+  { wait_log = "Progress saved: spine=\\d+ offset=0 page=0", note = "the reader's own first page: nothing to restore" },
+  { quit = true },
+  { expect_schema = "books/d-other-edition.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_restore_damaged/cleaned.schema.json" },
+  { expect_json = "books/d-other-edition.epub.rsvp-state.json", pointer = "/book_sha256", equals = "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+  { expect_no_file = "books/*.rsvp-state.json.*", note = "no temporary or set-aside file" },
+  { compare = "a_unknown_after_break" },
+  { compare = "c_prompt_instead_of_reread" },
+]

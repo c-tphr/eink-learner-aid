@@ -9,8 +9,10 @@
 #include <CheckpointIndex.h>
 #include <CheckpointTrigger.h>
 #include <CheckpointTypes.h>
+#include <StateRestore.h>
 #include <WordIndexReader.h>
 
+#include <cstddef>
 #include <cstdint>
 
 namespace reading {
@@ -111,5 +113,51 @@ RereadPagePlace rereadPagePlace(const PageWords& page, uint16_t chapter, const P
 // RSVP's sentence step during a reread goes to `to` only when it stays inside the section: a step
 // across the section's start or end does not move (README.md, "Rereading").
 bool rereadStepStays(const checkpoint::SectionRange& range, uint32_t to);
+
+// --- Opening a book with a checkpoint in progress (task C5; README.md, "Opening a book").
+
+// checkpoint::BookLayout over the word indexes of every reader chapter, for checkpoint::planRestore().
+// `openChapter` gives an open word index of a chapter (built if needed), or null; one index may be open
+// at a time, so a reader it returned is used before the next call. `sectionSpine` gives the reader
+// chapter of a section of the index (its chapter_href through the spine), or -1.
+class BookIndexLayout final : public checkpoint::BookLayout {
+ public:
+  using OpenFn = wordindex::WordIndexReader* (*)(void* context, uint16_t chapter);
+  using SpineFn = int (*)(void* context, uint16_t section);
+  BookIndexLayout(const checkpoint::CheckpointIndex& index, uint16_t chapterCount, OpenFn openChapter,
+                  SpineFn sectionSpine, void* context)
+      : checkpoints(index), chapters(chapterCount), openFn(openChapter), spineFn(sectionSpine), fnContext(context) {}
+
+  uint16_t chapterCount() const override { return chapters; }
+  bool chapterWordCount(uint16_t chapter, uint32_t& count) override;
+  bool sectionRange(uint16_t section, checkpoint::SectionRange& out) override;
+
+ private:
+  const checkpoint::CheckpointIndex& checkpoints;
+  uint16_t chapters;
+  OpenFn openFn;
+  SpineFn spineFn;
+  void* fnContext;
+};
+
+// What the reader does with checkpoint::planRestore()'s plan for a state file that held a checkpoint in
+// progress (docs/PLAN.md section 7, "State file": an active reread, then an active prompt with its
+// answer hidden, then the plain reading position).
+struct OpenAction {
+  enum class Show : uint8_t {
+    Reading,  // ordinary reading (`jump`: at `at`; otherwise the reader's own progress)
+    Prompt,   // the prompt, answer hidden, before any page of the book is drawn
+    Reread,   // the reread at `at`, in its mode
+  };
+  Show show = Show::Reading;
+  checkpoint::Place at;
+  bool jump = false;       // page view opens on the page holding `at` (in RSVP: the page under it)
+  bool speedRead = false;  // RSVP opens once the first page is shown
+};
+OpenAction openActionFor(const checkpoint::RestorePlan& plan);
+
+const char* openViewName(checkpoint::OpenView view);
+// The names of the checkpoint::RestoreNote bits in `notes`, joined by '+' ("none" for 0), for the log.
+void restoreNoteNames(uint16_t notes, char* out, size_t size);
 
 }  // namespace reading

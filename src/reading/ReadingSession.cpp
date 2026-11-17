@@ -4,14 +4,19 @@
 
 #include <Epub.h>
 #include <HalStorage.h>
+#include <I18n.h>
 #include <Logging.h>
 #include <Memory.h>
+
+#include <cstdio>
 
 #include "CheckpointBook.h"
 #include "MappedInputManager.h"
 #include "RsvpPosition.h"
 #include "activities/Activity.h"
 #include "activities/RenderLock.h"
+#include "activities/rsvp/RsvpLaunch.h"
+#include "components/UITheme.h"
 #include "controls/ControlMap.h"
 
 namespace reading {
@@ -65,6 +70,7 @@ BookIdentity ReadingSession::identity() const {
 const std::string& ReadingSession::bookPath() const { return epub->getPath(); }
 
 void ReadingSession::setMode(const checkpoint::ReadingMode mode) {
+  if (mode == checkpoint::ReadingMode::Rsvp) pageUnderRsvp = false;
   if (mode == currentMode) return;
   currentMode = mode;
   LOG_DBG("CPT", "mode %s source=%s", modeName(mode), checkpoint::navSourceName(checkpoint::NavSource::ModeSwitch));
@@ -133,11 +139,11 @@ checkpoint::Step ReadingSession::rsvpStop(const int spine, const uint32_t lastSh
   return step;
 }
 
-bool ReadingSession::openPageIndex(const int spine) {
+bool ReadingSession::openPageIndex(const int spine, const ChapterWordIndex::BuildNotice notice, void* noticeContext) {
   if (!layout) return false;
   if (layout->pageIndex.isOpen() && layout->pageIndex.spineIndex() == spine) return true;
   layout->pageIndex.close();
-  return layout->pageIndex.open(*epub, spine);
+  return layout->pageIndex.open(*epub, spine, notice, noticeContext);
 }
 
 checkpoint::Step ReadingSession::nextPage(const readingsession::PageSpan& page, PageWords& words, uint32_t& from) {
@@ -354,6 +360,178 @@ std::unique_ptr<Activity> ReadingSession::promptAgain(GfxRenderer& renderer, Map
   return activity;
 }
 
+namespace {
+
+void restoreNotice(void* context) {
+  // A chapter's word index must be built before the restored screen can show (README.md, "Opening a
+  // book"): the notice RSVP shows for a long build.
+  auto* renderer = static_cast<GfxRenderer*>(context);
+  if (renderer != nullptr) GUI.drawPopup(*renderer, tr(STR_RSVP_PREPARING));
+}
+
+void placeText(const checkpoint::Place& place, char* out, const size_t size) {
+  snprintf(out, size, "%u:%lu:%s", place.position.chapter, static_cast<unsigned long>(place.position.word),
+           modeName(place.mode));
+}
+
+const char* showName(const OpenAction::Show show) {
+  switch (show) {
+    case OpenAction::Show::Reading:
+      return "reading";
+    case OpenAction::Show::Prompt:
+      return "prompt";
+    case OpenAction::Show::Reread:
+      return "reread";
+  }
+  return "?";
+}
+
+}  // namespace
+
+wordindex::WordIndexReader* ReadingSession::restoreChapter(void* context, const uint16_t chapter) {
+  auto* self = static_cast<ReadingSession*>(context);
+  if (!self->openPageIndex(chapter, &restoreNotice, self->restoreRenderer)) return nullptr;
+  return &self->layout->pageIndex.reader();
+}
+
+int ReadingSession::restoreSectionSpine(void* context, const uint16_t section) {
+  const auto* self = static_cast<const ReadingSession*>(context);
+  return self->book->sectionSpine(*self->epub, section);
+}
+
+readingsession::OpenRestore ReadingSession::restoreOnOpen(GfxRenderer& renderer) {
+  readingsession::OpenRestore open;
+  const std::string& path = epub->getPath();
+  // A book without a state file allocates nothing here.
+  if (!book || !bookStateExists(path)) return open;
+  // The checkpoint block (78 KB, nearly all of it the grade table; PSRAM on the Picco): the file is read
+  // straight into the state the flow drives, kept as the checkpoint in progress when one is restored
+  // and freed on return otherwise. No second state is allocated for the restore.
+  std::shared_ptr<checkpointentry::Progress> made(
+      makeUniqueNoThrow<checkpointentry::Progress>(book->index()).release());
+  if (!made) {
+    LOG_ERR("CPT", "OOM: restore (%u bytes): the book opens at the reader's own page",
+            static_cast<unsigned>(sizeof(checkpointentry::Progress)));
+    return open;
+  }
+  const StateLoad load = loadBookState(path, identity(), made->state);
+  const checkpoint::BookState& state = made->state;
+  if (load.shaMismatch) {
+    // Written for another edition: checkpoint::applyBookChangeRule() dropped the position and any
+    // checkpoint in progress as the file was read. The file says so before anything shows.
+    const bool ok = writeBookState(path, state);
+    LOG_INF("CPT", "restore dropped reason=other-edition grades=%u saved=%d", state.grades.count(), ok ? 1 : 0);
+  }
+  // The line rsvpentry::openedInRsvp() logs for a book without checkpoint data.
+  LOG_DBG("RSVP", "book state %s mode=%s ch=%u word=%lu", stateSourceName(load.source),
+          state.hasPosition ? modeName(state.position.mode) : "none", state.position.position.chapter,
+          static_cast<unsigned long>(state.position.position.word));
+  // Plain reading (no checkpoint in progress), or no layout to check positions with (out of memory: the
+  // file stays as it is): the mode the position was saved in, as for any book.
+  open.speedRead = state.hasPosition && state.position.mode == checkpoint::ReadingMode::Rsvp;
+  if (!state.hasActive) return open;
+  if (!layout) {
+    LOG_ERR("CPT", "restore skipped: no section layout");
+    return open;
+  }
+  restoreRenderer = &renderer;
+  open = restoreActive(std::move(made));
+  restoreRenderer = nullptr;
+  return open;
+}
+
+readingsession::OpenRestore ReadingSession::restoreActive(std::shared_ptr<checkpointentry::Progress> made) {
+  checkpoint::BookState& state = made->state;
+  const checkpoint::CheckpointIndex& index = book->index();
+  char savedId[checkpoint::ID_BUFFER_BYTES];
+  snprintf(savedId, sizeof(savedId), "%s", state.active.id);
+  const unsigned savedPrompt = state.active.promptIndex + 1u;
+
+  BookIndexLayout bookLayout(index, static_cast<uint16_t>(epub->getSpineItemsCount()), &ReadingSession::restoreChapter,
+                             &ReadingSession::restoreSectionSpine, this);
+  checkpoint::RestorePlan plan = checkpoint::planRestore(state, &index, bookLayout);
+  if (plan.view == checkpoint::OpenView::Reread || plan.view == checkpoint::OpenView::Prompt) {
+    const checkpoint::Transition t = made->flow.restore(plan);
+    if (!t.accepted) {
+      // planRestore() checked what restore() checks, so this does not happen; reading then goes on
+      // after the break rather than at a prompt the flow refused.
+      LOG_ERR("CPT", "restore refused: refusal=%u", static_cast<unsigned>(t.refusal));
+      const checkpoint::Place resume = state.active.resume;
+      state.hasActive = false;
+      state.active = checkpoint::ActiveCheckpoint{};
+      state.hasPosition = true;
+      state.position = resume;
+      plan.view = checkpoint::OpenView::Position;
+      plan.place = resume;
+      plan.notes = static_cast<uint16_t>(plan.notes | checkpoint::NOTE_UNKNOWN_CHECKPOINT);
+    }
+  }
+
+  char notes[160];
+  restoreNoteNames(plan.notes, notes, sizeof(notes));
+  char place[40];
+  placeText(plan.place, place, sizeof(place));
+  char resume[40] = "none";
+  // "<saved prompt>/<prompts>", or "<saved prompt>/-" when the checkpoint was dropped.
+  char prompt[16];
+  if (state.hasActive) {
+    placeText(state.active.resume, resume, sizeof(resume));
+    snprintf(prompt, sizeof(prompt), "%u/%u", savedPrompt, static_cast<unsigned>(index.promptCount(plan.checkpoint)));
+  } else {
+    snprintf(prompt, sizeof(prompt), "%u/-", savedPrompt);
+  }
+  LOG_DBG("CPT", "restore view=%s checkpoint=%s prompt=%s place=%s resume=%s notes=%s progress_bytes=%u",
+          openViewName(plan.view), savedId, prompt, place, resume, notes,
+          static_cast<unsigned>(sizeof(checkpointentry::Progress)));
+  if (plan.notes != 0) {
+    // What could not be restored is gone from the state: the file says so before anything shows.
+    const bool ok = writeBookState(epub->getPath(), state);
+    LOG_INF("CPT", "restore dropped checkpoint=%s prompt=%u reason=%s saved=%d", savedId, savedPrompt, notes,
+            ok ? 1 : 0);
+  }
+
+  const OpenAction action = openActionFor(plan);
+  if (action.show != OpenAction::Show::Reading) {
+    // The checkpoint in progress, kept as startCheckpoint() keeps it. Its run is rebuilt from the plan:
+    // the checkpoint, its section, the first word after its break and the mode it fired in. The views
+    // no longer show the page it fired on (`reread`).
+    auto run = std::make_shared<readingsession::CheckpointRun>();
+    run->request.fire.kind = checkpoint::StepKind::Fire;
+    run->request.fire.checkpoint = plan.checkpoint;
+    run->request.fire.section = plan.section;
+    run->request.fire.resume = state.active.resume.position;
+    run->request.fire.crossed = 1;
+    run->request.mode = state.active.resume.mode;
+    run->request.progress = made;
+    run->outcome = std::make_shared<checkpointentry::Outcome>();
+    run->outcome->checkpoint = plan.checkpoint;
+    run->outcome->promptIndex = state.active.promptIndex;
+    run->reread = true;
+    current = std::move(run);
+    progress = std::move(made);
+    // The prompt waits for whoever is on top: the reader shows it before any page of the book.
+    promptWaiting = action.show == OpenAction::Show::Prompt;
+  }
+  readingsession::OpenRestore open;
+  open.speedRead = action.speedRead;
+  if (action.jump) {
+    open.jump = true;
+    open.spine = action.at.position.chapter;
+    if (!wordOffset(action.at.position.chapter, action.at.position.word, open.offset)) open.offset = 0;
+    if (action.at.mode == checkpoint::ReadingMode::Page) {
+      setPageReading(action.at.position.chapter, action.at.position.word);
+    } else if (action.show == OpenAction::Show::Reread) {
+      setPageUnderRsvp();
+    }
+  }
+  LOG_DBG("CPT", "restore open show=%s speed_read=%d jump=%d ch=%d offset=%lu kept_bytes=%u", showName(action.show),
+          open.speedRead ? 1 : 0, open.jump ? 1 : 0, open.spine, static_cast<unsigned long>(open.offset),
+          current ? static_cast<unsigned>(sizeof(checkpointentry::Progress) + sizeof(readingsession::CheckpointRun) +
+                                          sizeof(checkpointentry::Outcome))
+                  : 0u);
+  return open;
+}
+
 void ReadingSession::setRsvpResume(const checkpoint::Place& resume, const uint16_t fromChapter) {
   rsvpResumeValid = true;
   rsvpResume = resume;
@@ -394,6 +572,15 @@ std::shared_ptr<reading::ReadingSession> open(const std::shared_ptr<Epub>& epub)
   return session;
 }
 
+OpenRestore restoreOnOpen(GfxRenderer& renderer, const Epub& epub, reading::ReadingSession* session) {
+  if (session == nullptr || !session->hasCheckpoints()) {
+    OpenRestore open;
+    open.speedRead = rsvpentry::openedInRsvp(epub, session);
+    return open;
+  }
+  return session->restoreOnOpen(renderer);
+}
+
 bool wantsNextPageOffset(const reading::ReadingSession& session, const int spine) { return session.mayFireIn(spine); }
 
 std::unique_ptr<Activity> nextPageCheckpoint(GfxRenderer& renderer, MappedInputManager& input,
@@ -426,12 +613,14 @@ PageResume afterPageCheckpoint(reading::ReadingSession& session, const Checkpoin
     // Task C4: the reread starts at the section's first word, in the mode chosen.
     const checkpoint::Place start = session.startReread(run);
     next.spine = start.position.chapter;
-    if (start.mode == checkpoint::ReadingMode::Rsvp) {
-      next.go = PageResume::Go::SpeedRead;  // RSVP opens at the reread place (ReadingSession::rsvpStart())
-    } else {
-      next.go = PageResume::Go::Offset;
-      if (!session.wordOffset(start.position.chapter, start.position.word, next.offset)) next.offset = 0;
+    // RSVP opens at the reread place (ReadingSession::rsvpStart()); `offset` is then the page under it,
+    // drawn first when no page of the book was shown yet (a prompt restored on opening, task C5).
+    next.go = start.mode == checkpoint::ReadingMode::Rsvp ? PageResume::Go::SpeedRead : PageResume::Go::Offset;
+    if (!session.wordOffset(start.position.chapter, start.position.word, next.offset)) next.offset = 0;
+    if (start.mode == checkpoint::ReadingMode::Page) {
       session.setPageReading(start.position.chapter, start.position.word);
+    } else {
+      session.setPageUnderRsvp();
     }
     LOG_DBG("CPT", "page resume reread-%s ch=%u word=%lu offset=%lu",
             start.mode == checkpoint::ReadingMode::Rsvp ? "rsvp" : "page", start.position.chapter,
@@ -445,6 +634,7 @@ PageResume afterPageCheckpoint(reading::ReadingSession& session, const Checkpoin
     // It fired in RSVP and ended here after a reread in page view: RSVP opens after the break, waiting.
     session.setRsvpResume(place, run.request.fire.section.chapter);
     next.go = PageResume::Go::SpeedRead;
+    if (!session.wordOffset(at.chapter, at.word, next.offset)) next.offset = 0;  // the page under RSVP
     LOG_DBG("CPT", "page resume rsvp ch=%u word=%lu", at.chapter, static_cast<unsigned long>(at.word));
     return next;
   }
@@ -505,10 +695,16 @@ void drawBar(GfxRenderer& renderer, reading::ReadingSession& session, const Page
 
 }  // namespace
 
-void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const PageSpan& page) {
+void pageShowing(reading::ReadingSession& session, const PageSpan& page) {
   // Every page shown takes the source of the move that showed it, so none is left for a later page.
   const checkpoint::NavSource source = session.takePageSource();
+  session.setRereadBarDue(false);
+  const bool underRsvp = session.takePageUnderRsvp();
   if (!session.rereading()) return;
+  if (underRsvp) {
+    LOG_DBG("CPT", "reread page ch=%d under rsvp: not the reread place", page.spine);
+    return;
+  }
   const checkpoint::SectionRange& range = session.rereadRange();
   reading::PageWords words;
   reading::RereadPagePlace place;
@@ -516,7 +712,7 @@ void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const Pa
     if (!session.pageWordsOf(page, words)) {
       // No word index for the section's own chapter: the reread stays where it was.
       LOG_ERR("CPT", "reread page ch=%d: no word index, the reread place stays", page.spine);
-      drawBar(renderer, session, page);
+      session.setRereadBarDue(true);
       return;
     }
     place = reading::rereadPagePlace(words, range.chapter, session.pageReadingWord(), range);
@@ -528,8 +724,13 @@ void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const Pa
   LOG_DBG("CPT", "reread page ch=%d first=%lu last=%lu any=%d inside=%d word=%lu", page.spine,
           static_cast<unsigned long>(words.first), static_cast<unsigned long>(words.last), words.any ? 1 : 0,
           place.inside ? 1 : 0, static_cast<unsigned long>(place.word));
-  if (session.rereadMoved(to, source, "page") != reading::ReadingSession::RereadMove::Stays) return;
-  drawBar(renderer, session, page);
+  // Saved here, before the page shows (task C5). A page that left the section shows briefly, then the
+  // prompt.
+  session.setRereadBarDue(session.rereadMoved(to, source, "page") == reading::ReadingSession::RereadMove::Stays);
+}
+
+void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const PageSpan& page) {
+  if (session.rereadBarWanted()) drawBar(renderer, session, page);
 }
 
 bool promptDue(const reading::ReadingSession& session) { return session.promptDue(); }

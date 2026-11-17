@@ -67,11 +67,27 @@ enum class PageMove : uint8_t { NextPage, PreviousPage, ChapterSkip };
 // What the reader does after the list a side-key hold opens during a page-view reread.
 enum class RereadChoice : uint8_t { KeepReading, BackToQuestion, SpeedRead };
 
+// Where the reader opens a book (task C5; README.md, "Opening a book"). A restored prompt is not here:
+// it waits in the session (promptDue()) and the reader shows it before any page.
+struct OpenRestore {
+  bool speedRead = false;  // open RSVP once the first page is shown (it takes its place from the session)
+  bool jump = false;       // page view opens on the page holding `offset` of `spine`, not at its progress
+  int spine = 0;
+  uint32_t offset = 0;
+};
+
 #if CROSSPOINT_RSVP_ENABLED
 
 // The session for a loaded book: its checkpoint data when it is a prepared book (logged). nullptr only
 // when out of memory; reading then goes on without checkpoints.
 std::shared_ptr<reading::ReadingSession> open(const std::shared_ptr<Epub>& epub);
+
+// The book opens (main task, from loadBook(), after open()). Reads the state file, when there is one,
+// and restores in docs/PLAN.md's order: a reread in progress (its mode, its place), else the prompt in
+// progress with its answer hidden (promptDue() is then true), else the plain reading position. Without
+// a session or checkpoint data this is the saved mode only (rsvpentry::openedInRsvp()). May build a
+// chapter's word index, with "Preparing..." on screen.
+OpenRestore restoreOnOpen(GfxRenderer& renderer, const Epub& epub, reading::ReadingSession* session);
 
 // Whether a next-page action in chapter `spine` may need the next page's start offset (a prepared
 // book's chapter with a checkpoint): the reader then lays it out before asking nextPageCheckpoint().
@@ -95,9 +111,12 @@ void notePageMove(reading::ReadingSession& session, PageMove move);
 
 // --- Rereading in page view (task C4; S4 row 31). Call with the RenderLock held unless noted.
 
-// The reader drew `page` (render task): during a reread the session records the page as the reread
-// place, or, when the page holds no word of the section, goes back to the prompt (promptDue()); while
-// the reread goes on, the bar is drawn over the page and shown with a fast refresh.
+// The reader is about to draw `page` (render task): during a reread the session records the page as the
+// reread place, saved before the page shows (task C5), or, when the page holds no word of the section,
+// goes back to the prompt (promptDue()).
+void pageShowing(reading::ReadingSession& session, const PageSpan& page);
+// The reader drew `page`: while the reread goes on, the bar is drawn over the page and shown with a
+// fast refresh.
 void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const PageSpan& page);
 
 // Any task, no lock: a prompt waits to be shown again (rereadPrompt()).
@@ -133,6 +152,7 @@ std::shared_ptr<CheckpointRun> checkpointRun(const reading::ReadingSession& sess
 namespace readingsession {
 
 inline std::shared_ptr<reading::ReadingSession> open(const std::shared_ptr<Epub>&) { return nullptr; }
+inline OpenRestore restoreOnOpen(GfxRenderer&, const Epub&, reading::ReadingSession*) { return {}; }
 inline bool wantsNextPageOffset(const reading::ReadingSession&, int) { return false; }
 inline std::unique_ptr<Activity> nextPageCheckpoint(GfxRenderer&, MappedInputManager&, reading::ReadingSession&,
                                                     const PageSpan&, std::shared_ptr<CheckpointRun>&) {
@@ -140,6 +160,7 @@ inline std::unique_ptr<Activity> nextPageCheckpoint(GfxRenderer&, MappedInputMan
 }
 inline PageResume afterPageCheckpoint(reading::ReadingSession&, const CheckpointRun&) { return {}; }
 inline void notePageMove(reading::ReadingSession&, PageMove) {}
+inline void pageShowing(reading::ReadingSession&, const PageSpan&) {}
 inline void pageShown(GfxRenderer&, reading::ReadingSession&, const PageSpan&) {}
 inline std::unique_ptr<Activity> rereadPrompt(GfxRenderer&, MappedInputManager&, reading::ReadingSession&,
                                               std::shared_ptr<CheckpointRun>&) {
@@ -205,6 +226,9 @@ class ReadingSession {
   // What the state file is read and written with (BookStateFile.h).
   BookIdentity identity() const;
   const std::string& bookPath() const;
+
+  // The book opened (readingsession::restoreOnOpen()) with checkpoint data.
+  readingsession::OpenRestore restoreOnOpen(GfxRenderer& renderer);
 
   checkpoint::ReadingMode mode() const { return currentMode; }
   // RSVP opened (Rsvp) or returned to page view (Page).
@@ -286,6 +310,18 @@ class ReadingSession {
   void notePageSource(checkpoint::NavSource source) { pageSource = source; }
   // The reread bar's button as last drawn (RenderLock), for a tap on it; none before the first draw.
   void setRereadButton(const controls::Zone& button) { rereadButton = button; }
+  // pageShowing() kept the reread on: pageShown() draws its bar.
+  void setRereadBarDue(bool due) { rereadBarDue = due; }
+  // The next page the reader draws only lies under RSVP, which opens over it at the reread place
+  // (task C5: a reread in RSVP restored, or started, before the reader showed a page): it is not the
+  // reread's place. Cleared by that page or by RSVP opening (setMode()).
+  void setPageUnderRsvp() { pageUnderRsvp = true; }
+  bool takePageUnderRsvp() {
+    const bool under = pageUnderRsvp;
+    pageUnderRsvp = false;
+    return under;
+  }
+  bool rereadBarWanted() const { return rereadBarDue && rereading(); }
   const controls::Zone& rereadButtonZone() const { return rereadButton; }
   checkpoint::NavSource takePageSource();
   // The visible offset of a word's start (the page holding it), and a chapter's word count.
@@ -304,7 +340,12 @@ class ReadingSession {
     ChapterWordIndex pageIndex;
   };
 
-  bool openPageIndex(int spine);
+  bool openPageIndex(int spine, ChapterWordIndex::BuildNotice notice = nullptr, void* noticeContext = nullptr);
+  // checkpoint::planRestore() for a state with a checkpoint in progress, and what the reader does.
+  readingsession::OpenRestore restoreActive(std::shared_ptr<checkpointentry::Progress> made);
+  // BookIndexLayout's callbacks (`context`: the session; RestoreNotice for "Preparing...").
+  static wordindex::WordIndexReader* restoreChapter(void* context, uint16_t chapter);
+  static int restoreSectionSpine(void* context, uint16_t section);
   int hrefChapterOf(int spine) const;
   // The loaded chapter has a section with a checkpoint (layout must exist).
   bool hasCheckpointSection() const;
@@ -329,6 +370,10 @@ class ReadingSession {
   checkpoint::Place rsvpResume;
   uint16_t rsvpResumeFrom = 0;
   controls::Zone rereadButton{controls::Item::BackToQuestion, 0, 0, 0, 0, false};
+  bool rereadBarDue = false;
+  bool pageUnderRsvp = false;
+  // While restoreOnOpen() runs: the renderer for "Preparing..." when a word index must be built.
+  GfxRenderer* restoreRenderer = nullptr;
 };
 
 }  // namespace reading
