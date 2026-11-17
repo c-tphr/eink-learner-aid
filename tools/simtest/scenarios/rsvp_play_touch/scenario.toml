@@ -1,0 +1,37 @@
+description = "draft"
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+]
+steps = [
+  { wait_screen = "Browse Files" },
+  { tap = [240, 346] },
+  { wait_screen = "SD card | books" },
+  { tap = [240, 138] },
+  { wait_screen = "fixture | .epub" },
+  { tap = [240, 138] },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 400] },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { shot = "toolbar" },
+  { tap = [385, 752] },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { shot = "more" },
+  { tap = [240, 388] },
+  { wait_log = "pause screen focus=Play refresh=clear" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { shot = "pause_entry" },
+  { tap = [240, 340] },
+  { wait_log = "frame ch=1 first=5 " },
+  { shot = "frame" },
+  { tap = [240, 600] },
+  { wait_log = "pause reason" },
+  { wait_log = "pause screen focus=Play refresh=clear" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { shot = "pause_after" },
+  { tap = [396, 84] },
+  { wait_log = "Progress saved: spine=1" },
+  { shot = "page" },
+]

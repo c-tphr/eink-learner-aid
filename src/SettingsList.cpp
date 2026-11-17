@@ -3,6 +3,8 @@
 #include <array>
 #include <utility>
 
+#include "RsvpFeature.h"
+
 void forEachBaseSetting(SettingVisitor visit, void* context) {
   // Load and save walk this list, so every condition here must be fixed before
   // settings load. Runtime probes belong in isHiddenOnDevice().
@@ -179,10 +181,14 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
                              "frontButtonFollowOrientation", StrId::STR_CAT_CONTROLS));
   emit(SettingInfo::Toggle(StrId::STR_SIDE_BTN_FOLLOW_ORIENTATION, &CrossPointSettings::sideButtonFollowOrientation,
                            "sideButtonFollowOrientation", StrId::STR_CAT_CONTROLS));
-  emit(SettingInfo::Enum(StrId::STR_LONG_PRESS_BEHAVIOR, &CrossPointSettings::longPressButtonBehavior,
-                         {StrId::STR_LONG_PRESS_BEHAVIOR_OFF, StrId::STR_LONG_PRESS_BEHAVIOR_SKIP,
-                          StrId::STR_LONG_PRESS_BEHAVIOR_ORIENTATION},
-                         "longPressButtonBehavior", StrId::STR_CAT_CONTROLS));
+  {
+    std::vector<StrId> longPressValues = {StrId::STR_LONG_PRESS_BEHAVIOR_OFF, StrId::STR_LONG_PRESS_BEHAVIOR_SKIP,
+                                          StrId::STR_LONG_PRESS_BEHAVIOR_ORIENTATION};
+    // RSVP builds: CrossPointSettings::SPEED_READ.
+    if (RSVP_FEATURE_ENABLED) longPressValues.push_back(StrId::STR_LONG_PRESS_BEHAVIOR_SPEED_READ);
+    emit(SettingInfo::Enum(StrId::STR_LONG_PRESS_BEHAVIOR, &CrossPointSettings::longPressButtonBehavior,
+                           std::move(longPressValues), "longPressButtonBehavior", StrId::STR_CAT_CONTROLS));
+  }
   emit(buildLongPressMenuSetting());
   // Double-click power frontlight shortcut only exists on the X4 Pro.
   if (BoardConfig::isX4Pro()) emit(buildDoublePowerButtonSetting());

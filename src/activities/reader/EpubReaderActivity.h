@@ -179,6 +179,8 @@ class EpubReaderActivity final : public ReaderActivity {
   ChapterPosition chapterPosition() const;
   int bookPercentFor(const ChapterPosition& position) const;
   void openReaderMenu();
+  // RSVP builds: push speed reading at the page on screen (src/activities/rsvp/RsvpLaunch.h).
+  void openSpeedRead();
   // Toolbar reader menu (see Overlay above).
   bool usesToolbarMenu() const;
   void openOverlay(Overlay target);

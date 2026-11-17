@@ -52,6 +52,7 @@
 #include "SdCardFontSystem.h"
 #include "SilentRestart.h"
 #include "activities/network/WifiSelectionActivity.h"
+#include "activities/rsvp/RsvpLaunch.h"
 #include "activities/settings/TextSettingsActivity.h"
 #include "clippings/ClippingText.h"
 #include "clippings/ClippingsManager.h"
@@ -1090,6 +1091,11 @@ void EpubReaderActivity::loop() {
     return;
   }
 
+  if (longPress && SETTINGS.longPressButtonBehavior == SETTINGS.SPEED_READ) {
+    openSpeedRead();
+    return;
+  }
+
   if (longPress && SETTINGS.longPressButtonBehavior == SETTINGS.ORIENTATION_CHANGE) {
     const uint8_t newOrientation =
         nextTriggered ? (SETTINGS.orientation - 1 + SETTINGS.ORIENTATION_COUNT) % SETTINGS.ORIENTATION_COUNT
@@ -1376,7 +1382,40 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       addBookmark();
       break;
     }
+    case EpubReaderMenuActivity::MenuAction::SPEED_READ: {
+      openSpeedRead();
+      break;
+    }
   }
+}
+
+void EpubReaderActivity::openSpeedRead() {
+  if (!RSVP_FEATURE_ENABLED || !epub || !section || isAtEndOfBook()) return;
+  const uint32_t pageStart = currentPageVisibleOffset.value_or(0);
+  auto handOff = std::make_shared<rsvpentry::HandOff>();
+  auto activity = rsvpentry::create(renderer, mappedInput, epub, currentSpineIndex, pageStart, handOff);
+  if (!activity) return;
+  pendingManualTurn = 0;
+  automaticPageTurnActive = false;
+  startActivityForResult(std::move(activity), [this, handOff](const ActivityResult&) {
+    using Then = rsvpentry::HandOff::Then;
+    if (handOff->then == Then::None) return;
+    if (handOff->then == Then::ExitBook) {
+      const auto page = section && currentSpineIndex == handOff->spineIndex
+                            ? section->getPageForVisibleTextOffset(handOff->visibleTextOffset)
+                            : std::nullopt;
+      EpubReaderUtils::saveProgress(*epub, handOff->spineIndex, page.value_or(0),
+                                    page ? section->estimatedTotalPages() : 0, handOff->visibleTextOffset);
+      onGoHome();
+      return;
+    }
+    ProgressChangeResult position;
+    position.spineIndex = handOff->spineIndex;
+    position.hasVisibleTextOffset = true;
+    position.visibleTextOffset = handOff->visibleTextOffset;
+    applyProgressChange(position);
+    if (handOff->then == Then::ReaderMenu) openReaderMenu();
+  });
 }
 
 unsigned long EpubReaderActivity::confirmLongPressThreshold() const {
