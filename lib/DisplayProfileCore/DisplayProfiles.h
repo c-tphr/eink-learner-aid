@@ -75,10 +75,24 @@ const char* panelName(PanelId panel);
 // The panel for BoardConfig::ACTIVE.displayControllerVariant (0..4); anything else is UNKNOWN.
 PanelId panelFromVariant(uint8_t variant);
 
-// The default allow rule, used by backends that do not override DisplayBackend::allows().
-// Stock is always allowed. The simulator allows every profile, so their modelled timings can be
-// tried there. On a real panel the trials stay disallowed until task D2 supplies the rule of
-// S2, section 9 (A to C on panels 1 to 3, D on 1 to 4, never while the screen is inverted).
-bool defaultProfileAllowed(ProfileId id, PanelId panel);
+// True for TRIAL_A..TRIAL_D: the experimental profiles that drive the panel with a waveform other
+// than the stock reading one, under the safety rules of plan section 6.
+constexpr bool isTrial(const ProfileId id) {
+  return id == ProfileId::TRIAL_A || id == ProfileId::TRIAL_B || id == ProfileId::TRIAL_C || id == ProfileId::TRIAL_D;
+}
+
+// The allow rule (plan section 6, "Safety limits"; S2 sections 6, 7 and 9). Every input is explicit:
+//
+//   STOCK           always
+//   TRIAL_A..C      unlocked, screen not inverted, and the panel is YRD0426, DEPG0397 or OPM040B3
+//                   (the three SSD1677 panels the tables were derived for)
+//   TRIAL_D         unlocked, screen not inverted, and the panel is recognised (YRD0426, DEPG0397,
+//                   OPM040B3 or SE0400NQW47: it runs only that panel's stock UI waveform)
+//   anything else   refused: an unrecognised panel, an id outside the table
+//
+// SIMULATED (the desktop simulator, no glass) counts as a panel every trial may run on, so the
+// simulator exercises the same unlock and inversion rules and the same exposure limits.
+// `unlocked` is whether the owner has unlocked this trial (TrialUnlock.h); ignored for STOCK.
+bool profileAllowed(ProfileId id, PanelId panel, bool inverted, bool unlocked);
 
 }  // namespace displayprofile

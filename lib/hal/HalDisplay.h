@@ -18,6 +18,9 @@ class HalDisplay {
   const char* controllerName() const { return einkDisplay.getControllerName(); }
   // True while book pages are presented; panels with a reading waveform use it.
   void setReaderRefresh(bool reading) { einkDisplay.setReaderRefresh(reading); }
+  // A 110-byte SSD1677 table for the next fast refreshes; false releases it. Drivers without custom
+  // tables ignore it (PanelDriver::setCustomLut). Only the RSVP trial profiles call it.
+  void setCustomLut(bool enabled, const unsigned char* lut = nullptr) { einkDisplay.setCustomLUT(enabled, lut); }
   bool displayRetainedGrayscaleOverlay(uint16_t x, uint16_t y, uint16_t w, uint16_t h, bool restore) {
     return einkDisplay.displayRetainedGrayscaleOverlay(x, y, w, h, restore);
   }

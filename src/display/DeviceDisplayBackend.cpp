@@ -28,6 +28,22 @@ void Parts::HalRefreshPort::refresh(const RefreshKind kind) {
   display.setReaderRefresh(false);
 }
 
+void Parts::HalRefreshPort::refreshUi() {
+  // Outside the reader scope the SDK picks its UI waveform (Ssd2677Driver.cpp:196-221).
+  display.setReaderRefresh(false);
+  renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+  display.waitRefreshComplete();
+}
+
+// FreeInkDisplay::setCustomLUT -> Ssd1677Driver::setCustomLut: true writes the 105 LUT bytes and
+// the voltages and sets _customLutActive, so the next FAST runs CTRL2 0xCC with this table
+// (Ssd1677Driver.cpp:1245-1271, :703-712); false only clears the flag (:1246-1249).
+void Parts::HalRefreshPort::loadTable(const uint8_t* table) { display.setCustomLut(true, table); }
+
+void Parts::HalRefreshPort::releaseTable() { display.setCustomLut(false); }
+
+bool Parts::HalRefreshPort::inverted() const { return display.isInverted(); }
+
 }  // namespace device_detail
 
 DeviceDisplayBackend::DeviceDisplayBackend(GfxRenderer& renderer)
@@ -43,8 +59,8 @@ DeviceDisplayBackend::DeviceDisplayBackend(GfxRenderer& renderer)
           record.updateWaveform, record.clearWaveform);
 }
 
-uint32_t DeviceDisplayBackend::presentUpdate() {
-  const uint32_t ms = TimedBackend::presentUpdate();
+uint32_t DeviceDisplayBackend::presentUpdate(const ProfileId waveform) {
+  const uint32_t ms = TimedBackend::presentUpdate(waveform);
   logCall();
   return ms;
 }
@@ -62,6 +78,10 @@ void DeviceDisplayBackend::logCall() {
     LOG_DBG("DSP", "%s waited %lu ms for a refresh started elsewhere", kind, static_cast<unsigned long>(call.waitedMs));
   }
   logRefresh(*this, call.kind, call.ms);
+  if (call.waveform.path != WordPath::STOCK) {
+    LOG_DBG("DSP", "update waveform=\"%s\" predicted=%u", call.waveform.name,
+            static_cast<unsigned>(call.waveform.predictedMs));
+  }
   if (call.timedOut) {
     LOG_ERR("DSP", "%s timed out: ms=%lu limit=%lu panel=%s; the panel's BUSY line did not report the end", kind,
             static_cast<unsigned long>(call.ms), static_cast<unsigned long>(timeoutMs(call.kind)), panelName(panel()));

@@ -15,6 +15,7 @@
 
 #include "DisplayBackend.h"
 #include "DisplayTiming.h"
+#include "TrialWaveforms.h"
 
 namespace displayprofile {
 
@@ -29,17 +30,27 @@ inline constexpr uint32_t timeoutMs(const RefreshKind kind) {
   return kind == RefreshKind::UPDATE ? UPDATE_TIMEOUT_MS : CLEAR_TIMEOUT_MS;
 }
 
-// The two hardware operations the device backend needs. Both block; neither draws.
+// The hardware operations the device backend needs. None draws; the refreshes block.
 class RefreshPort {
  public:
   virtual ~RefreshPort() = default;
   // Returns once no refresh started earlier (an asynchronous one elsewhere in the firmware) is
   // still running. Device: HalDisplay::waitRefreshComplete(), a no-op when none is pending.
   virtual void finishPending() = 0;
-  // Sends the frame buffer and runs one refresh of `kind` with the stock waveform; returns once
-  // the driver's wait for BUSY has ended. Device: a FAST (UPDATE) or HALF (CLEAR) refresh with the
-  // panel's reading waveform.
+  // Sends the frame buffer and runs one refresh of `kind`; returns once the driver's wait for BUSY
+  // has ended. Device: a FAST (UPDATE) or HALF (CLEAR) refresh with the reader flag on, as for
+  // book pages: with no table loaded, the panel's stock reading waveform (task D1); with a table
+  // loaded, a FAST runs that table instead (the driver's custom-LUT path).
   virtual void refresh(RefreshKind kind) = 0;
+  // A FAST refresh with the reader flag off: the SDK's own UI waveform (Trial D on SE0400NQW47).
+  virtual void refreshUi() = 0;
+  // Loads a 110-byte SSD1677 table for the next FAST refresh (device: HalDisplay::setCustomLut(true,
+  // table)), and releases it (setCustomLut(false): a flag in the driver, no bus traffic). The
+  // backend releases after every table refresh, whatever happened during it, and before every clear.
+  virtual void loadTable(const uint8_t* table) = 0;
+  virtual void releaseTable() = 0;
+  // Whether the screen is inverted now (device: HalDisplay::isInverted()).
+  virtual bool inverted() const = 0;
 };
 
 // What one timed call did, for the log line and for tests.
@@ -48,6 +59,7 @@ struct TimedCall {
   uint32_t ms = 0;        // transfer start to BUSY end: what update()/clear() returned
   uint32_t waitedMs = 0;  // spent before the clock started, finishing a refresh started elsewhere
   bool timedOut = false;  // ms >= timeoutMs(kind)
+  WordWaveform waveform;  // what an UPDATE ran (CLEAR: the default, stock)
 };
 
 class TimedBackend : public DisplayBackend {
@@ -59,11 +71,12 @@ class TimedBackend : public DisplayBackend {
   const TimedCall& lastCall() const { return last; }
 
  protected:
-  uint32_t presentUpdate() override { return run(RefreshKind::UPDATE); }
-  uint32_t presentClear() override { return run(RefreshKind::CLEAR); }
+  bool inverted() const override { return port.inverted(); }
+  uint32_t presentUpdate(const ProfileId waveform) override { return run(RefreshKind::UPDATE, waveform); }
+  uint32_t presentClear() override { return run(RefreshKind::CLEAR, ProfileId::STOCK); }
 
  private:
-  uint32_t run(RefreshKind kind);
+  uint32_t run(RefreshKind kind, ProfileId waveform);
 
   RefreshPort& port;
   rsvp::Clock& clock;

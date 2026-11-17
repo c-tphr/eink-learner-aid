@@ -9,14 +9,17 @@ Host-tested in `test/display_profile`.
 
 | File | What it holds |
 | --- | --- |
-| `DisplayProfiles.h/.cpp` | `ProfileId`, `ProfileInfo`, `PROFILES` (ids, names, clearing limits, simulator defaults), `findProfile`, `PanelId`, `panelName`, `panelFromVariant`, `defaultProfileAllowed` |
-| `DisplayBackend.h/.cpp` | `DisplayBackend` (the interface and its calling contract), `Presenter`, `Sleeper`, `ModelledCall`, `ModelledBackend` |
+| `DisplayProfiles.h/.cpp` | `ProfileId`, `ProfileInfo`, `PROFILES` (ids, names, clearing limits, simulator defaults), `findProfile`, `PanelId`, `panelName`, `panelFromVariant`, `isTrial`, `profileAllowed` (the allow rule) |
+| `DisplayBackend.h/.cpp` | `DisplayBackend` (the interface and its calling contract), `UpdateKind`, `Presenter`, `Sleeper`, `ModelledCall`, `ModelledBackend` |
+| `TrialUnlock.h/.cpp` | `TrialMask`, `trialBit`, `TrialSetting` and its one-byte encoding (`encodeTrialSetting`, `decodeTrialSetting`), `resolveProfile` (task D2) |
+| `TrialWaveforms.h/.cpp` | The trial tables `LUT_TRIAL_{A,B,C,D}_{DEPG0397,YRD0426_OPM040B3}` (110-byte flash constants, with their origin and licence), `WordPath`, `WordWaveform`, `wordWaveform` (task D2) |
+| `TrialExposure.h/.cpp` | The exposure limits every backend enforces: `RefreshRequest`, `RefreshAction`, `Promotion`, `RefreshDecision`, `TrialExposure` (task D2) |
 | `DisplayStats.h/.cpp` | `RefreshStats` (count, min, max, mean, last, timeouts, and median and percentiles over the last 128 calls), `DisplayStats` (updates, clears) |
-| `TimedBackend.h/.cpp` | The device backend's logic (task D1): `RefreshPort` (the two hardware calls), `TimedBackend` (timing window, timeouts), `UPDATE_TIMEOUT_MS`, `CLEAR_TIMEOUT_MS`, `TimedCall` |
+| `TimedBackend.h/.cpp` | The device backend's logic (tasks D1, D2): `RefreshPort` (the hardware calls), `TimedBackend` (timing window, timeouts, which table to load and its release), `UPDATE_TIMEOUT_MS`, `CLEAR_TIMEOUT_MS`, `TimedCall` |
 | `PanelRecords.h/.cpp` | `Controller`, `PanelRecord`, `PANEL_RECORDS` (one per panel: controller, recognised, async split, predicted times, waveforms), `panelRecord`, `resolvePanel` |
 | `DisplayTiming.h/.cpp` | The timing model: `TimingModel`, `TimingFile`, `TimingOverrides`, `parseOverrideMs`, `checkTimingFile`, `remainderToSleepMs` |
 | `ProfileDisplaySink.h/.cpp` | `ProfileDisplaySink` (an `rsvp::DisplaySink` over a backend) and `FramePainter` |
-| `FakeDisplayBackend.h` | Host tests only: `FakeClock`, `FakeDisplayBackend` (the modelled backend with a fake presenter and sleeper, and an event log), `FakeRefreshPort` (the device backend's hardware calls, with a transfer time, a BUSY time and a pending refresh) |
+| `FakeDisplayBackend.h` | Host tests only: `FakeClock`, `FakeDisplayBackend` (the modelled backend with a fake presenter and sleeper, a settable inversion, and an event log with each call's decision), `FakeRefreshPort` (the device backend's hardware calls, with a transfer time, a BUSY time, a pending refresh, an inversion flag and a log of table loads and releases) |
 
 Everything is in namespace `displayprofile`. It depends on `lib/RsvpCore` headers only
 (`ClearingLimits`, `Clock`, `DisplaySink`, `Frame`). Like RsvpCore it has no Arduino, HAL, SDK,
@@ -39,22 +42,26 @@ both be tested on the host.
 | `trial-d` | Trial D | yes | 30 / 60 | 198 / 1,960 ms |
 
 - The ids are stable strings for settings and results files. `findProfile()` matches them exactly.
-- Clearing limits are those of S2, section 8. RSVP passes them to `Scheduler::setClearingLimits()`;
-  the scheduler itself knows nothing of profiles.
+- Clearing limits are those of S2, section 8 (plan section 6: "Trial profiles may use lower
+  limits"). RSVP passes them to `Scheduler::setClearingLimits()`; the scheduler itself knows nothing
+  of profiles. Since D2 every backend also enforces each trial's hard limit itself ("Trial
+  profiles" below).
 - Simulator defaults: stock uses the Xteink X4 figures of plan section 9 (540 and 1,960 ms). Trials
   use S2's predicted waveform time on the DEPG0397 panel (300, 220, 160 and 160 ms) plus
   `FRAME_TRANSFER_MS` (38 ms, the at least 38.4 ms needed to send the full frame), and clear like
   stock: the clearing refresh is the same HALF refresh with any trial table released.
 
-## Panel identity and the allow hook
+## Panel identity and the allow rule
 
 `PanelId` copies the SDK's private `PiccoPanel` values 0..4 (`UNKNOWN`, `YRD0426`, `DEPG0397`,
 `OPM040B3`, `SE0400NQW47`) and adds `SIMULATED` (100). It is not called `SIMULATOR` because the
 simulator build defines that macro. `panelName()` gives `unknown`, `YRD0426`, ..., `simulator`.
 
-`DisplayBackend::allows(id)` is virtual. Its default, `defaultProfileAllowed()`, always allows
-stock, allows every profile in the simulator (no glass to protect, so the trial timings can be
-tried there), and allows no trial on a real panel. D2 overrides it on the device with S2's rule.
+`DisplayBackend::allows(id)` applies `profileAllowed(id, panel, inverted, unlocked)` with the
+backend's panel, the screen's inversion now (`RefreshPort::inverted()` on the device,
+`Presenter::inverted()` in the simulator: both `HalDisplay::isInverted()`) and the unlocked trials
+(`setUnlockedTrials()`). It is not virtual: no backend can loosen it. The rule and its full truth
+table are in "Trial profiles" below.
 
 ## The backend
 
@@ -64,11 +71,13 @@ tried there), and allows no trial on a real panel. D2 overrides it on the device
 | --- | --- |
 | `panel()` | The panel the driver found |
 | `allows(id)` | Whether a profile may be used now (see above) |
-| `select(id)` | Makes it the profile of later calls; false (and no change) if not allowed. Refreshes nothing |
+| `setUnlockedTrials(mask)`, `unlockedTrials()` | The trials the owner has unlocked (initially none); locking the selected one falls back to Stock |
+| `select(id)` | Makes it the profile of later word updates; when not allowed, selects Stock and returns false (never keeps a previous trial). Refreshes nothing |
 | `profile()`, `info()` | The selected profile and its table entry |
-| `update()` | Presents the frame buffer as one word update; blocks until finished; returns ms |
+| `update(kind)` | Presents the frame buffer; blocks until finished; returns ms. `UpdateKind::WORD` (a word frame during playback) may run the selected trial; `UpdateKind::SCREEN`, the default, never does. The exposure rules may run it as a clearing refresh instead |
 | `clear()` | One clearing refresh; blocks until finished; returns ms |
-| `stats()`, `resetStats()` | Count, min, max, mean, last, median, percentiles and timeouts of updates and of clears |
+| `stats()`, `resetStats()` | Count, min, max, mean, last, median, percentiles and timeouts of updates and of clears (an update run as a clearing refresh counts as a clear) |
+| `exposure()`, `lastDecision()` | The trial run's state (`trialRun()`, `residuePending()`, `promotions()`) and what the last call ran and why |
 
 The calling contract (who draws, who refreshes, which task, blocking) is at the top of
 `DisplayBackend.h` and repeated in `src/display/DisplayProfile.h`. In short: the caller draws the
@@ -76,14 +85,110 @@ frame into the renderer's frame buffer, the backend alone refreshes, both on the
 RenderLock (for RSVP, the render task inside `Scheduler::step()`), and both calls block until the
 refresh has finished.
 
-`update()` and `clear()` are non-virtual: they call the backend's `presentUpdate()` /
-`presentClear()` and record the returned duration, so every backend keeps statistics the same way.
-A subclass overrides `presentUpdate()`, `presentClear()`, `panel()`, and optionally `allows()` and
-`onSelect()` (called after a successful `select()`, for example to prepare a waveform).
+`update()` and `clear()` are non-virtual: they apply the allow rule and the exposure rules, call
+the backend's `presentUpdate(waveform)` / `presentClear()` and record the returned duration, so
+every backend keeps statistics and the safety rules the same way. A subclass overrides
+`presentUpdate()`, `presentClear()`, `panel()`, and optionally `inverted()` and `onSelect()`
+(called after the selection changed).
 
 `ProfileDisplaySink` adapts a backend to `rsvp::DisplaySink`: `showFrame(frame)` calls the
-activity's `FramePainter::paintFrame(frame)` and then `update()`; `clearingRefresh()` calls
+activity's `FramePainter::paintFrame(frame)` and then `update(UpdateKind::WORD)` (the only word
+updates there are); `clearingRefresh()` calls
 `paintClearedBand()` and then `clear()`. The painter only draws.
+
+## Trial profiles
+
+Task D2: plan section 6 ("Display profiles", "How trial waveforms are supplied", "Clearing",
+"Safety limits", "Outcome") and `docs/spikes/S2-waveforms.md` sections 6 to 9.
+
+### The allow rule
+
+`profileAllowed(id, panel, inverted, unlocked)`, every input explicit:
+
+| Profile | Allowed when |
+| --- | --- |
+| Stock | always |
+| Trial A, B, C | unlocked, not inverted, panel YRD0426, DEPG0397 or OPM040B3 (the three SSD1677 panels) or the simulator |
+| Trial D | unlocked, not inverted, panel YRD0426, DEPG0397, OPM040B3, SE0400NQW47 (any recognised panel: it runs only that panel's stock UI waveform) or the simulator |
+| anything else | never (an unrecognised panel, an id outside the table) |
+
+The simulator (`PanelId::SIMULATED`) counts as a panel every trial may run on, so it exercises the
+same unlock and inversion rules and the same exposure limits as the device. On the device the panel
+is `resolvePanel()`'s: a probe variant whose driver does not match (for example DEPG0397 on the
+SSD2677 driver) is `UNKNOWN`, so no trial. `wordWaveform()` gives the stock path for any profile on
+a panel it has no table for, so even a caller that skipped the rule could not reach a trial table
+on the wrong panel. `TrialRulesTest.cpp` prints and checks the full truth table (5 profiles x 6
+panels x inverted x unlocked).
+
+### Off by default: the unlock value
+
+`TrialSetting` says which trials are unlocked (from the device-test menu for the benchmark, task
+D3a, or rated clean and kept at the end of the device session, task D3b) and which profile is
+chosen. It is stored as one byte, `encodeTrialSetting()`:
+
+| Bits | Meaning |
+| --- | --- |
+| 0..3 | unlocked trials: A, B, C, D |
+| 4..6 | chosen profile: 0 Stock, 1..4 Trial A..D |
+| 7 | reserved, 0 |
+
+`0` (nothing stored) is the default: nothing unlocked, Stock. `decodeTrialSetting()` treats a
+reserved bit or a chosen value of 5..7 as a byte this firmware did not write and returns the
+default; a chosen trial that is not unlocked becomes Stock with the unlocked bits kept.
+`resolveProfile(setting, panel, inverted)` is the profile RSVP plays with: the chosen one if it is
+unlocked and allowed on this panel now, otherwise Stock. This task adds no setting, menu row or
+string: D3a and D3b store the byte and change it.
+
+### Exposure limits (`TrialExposure.h`)
+
+Every `update()` and `clear()` goes through `TrialExposure::decide()` before anything is presented:
+
+1. Only `UpdateKind::WORD` updates run a trial waveform. A screen update and a clear never do.
+2. A trial run starts from a clearing refresh: the first trial word after anything else (or after
+   start-up, so after every wake) runs as a clearing refresh instead (`promoted=not-cleared`).
+3. A trial run is bounded by the profile's hard limit (A 120, B 90, C 60, D 60 consecutive word
+   updates): the next trial word runs as a clearing refresh instead (`promoted=hard-limit`). The
+   scheduler clears at the same limit, so this acts only when a caller ignores the limits.
+4. A trial run always ends with a clearing refresh: after a trial word, a screen update (the pause
+   screen when playback pauses), a stock word or another trial's word runs as a clearing refresh
+   instead (`promoted=residue` or `promoted=profile-changed`).
+
+The allow rule is checked again on every word update, so a screen inverted after `select()` stops
+trials at the next word. A request run as a clearing refresh still shows the frame buffer the
+caller drew (nothing is dropped), returns that refresh's duration and is counted as a clear.
+
+Why a clearing refresh and not a fallback to a stock update at the hard limit: a stock fast update
+is differential too and does not remove the residue the trial left, so falling back would let the
+exposure continue (stock words on top of trial residue, then trial words again). A clearing refresh
+is the only refresh that ends it, and it shows the requested frame; the cost is one slow update
+where a caller broke the limit.
+
+The soft limit (clear at a paragraph or section end) stays with the scheduler: only it knows where
+paragraphs end.
+
+### The tables (`TrialWaveforms.h`)
+
+All bytes come from the FreeInk SDK pinned at `3f3e4c1126e2cb9a278c2c1076fb4a3334ffdc30`, file
+`freeink-sdk/libs/display/FreeInkDisplay/src/lut/Ssd1677Luts.h`, MIT licence, "Copyright (c) 2026
+FreeInk" (`freeink-sdk/LICENSE`, `freeink-sdk/NOTICE`). The SDK says its Picco tables were copied
+byte for byte from the BOOX stock firmware (build 2912); that is where the underlying bytes come
+from. Nothing was taken from any other project.
+
+| Table | Derived from | Changed | Group 0 TP A, B, C, D | Frames | Drive time | Voltages (VGH VSH1 VSH2 VSL VCOM) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `LUT_TRIAL_A_DEPG0397` | `lut_picco_depg_custom_fast` | top-up dropped (L0 = 0, TP_D = 0), phases A and C shortened | 7, 1, 7, 0 | 15 (14 driven) | 300 ms | 17 41 A8 32 30 (from `lut_picco_depg_custom_fast`) |
+| `LUT_TRIAL_B_DEPG0397` | same | same | 5, 1, 5, 0 | 11 (10) | 220 ms | same |
+| `LUT_TRIAL_C_DEPG0397` | same | same, rest frame dropped | 4, 0, 4, 0 | 8 (8) | 160 ms | same |
+| `LUT_TRIAL_{A,B,C}_YRD0426_OPM040B3` | same selector rows and frame rate | as above | as above | as above | as above | 17 41 A8 34 30 (from `lut_picco_fast`, these panels' only host-side B/W table) |
+| `LUT_TRIAL_D_DEPG0397` | `lut_picco_depg_fast` (BOOX mode 3) | nothing: a copy | 7, 0, 1, 0 | 8 | 160 ms | 17 41 BA 32 04 (its own) |
+| `LUT_TRIAL_D_YRD0426_OPM040B3` | `lut_picco_fast` (BOOX slot 2, UI) | nothing: a copy | 2, 0, 0, 0 | 2 | about 80 ms if FR code 1 is 40 ms (assumed) | 17 41 A8 34 30 (its own) |
+
+Kept from `lut_picco_depg_custom_fast` in A to C: L1 = `0x88` (VSL in phases A and C, black to
+white), L2 = `0x44` (VSH1 in phases A and C, white to black), frame-rate codes `0x22` (20 ms), RP = 0.
+L0, L3 and L4 are 0: unchanged pixels get 0 V. `TrialWaveformsTest.cpp` re-reads the SDK header from
+the submodule, rebuilds A to C from it as `docs/spikes/s2_lut_times.py` does and compares every byte,
+checks that the D tables equal the SDK's, and recomputes frame counts and drive time from the
+committed bytes. 8 tables x 110 bytes = 880 bytes of flash (`.flash.rodata`), no RAM.
 
 ## Timing model
 
@@ -239,13 +344,27 @@ path, no trial. The per-call behaviour with source lines is in `src/display/READ
   and use `MillisClock` as the scheduler's clock. Run `clear()` (with the pause screen drawn) on
   pause and before the first update of a playback. Remove the self-test hook and its `main.cpp`
   call when the activity scenario covers the timing model.
+- **Activity call sites for the trials (after D2, with the task that owns
+  `src/activities/rsvp/RsvpActivity.cpp`):** word frames already reach the backend marked
+  `UpdateKind::WORD` through `ProfileDisplaySink`, and the activity's own `backend.update()` calls
+  (`showPreparing()`, `drawPauseScreen(false)`) are screen updates, which never run a trial. So the
+  only change needed is in `onEnter()`, where `scheduler.setClearingLimits(backend.info().clearing)`
+  is today: before it, `backend.setUnlockedTrials(setting.unlocked);` and
+  `backend.select(setting.chosen);` with `setting = decodeTrialSetting(<the stored byte>)` (D3a/D3b
+  add the byte; `select()` applies the allow rule and falls back to Stock), so the scheduler gets
+  the selected profile's lower limits. Nothing else is required for safety; until it is done only
+  Stock is ever selected. Optional: `showPreparing()` during trial playback runs as a clearing
+  refresh (rule 4), so the clear `startPlayback()` runs after it is a second one.
 - **D1 (done):** `DeviceDisplayBackend` runs stock's real path (FAST with the reader flag, HALF to
   clear) through `TimedBackend`, with timeouts, percentiles and the panel records.
-- **D2:** load and release trial tables around the port's refresh (a second `RefreshPort` call, or
-  a port that knows the selected profile), release before a clear, and override `allows()` with
-  S2's rule, reading `panelRecord(panel()).recognised` and `controller`. The fakes' logs can check
-  the safety sequence on the host (`FakeDisplayBackend::events`, `FakeRefreshPort::log`).
+- **D2 (done):** the trial tables, the allow rule, the unlock value and the exposure limits
+  ("Trial profiles" above); `TimedBackend` loads a table for one refresh and releases it, and
+  releases before every clear.
 - **D3a:** reset the statistics before each series and read `medianMs()`, `percentileMs(95)`,
-  `maxMs` and `timeouts`; record `panelName(panel())` and the record's `controller`.
+  `maxMs` and `timeouts`; record `panelName(panel())` and the record's `controller`. Unlock the
+  trials for the benchmark with `setUnlockedTrials()` (stored with `encodeTrialSetting()`), run a
+  `clear()` before each series, and mark word updates `UpdateKind::WORD`. A series longer than the
+  trial's hard limit gets a clearing refresh in the middle (counted as a clear, not an update), and
+  `wordWaveform(profile, panel)` names the table and its predicted time for the results file.
 - **Device session:** commit `docs/device/picco-timings.json` from the benchmark; the next simulator
   build uses it.

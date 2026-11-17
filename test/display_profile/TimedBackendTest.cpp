@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdio>
+#include <iterator>
 
 #include "FakeDisplayBackend.h"
 #include "PanelRecords.h"
@@ -59,7 +60,8 @@ TEST(TimedBackend, ClearIsTimedTheSameWayAndCountedApart) {
   rig.port.clearTransferMs = 77;  // HALF sends both planes
   rig.port.clearBusyMs = 960;     // lut_picco_depg_full
   EXPECT_EQ(rig.backend.clear(), 1037u);
-  EXPECT_EQ(rig.port.log[1].kind, RefreshKind::CLEAR);
+  EXPECT_EQ(rig.port.log[1].op, Op::RELEASE_TABLE);  // any trial table released first (task D2)
+  EXPECT_EQ(rig.port.log[2].kind, RefreshKind::CLEAR);
   EXPECT_EQ(rig.backend.lastCall().kind, RefreshKind::CLEAR);
   EXPECT_EQ(rig.backend.stats().clears.count, 1u);
   EXPECT_EQ(rig.backend.stats().clears.lastMs, 1037u);
@@ -85,12 +87,11 @@ TEST(TimedBackend, EveryCallChecksForAPendingRefreshFirst) {
   rig.backend.update();
   rig.backend.clear();
   rig.backend.update();
-  ASSERT_EQ(rig.port.log.size(), 9u);
-  for (size_t i = 0; i < rig.port.log.size(); i += 3) {
-    EXPECT_EQ(rig.port.log[i].op, Op::FINISH_PENDING) << i;
-    EXPECT_EQ(rig.port.log[i + 1].op, Op::TRANSFER_START) << i;
-    EXPECT_EQ(rig.port.log[i + 2].op, Op::BUSY_END) << i;
-  }
+  // A clear also releases any trial table before its refresh (task D2).
+  const Op want[] = {Op::FINISH_PENDING, Op::TRANSFER_START, Op::BUSY_END,       Op::FINISH_PENDING, Op::RELEASE_TABLE,
+                     Op::TRANSFER_START, Op::BUSY_END,       Op::FINISH_PENDING, Op::TRANSFER_START, Op::BUSY_END};
+  ASSERT_EQ(rig.port.log.size(), std::size(want));
+  for (size_t i = 0; i < rig.port.log.size(); ++i) EXPECT_EQ(rig.port.log[i].op, want[i]) << i;
 }
 
 TEST(TimedBackend, AStuckBusyLineEndsAsATimeout) {
@@ -172,7 +173,7 @@ TEST(TimedBackend, BenchmarkSeriesGivesMedianAndP95) {
   std::printf("100 updates: median %u ms, p95 %u ms, max %u ms\n", u.medianMs(), u.percentileMs(95), u.maxMs);
 }
 
-TEST(TimedBackend, OnlyStockOnARealPanelUntilD2) {
+TEST(TimedBackend, OnlyStockOnARealPanelWhileNothingIsUnlocked) {
   for (const PanelId panel :
        {PanelId::UNKNOWN, PanelId::YRD0426, PanelId::DEPG0397, PanelId::OPM040B3, PanelId::SE0400NQW47}) {
     Rig rig(panel);

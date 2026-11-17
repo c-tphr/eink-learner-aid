@@ -84,13 +84,16 @@ TEST(ModelledBackend, ZeroModelAddsNoDelay) {
 TEST(ModelledBackend, UsesTheSelectedProfilesTimes) {
   FakeClock clock;
   FakeDisplayBackend display(clock);
+  display.setUnlockedTrials(ALL_TRIALS);
   ASSERT_TRUE(display.select(ProfileId::TRIAL_C));
   EXPECT_EQ(display.profile(), ProfileId::TRIAL_C);
   EXPECT_STREQ(display.info().key, "trial-c");
-  EXPECT_EQ(display.update(), 198u);
   EXPECT_EQ(display.clear(), 1960u);
+  EXPECT_EQ(display.update(UpdateKind::WORD), 198u);
+  EXPECT_EQ(display.update(UpdateKind::WORD), 198u);
   ASSERT_TRUE(display.select(ProfileId::STOCK));
-  EXPECT_EQ(display.update(), 540u);
+  EXPECT_EQ(display.update(UpdateKind::WORD), 1960u);  // after trial words: runs as a clear
+  EXPECT_EQ(display.update(UpdateKind::WORD), 540u);
 }
 
 TEST(ModelledBackend, WorksAcrossClockWrap) {
@@ -104,7 +107,7 @@ TEST(ModelledBackend, WorksAcrossClockWrap) {
 
 TEST(ModelledBackend, AllowHookGatesSelection) {
   FakeClock clock;
-  // A real panel: until D2, only stock is allowed by the default rule.
+  // A real panel with nothing unlocked: only stock (the full rule is in TrialRulesTest.cpp).
   FakeDisplayBackend device(clock, TimingModel(), PanelId::DEPG0397);
   EXPECT_EQ(device.panel(), PanelId::DEPG0397);
   EXPECT_TRUE(device.allows(ProfileId::STOCK));
@@ -113,8 +116,10 @@ TEST(ModelledBackend, AllowHookGatesSelection) {
   EXPECT_EQ(device.profile(), ProfileId::STOCK);
   EXPECT_FALSE(device.select(static_cast<ProfileId>(9)));
   EXPECT_TRUE(device.select(ProfileId::STOCK));
-  // The simulator allows every profile.
+  // The simulator allows every profile once unlocked, and none before.
   FakeDisplayBackend simulator(clock);
+  for (const ProfileInfo& info : PROFILES) EXPECT_EQ(simulator.select(info.id), !info.experimental) << info.key;
+  simulator.setUnlockedTrials(ALL_TRIALS);
   for (const ProfileInfo& info : PROFILES) EXPECT_TRUE(simulator.select(info.id)) << info.key;
 }
 
@@ -145,9 +150,10 @@ TEST(ModelledBackend, StatisticsAreSeparateAndResettable) {
 TEST(FakeDisplayBackend, EventLogRecordsTheCallSequence) {
   FakeClock clock(100);
   FakeDisplayBackend display(clock, modelOf("200", "400"));
+  display.setUnlockedTrials(ALL_TRIALS);
   ASSERT_TRUE(display.select(ProfileId::TRIAL_B));
   display.clear();
-  display.update();
+  display.update(UpdateKind::WORD);
   ASSERT_EQ(display.events.size(), 3u);
   EXPECT_EQ(display.events[0].kind, FakeEvent::SELECT);
   EXPECT_EQ(display.events[0].profile, ProfileId::TRIAL_B);
