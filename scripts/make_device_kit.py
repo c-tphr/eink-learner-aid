@@ -159,6 +159,12 @@ def main(argv=None):
             die("%s not found in %s; run `pio run -e %s` first" % (name, build, ENV_NAME))
 
     dump = envdump_text(args.envdump)
+    for name in ("bootloader.bin", "partitions.bin", "firmware.bin"):
+        if not os.path.isfile(os.path.join(build, name)):
+            die("%s disappeared during `pio run -e %s -t envdump`. PlatformIO empties the build folder when the "
+                "set of source files changed since the last run, which happens after the first build of a fresh "
+                "checkout (the build generates sources). Run `pio run -e %s` again, then this script; CI runs "
+                "envdump before the build for this reason." % (name, ENV_NAME, ENV_NAME))
     extra = dump_value(dump, "FLASH_EXTRA_IMAGES")
     sources, expect = {}, {}
     for offset, path in extra:

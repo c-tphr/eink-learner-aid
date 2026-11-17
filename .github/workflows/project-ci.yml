@@ -488,6 +488,15 @@ jobs:
         name: scripts/cloud-setup.sh
         run: ./scripts/cloud-setup.sh
       - if: steps.detect.outputs.present == 'true'
+        name: pio run -e picco_2slot -t envdump (before the build)
+        # The first PlatformIO run of a fresh checkout generates sources (i18n, HTML). PlatformIO empties a
+        # build folder whose source-file list changed since its last run, so an envdump after the first
+        # build would delete the images the kit step needs. Run it once here instead.
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          mkdir -p build
+          pio run -e picco_2slot -t envdump > build/envdump-picco_2slot.txt 2>&1 || { tail -50 build/envdump-picco_2slot.txt; exit 1; }
+      - if: steps.detect.outputs.present == 'true'
         name: pio run -e picco_2slot
         run: |
           set -o pipefail
