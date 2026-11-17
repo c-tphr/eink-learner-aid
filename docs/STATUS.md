@@ -6,16 +6,20 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 _Updated 2026-11-19._
 
-- **Milestones:** M0, M1 and M2 complete. M3 complete (P1, P2a, P2b, P3, P4, P6; plus P7 fixes). M4: libraries merged (R1, R2, R3); **R4a in progress**, then R4b, R5. M5: libraries merged (C1a, C1b); C2 to C5 follow R5. M6: D4 and D5 merged, the early-check sheet merged, **A0 in progress**; D1, D2, D3a, D3b, D6 open. M7: P5 merged (the real book is READY); A1 open.
-- **Merged since the last update:** #38 P5 (PR #74), fork preamble in `AGENTS.md` (#76), #75 P7 (#77), #8 E3 (#78), #34 D4 (#79).
+- **Milestones:** M0 to M3 complete. M4: libraries and R4a merged (RSVP plays in the simulator); **R4b in progress**, then R5. M5: libraries merged (C1a, C1b); C2 to C5 follow R5. M6: D4, D5, the early-check sheet and A0 merged; **D1 in progress**; D2, D3a, D3b, D6 open. M7: P5 merged (the real book is READY); **H1 in progress**; A1 open.
+- **Merged since the last update:** #37 A0 (PR #81), #21 R4a (PR #82).
 - **Assigned, in progress:**
-  - #21 R4a: RsvpActivity playback and pause screen, control map, word index on demand, seven scenarios (branch `task/21-rsvp-activity`).
-  - #37 A0: release workflow and kit packaging (branch `task/37-release-workflow`).
-- **Next when dependencies merge:** after R4a: #22 R4b, #30 D1; then #23 R5, #26 C2, #31 D2, #32 D3a. #36 D6 needs D3b. #72 housekeeping any time.
+  - #22 R4b: steppers, save as default / for this book, saved RSVP position, mode switch (branch `task/22-rsvp-settings`).
+  - #30 D1: device display backend, stock profile, timing statistics (branch `task/30-display-device-backend`).
+  - #72 H1: housekeeping (branch `task/72-housekeeping`). CI stays pinned to `ubuntu-24.04`.
+  - File ownership while these run: R4b owns `src/activities/rsvp/`, `src/controls/`, `src/reading/`; D1 owns `src/display/`, `lib/DisplayProfileCore/`; simulator patch numbers: H1 0003, D1 0004, R4b 0005.
+- **Next when dependencies merge:** after R4b: #23 R5, then #26 C2 to #29 C5. After D1: #31 D2; then #32 D3a (also needs R4b), #33 D3b (also needs C5), #36 D6, #39 A1.
 - **Blockers:** none.
 - **Waiting on the owner:**
   1. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md`. Return only the summary file.
   2. Optional: try the simulator in a Codespace (`docs/SIMULATOR.md`); it has never run in a real Codespace.
+  3. Delete the test draft release "v2.0.1 (preview kit)" on the Releases page (sessions cannot delete or edit releases). It is not public and has no tag.
+  4. Decide how `/prep-book` should work where the checker's guard hook does not run (issue #75, last comment).
 
 ## Last decisions
 
@@ -52,6 +56,10 @@ _Updated 2026-11-19._
 - 2026-11-19: P7: `validate` has a 13th check (`exclusions`); instructions are version 1.1 (already prepared books stay valid); the checker writes its result through one guarded write. The guarded write has not yet been observed in a real Claude Code run (needs a session started after the merge); a checker that does not deliver through it fails the round.
 - 2026-11-19: E3: the simulator models update time through `DisplayProfile` (540 ms update, 1,960 ms clear by default; `CROSSPOINT_SIM_UPDATE_MS` / `CROSSPOINT_SIM_CLEAR_MS`, 0 = none); a real `docs/device/picco-timings.json` is compiled in at build time when present.
 
+- 2026-11-19: A0: releases are made only by the manual workflow `.github/workflows/release-kit.yml` (`docs/RELEASING.md`). One build of `picco_2slot` with `EINK_RELEASE_VERSION`; development builds now show `2.0.0-dev-picco2`. The kit is `picco-2slot-<version>.zip`; the workflow only creates a draft. Both runs on `main` passed, including the draft-release job with attestation. Cloud sessions cannot create, edit or delete releases through the API (HTTP 403): publishing or deleting a draft is the owner's click, or a workflow step. Version 2.0.1 is used by the test draft; the next kit is 2.0.2 or higher. A `final` kit needs `docs/DEVICE_SESSION.md`.
+- 2026-11-19: R4a: RSVP runs on the render task, one display call per step; entry is the first row of the reader's menu ("Speed read") or a 0.7 s side-key hold ("Page turn long press: Speed read", the default in feature builds). Leaving by Page view, Menu or Exit updates the reader's saved page; the Home gesture and sleep do not yet (R4b). A non-prose item stops playback with a note and Play continues after it (R5 shows the item). Simulator patch 0002 makes a zero-timeout mutex take non-blocking, as on the device. Firmware log lines listed in `src/activities/rsvp/README.md` are the contract for scenarios and the benchmark.
+- 2026-11-19: The checker's guard hook did not run in a cloud session (first real run; issue #75): the checker judged correctly, but `save-check` refused the unguarded result, so `/prep-book` cannot reach READY there. Claude Code skips hooks in a project agent's frontmatter until the folder is trusted. Whether it runs in a local trusted session is unobserved. The committed real book is unaffected.
+
 ## Issue map
 
 | ID | Issue | Milestone | State |
@@ -77,8 +85,8 @@ _Updated 2026-11-19._
 | R1 | #18 | M4 | merged |
 | R2 | #19 | M4 | merged |
 | R3 | #20 | M4 | merged |
-| R4a | #21 | M4 | in progress |
-| R4b | #22 | M4 | open |
+| R4a | #21 | M4 | merged |
+| R4b | #22 | M4 | in progress |
 | R5 | #23 | M4 | open |
 | C1a | #24 | M5 | merged |
 | C1b | #25 | M5 | merged |
@@ -86,7 +94,7 @@ _Updated 2026-11-19._
 | C3 | #27 | M5 | open |
 | C4 | #28 | M5 | open |
 | C5 | #29 | M5 | open |
-| D1 | #30 | M6 | open |
+| D1 | #30 | M6 | in progress |
 | D2 | #31 | M6 | open |
 | D3a | #32 | M6 | open |
 | D3b | #33 | M6 | open |
@@ -94,11 +102,11 @@ _Updated 2026-11-19._
 | D5 | #35 | M6 | merged |
 | D6a | #60 | M7 | merged (early read-only check sheet) |
 | D6 | #36 | M6 | open |
-| A0 | #37 | M6 | in progress |
+| A0 | #37 | M6 | merged |
 | P5 | #38 | M7 | merged |
 | A1 | #39 | M7 | open |
 | A2 | #40 | M8 | open |
-| H1 | #72 | M7 | open (housekeeping) |
+| H1 | #72 | M7 | in progress (housekeeping) |
 | P7 | #75 | M7 | merged |
 
 ## Facts learned so far
@@ -109,7 +117,7 @@ _Updated 2026-11-19._
 - Host tests upstream are CMake and GoogleTest under `test/`: 924 pass at the pinned commit (about 5 minutes to build on 4 cores).
 - Cloud builds: run `./scripts/cloud-setup.sh` first in every session (about 3 minutes from empty caches, seconds afterwards). A plain `pio run` on empty caches fails with `CERTIFICATE_VERIFY_FAILED` because pioarduino replaces the CA settings; worse, its `idf_tools.py` falls back to unverified downloads, which the setup script treats as a failure. Building a `custom_sdkconfig` environment (upstream `default`) in the same core directory triggers a reinstall that hits the TLS problem again; re-run the setup script. `picco` builds in about 5.5 minutes: flash 5,449,518 B of the 7,431,782 B two-slot budget, RAM 34.4%.
 - Upload hazard confirmed by `pio run -e picco -t envdump`: `UPLOADERFLAGS` holds 0x0, 0x8000 and 0xe000 images although `FLASH_EXTRA_IMAGES` is empty.
-- Host suite on `main`: 1,280 tests. Python: `tools/prep` 686 tests, `tools/device` 190, `tools/simtest` 81 plus 6 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
+- Host suite on `main`: 1,328 tests. Python: `tools/prep` 686 tests, `tools/device` 190 plus `scripts/tests` 68, `tools/simtest` 90 plus 14 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
 - The session disk is small: finished implementers' working copies keep build output under `.claude/worktrees/agent-*/.pio` and `build`; delete those folders (not the working copies of running tasks) when `df` shows little free space.
 - Simulator: `pio run -e simulator_picco` applies `scripts/simulator_patches/` automatically; headless run: `xvfb-run -a .pio/build/simulator_picco/program` with `CROSSPOINT_SIM_INPUT_SCRIPT="0:WAIT:Entering activity: Home;1500:SHOT:home;2500:QUIT"` (SHOT writes a BMP at the given path).
 - Upstream renderer quirks found by the parity test (not ours, not fixed): the last word of a table caption is never drawn; rows of a grid table split across pages are drawn line by line. Neither affects RSVP positions or anchors.
@@ -126,4 +134,5 @@ _Updated 2026-11-19._
 2. List open issues and open pull requests. Validate any open pull request yourself (check out the branch, re-run its acceptance commands, read Project CI's checks), then pick the next issue whose dependencies are merged.
 3. Run `./scripts/cloud-setup.sh` before any `pio` command.
 4. After a container restart, background implementers are stopped but their working copies under `.claude/worktrees/agent-*/` survive: check `git status` in each, and resume the implementer with a message, or commit and push its work-in-progress yourself. Ask implementers to push work-in-progress early.
-5. The preparation checker for a real book is run by the orchestrator as a fresh subagent: instructions are the body of `.claude/agents/prep-checker.md`, input is only `WORK/checker`, the reply goes to `WORK/rounds/NN/checker-reply.txt`.
+5. The preparation checker is the `prep-checker` agent (`.claude/agents/prep-checker.md`); in a cloud session its guard hook does not run, so `save-check` refuses its result (issue #75). Do not work around the guard.
+6. Release runs: start `release-kit.yml` on `main` with the GitHub tool for running workflows (`gh api` cannot reach Actions paths), `publish=false` first. Read job results from the commit's check runs.
