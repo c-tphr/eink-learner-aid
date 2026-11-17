@@ -116,9 +116,7 @@ class FakeDisplayBackend final : private fake_detail::Parts, public ModelledBack
   uint32_t presentUpdate(const ProfileId waveform) override {
     return record(FakeEvent::UPDATE, waveform, ModelledBackend::presentUpdate(waveform));
   }
-  uint32_t presentClear() override {
-    return record(FakeEvent::CLEAR, profile(), ModelledBackend::presentClear());
-  }
+  uint32_t presentClear() override { return record(FakeEvent::CLEAR, profile(), ModelledBackend::presentClear()); }
 
  private:
   uint32_t record(const FakeEvent::Kind kind, const ProfileId id, const uint32_t ms) {

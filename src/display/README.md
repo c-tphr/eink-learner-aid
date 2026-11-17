@@ -10,11 +10,12 @@ model). This directory holds what needs Arduino and the renderer.
 | --- | --- | --- |
 | `DisplayProfile.h/.cpp` | The calling contract, `MillisClock`, `firmwareBackend()`, `logStats()`, the log lines, a temporary link check | RSVP flag |
 | `SimulatorDisplayBackend.h/.cpp` | The real draw through `renderer.displayBuffer()`, then a sleep for the rest of the modelled time; reads the compiled-in timings file and `CROSSPOINT_SIM_UPDATE_MS` / `CROSSPOINT_SIM_CLEAR_MS` | RSVP flag and `SIMULATOR` |
-| `DeviceDisplayBackend.h/.cpp` | The stock profile on the panel (task D1): the two hardware calls of `TimedBackend` (`lib/DisplayProfileCore`) over `HalDisplay` and the renderer, and its log lines; stock only until D2 | RSVP flag, not `SIMULATOR` |
+| `DeviceDisplayBackend.h/.cpp` | The stock and trial profiles on the panel (tasks D1, D2): the hardware calls of `TimedBackend`'s `RefreshPort` (`lib/DisplayProfileCore`) over `HalDisplay` and the renderer, and its log lines | RSVP flag, not `SIMULATOR` |
 | `DisplaySelfTest.h/.cpp` | **Temporary:** with `CROSSPOINT_SIM_DISPLAY_SELFTEST=<n>`, draws a counter band n times through `update()` and runs one `clear()` once Home is up | RSVP flag and `SIMULATOR` |
 
 Filled by task E3 (#8); D1 (#30) gave the device backend the stock profile's real path, its timing
-and timeouts; D2 (#31) adds the trial profiles and their safety rules.
+and timeouts; D2 (#31) added the trial profiles A to D and their safety rules ("Trial profiles"
+below; the portable rules are in `lib/DisplayProfileCore/README.md`, "Trial profiles").
 
 ## Calling contract
 
@@ -30,15 +31,17 @@ line until the modelled time has passed, so scenarios take screenshots after it 
 
 ## Device backend
 
-`DeviceDisplayBackend` (task D1) is `TimedBackend` (`lib/DisplayProfileCore/TimedBackend.h`) with two
-hardware calls. Everything that decides something (the timing window, timeouts, statistics, which
-panel) is portable and host-tested; this directory only makes the calls below and logs.
+`DeviceDisplayBackend` (task D1) is `TimedBackend` (`lib/DisplayProfileCore/TimedBackend.h`) with a
+few hardware calls. Everything that decides something (the timing window, timeouts, statistics, which
+panel, and since D2 the allow rule, the exposure limits and which table) is portable and host-tested;
+this directory only makes the calls below and logs. The stock profile's calls are these; the trial
+profiles add the ones in "Trial profiles" below.
 
 | Step | Call | Why |
 | --- | --- | --- |
 | Before the clock starts | `display.waitRefreshComplete()` | Returns at once unless some other code left a deferred refresh running (`D/include/FreeInkDisplay.h:191-194`; `D/src/FreeInkDisplay.cpp:636`). Otherwise `FreeInkDisplay::displayBuffer` would wait it out first (`:691`), inside our timing |
 | Word update | `display.setReaderRefresh(true)`, `renderer.displayBuffer(FAST_REFRESH)` | CrossPoint's book-page refresh (`ReaderRefreshScope`, `src/activities/reader/ReaderUtils.h`): the panel's reading waveform. The renderer passes the fading-fix setting as `turnOffScreen` (`lib/GfxRenderer/GfxRenderer.cpp:1779-1784`) |
-| Clearing refresh | the same, with `HALF_REFRESH` | An absolute refresh (both RAM planes rewritten, `CTRL1=0x40`), the one CrossPoint's reader runs every N pages. HALF, not FULL: S2 section 8 and plan section 6; on the Picco the stock firmware's only clean primitive is the single-pass HALF (`D/src/driver/Ssd1677Driver.cpp:809-815`) |
+| Clearing refresh | `display.setCustomLut(false)` (task D2: any trial table released; a flag write, a no-op when none is loaded), then the same, with `HALF_REFRESH` | An absolute refresh (both RAM planes rewritten, `CTRL1=0x40`), the one CrossPoint's reader runs every N pages. HALF, not FULL: S2 section 8 and plan section 6; on the Picco the stock firmware's only clean primitive is the single-pass HALF (`D/src/driver/Ssd1677Driver.cpp:809-815`) |
 | After the refresh | `display.waitRefreshComplete()`, `display.setReaderRefresh(false)` | The first returns at once (nothing is pending after a blocking refresh); it is there so a driver that ever defers a refresh is still timed to its end. The flag is restored, as `ReaderRefreshScope` does |
 
 `D/` is `freeink-sdk/libs/display/FreeInkDisplay/` at the pinned SDK commit `3f3e4c11`.
@@ -48,7 +51,8 @@ Log lines (DBG unless noted), stable for the device session's serial log:
 | Line | When |
 | --- | --- |
 | `[DSP] Device backend: panel=<name> variant=<0..4> driver=<SSD1677\|SSD2677> recognised=<0\|1> async_split=<0\|1> update="<waveform>" clear="<waveform>"` | Once, when RSVP first creates the backend |
-| `[DSP] <update\|clear> n=<count> profile=<id> ms=<duration>` | After every call (the same line as before D1) |
+| `[DSP] <update\|clear> n=<count> profile=<id> ms=<duration>` | After every call (the same line as before D1). Task D2 appends ` ran=<id>` when a word update ran another profile's waveform than the selected one (the allow rule refused it at that moment), and ` for=<word\|screen> promoted=<not-cleared\|hard-limit\|residue\|profile-changed>` to a `clear` line that an `update()` ran as a clearing refresh; neither appears while only Stock is used |
+| `[DSP] update waveform="<table>" predicted=<ms>` | Task D2: after a trial word update, which table (or SDK path) ran and S2's waveform-only prediction (0 when it cannot be computed) |
 | `[DSP] <update\|clear> waited <ms> ms for a refresh started elsewhere` | Only when `finishPending()` had to wait |
 | `[ERR] [DSP] <update\|clear> timed out: ms=<ms> limit=<ms> panel=<name>; ...` | A timeout (below) |
 | `[DSP] stats ...` | `logStats()`; D1 appended `update_median= update_p95= update_timeouts= clear_median= clear_p95= clear_timeouts=` |
@@ -121,6 +125,72 @@ RSVP's scheduler sees a slow update. Pausing playback on a timeout is the activi
   `D/src/bus/EpdBus.cpp:325`).
 - That no timeout is ever logged in normal use.
 
+## Trial profiles (task D2)
+
+Plan section 6 and `docs/spikes/S2-waveforms.md` sections 6 to 8. The rules (allow rule, unlock value,
+exposure limits) and the tables are portable: `lib/DisplayProfileCore/README.md`, "Trial profiles".
+The device side adds three `RefreshPort` calls and one `HalDisplay` pass-through.
+
+### What a trial word update runs
+
+| Panel | Trial A, B, C | Trial D |
+| --- | --- | --- |
+| DEPG0397 | `LUT_TRIAL_{A,B,C}_DEPG0397`: 300, 220, 160 ms | `LUT_TRIAL_D_DEPG0397` (= `lut_picco_depg_fast`, BOOX mode 3): 160 ms |
+| YRD0426, OPM040B3 | `LUT_TRIAL_{A,B,C}_YRD0426_OPM040B3`: 300, 220, 160 ms | `LUT_TRIAL_D_YRD0426_OPM040B3` (= `lut_picco_fast`, the SDK's own UI table): about 80 ms if FR code 1 is 40 ms |
+| SE0400NQW47 | refused | the SDK's UI path: FAST with the reader flag off, `lut_picco_se0400_mode3` when at most 1/8 of the frame bytes changed, otherwise `lut_picco_se0400_fast` (`D/src/driver/Ssd2677Driver.cpp:196-221`) |
+| Unrecognised | refused | refused |
+
+Times are waveform only (S2 section 4); the frame transfer (at least 38.4 ms) and the table upload
+(about 115 bytes of SPI) come on top.
+
+| Step | Call | SDK lines (`D/` = `freeink-sdk/libs/display/FreeInkDisplay/`, pinned `3f3e4c11`) |
+| --- | --- | --- |
+| Load | `display.setCustomLut(true, table)` (new pass-through in `lib/hal/HalDisplay.h` to `FreeInkDisplay::setCustomLUT`) | `D/src/FreeInkDisplay.cpp:1225-1229` forwards to `Ssd1677Driver::setCustomLut` (`D/src/driver/Ssd1677Driver.cpp:1245-1271`): 105 bytes to CMD 0x32, then VGH (0x03), VSH1/VSH2/VSL (0x04) and VCOM (0x2C), then `_customLutActive = true` (`:1270`). It does not drain a pending refresh, so `finishPending()` runs first |
+| Refresh | the stock update call: reader flag on, `renderer.displayBuffer(FAST_REFRESH)`, `waitRefreshComplete()`, reader flag off | With `_customLutActive` set, `boardLut` is false (`:584`), the Picco sequence branch is skipped (`:609`), the per-board sequence too (`:630`), and a FAST fires CTRL2 `0xCC` (`0xCF` with the fading fix) with the loaded table and no OTP reload (`:703-712`). The reader flag only picks a board table (`:577-584`), which is skipped, so it changes nothing here; it is kept so the driver's `_afterReader` state is the same as after a stock word |
+| Release | `display.setCustomLut(false)`, right after the refresh returns | `:1246-1249`: clears the flag only; no bus traffic |
+| Before every clear | `display.setCustomLut(false)` | as above; then HALF runs the panel's stock clearing waveform |
+| SE0400NQW47 Trial D | reader flag off, `renderer.displayBuffer(FAST_REFRESH)`, `waitRefreshComplete()` | no table: `Ssd2677Driver` does not override `setCustomLut` (`D/src/driver/PanelDriver.h:290-294`, a no-op) |
+
+### Why nothing of a trial can reach a later refresh
+
+- **The table is loaded for one refresh only.** `TimedBackend::run()` loads, refreshes and releases
+  in one call on the task holding the RenderLock; nothing else can refresh in between (the main
+  loop's `controllerIdle()` takes the RenderLock first, `src/main.cpp:150-155`). The host tests
+  check over a 2,000-step mixed session that no clear, stock update or UI refresh ever starts with a
+  table loaded, and that the port is never left loaded (`TrialExposureTest.cpp`).
+- **Timeout.** `displayBuffer()` returns even when BUSY never ends: the SDK's wait gives up after
+  30 s (`D/src/bus/EpdBus.cpp:467`; "Timeouts" above). The release runs after it returns, whatever
+  happened (`TrialExposureDevice.ReleasedAfterATimeout`).
+- **The next stock refresh rewrites what the table set.** With the flag clear, DEPG0397 loads its
+  board table and voltages before every FAST and HALF (`:584-586`); YRD0426 and OPM040B3 reload OTP
+  (sequences `0xDF` and `0xD7` carry the `0x10` load bit, `:599`, `:609-622`) or load
+  `lut_picco_fast` for UI updates. The voltage registers a trial leaves are the panel's own: DEPG
+  trials A to C write exactly what every stock DEPG word writes, YRD/OPM trials and Trial D write
+  `lut_picco_fast`'s, which every stock YRD/OPM UI update writes, and DEPG Trial D writes the BOOX
+  mode-3 table's own tail.
+- **Driver promotions under a loaded table run stock waveforms.** If the driver promoted the trial
+  FAST (first paint after `begin()`, after grayscale, after an inversion change, a pending
+  `promoteNextRefresh()`), the flag makes FULL `0x34` and HALF `0xD4` (`:698`, `:702`): both carry
+  the OTP load bit, so the panel's OTP waveform runs, not the trial table. The backend also starts
+  every trial run with its own clearing refresh (rule 2), which absorbs these promotions first.
+- **Sleep and wake.** Deep sleep is a chip reset on wake (`src/main.cpp:139-144`): the driver's
+  flag, the backend and its exposure state start fresh, and the first trial word after a wake runs
+  as a clearing refresh (rule 2; `TrialExposureDevice.AFreshBackendAfterWakeStartsWithAClear`).
+  Before sleeping, the sleep screen is drawn with a FULL or HALF refresh
+  (`src/activities/boot_sleep/SleepActivity.cpp:39-48`), which wipes any trial residue.
+- **Inversion.** Trials are refused while `display.isInverted()` (the DEPG dark-background path
+  drives every pixel, S2 section 6, item 6), checked on every word update, not only at `select()`.
+
+### What only the device session can confirm, per trial
+
+| Trial | Open questions |
+| --- | --- |
+| All | That `setCustomLut` behaves as read above on the unit's panel (the 0xCC sequence runs the loaded table; the next stock refresh is unaffected); real update times against the predictions (A 300, B 220, C 160 ms of waveform plus transfer; whether FR code 2 is really 20 ms on this glass); readability of a single word; residue after 30, 60 and 120 chained updates and recovery after one clearing refresh; contrast at the room temperature recorded (the tables are not temperature-compensated: CTRL2 `0xCC` has no load-temperature bit) |
+| A, B, C on YRD0426 / OPM040B3 | These panels read with an OTP waveform the repository cannot see; the trials are their UI table lengthened at its own voltages, so whether they look like the reading waveform at all is unknown |
+| D on DEPG0397 | The BOOX mode-3 table keeps its one-frame black top-up and its own VCOM (`0x04`, stock reading uses `0x30`); residue and DC on static black (the focus ticks) over the 300-update endurance run |
+| D on YRD0426 / OPM040B3 | The time (80 ms only if FR code 1 is 40 ms per frame); a 2-frame waveform is expected to ghost the most |
+| D on SE0400NQW47 | Which table ran (mode 3 or the reading table; the first FAST after a clear always runs the reading table because of the driver's `_afterReader` rule, `Ssd2677Driver.cpp:196-197`, and a large word may exceed 1/8 of the frame bytes); every SE0400 duration |
+
 ## Environment variables (simulator only)
 
 | Variable | Meaning |
@@ -147,4 +217,6 @@ the timing model.
 Everything here is compiled only with the RSVP feature flag: every file includes `RsvpFeature.h` and
 wraps its code in `#if CROSSPOINT_RSVP_ENABLED` (see `docs/ARCHITECTURE-RSVP.md`). A `HalDisplay`
 method added for a profile also needs a stub in the simulator (`scripts/simulator_patches/`, see
-`docs/BASE.md`); E3 and D1 needed none (D1 uses only existing `HalDisplay` calls).
+`docs/BASE.md`); E3 and D1 needed none (D1 uses only existing `HalDisplay` calls). D2 adds
+`HalDisplay::setCustomLut()`, stubbed by `scripts/simulator_patches/0004-hal-display-set-custom-lut.patch`
+(the simulator backend never calls it).

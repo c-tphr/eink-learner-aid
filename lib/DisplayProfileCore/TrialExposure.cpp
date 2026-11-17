@@ -7,8 +7,8 @@ namespace {
 // Rule 3 needs a real bound for every trial (a hard limit of 0 turns the scheduler's rule off).
 constexpr bool trialsHaveHardLimits() {
   for (const ProfileInfo& info : PROFILES) {
-    if (isTrial(info.id) && (info.clearing.hardLimit == 0 ||
-                             info.clearing.hardLimit > PROFILES[0].clearing.hardLimit)) {
+    if (isTrial(info.id) &&
+        (info.clearing.hardLimit == 0 || info.clearing.hardLimit > PROFILES[0].clearing.hardLimit)) {
       return false;
     }
   }

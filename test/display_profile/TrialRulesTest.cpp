@@ -218,8 +218,8 @@ TEST(TrialSetting, EncodesAndDecodesEveryValidValue) {
 
 TEST(TrialSetting, UnknownBitsResolveToStock) {
   // The reserved bit, or a chosen value no profile has: none of the byte is trusted.
-  for (const uint8_t value : {uint8_t{0x80}, uint8_t{0x8F}, uint8_t{0xCF}, uint8_t{0x5F}, uint8_t{0x6F},
-                              uint8_t{0x7F}, uint8_t{0xFF}}) {
+  for (const uint8_t value :
+       {uint8_t{0x80}, uint8_t{0x8F}, uint8_t{0xCF}, uint8_t{0x5F}, uint8_t{0x6F}, uint8_t{0x7F}, uint8_t{0xFF}}) {
     const TrialSetting s = decodeTrialSetting(value);
     EXPECT_EQ(s.unlocked, NO_TRIALS) << int{value};
     EXPECT_EQ(s.chosen, ProfileId::STOCK) << int{value};

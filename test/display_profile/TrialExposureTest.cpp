@@ -22,7 +22,8 @@ using Op = FakeRefreshPort::Op;
 
 // A modelled backend (the simulator's logic) on `panel`, every trial unlocked, `id` selected.
 struct Modelled {
-  explicit Modelled(const ProfileId id, const PanelId panel = PanelId::SIMULATED) : backend(clock, TimingModel(), panel) {
+  explicit Modelled(const ProfileId id, const PanelId panel = PanelId::SIMULATED)
+      : backend(clock, TimingModel(), panel) {
     backend.setUnlockedTrials(ALL_TRIALS);
     EXPECT_TRUE(backend.select(id));
     backend.events.clear();
@@ -146,7 +147,8 @@ TEST(TrialExposure, StockIsUnchanged) {
   // Stock words never count, never promote, need no clear first.
   TrialExposure guard;
   for (int i = 0; i < 500; ++i) {
-    const RefreshDecision d = guard.decide(i % 3 == 0 ? RefreshRequest::SCREEN : RefreshRequest::WORD, ProfileId::STOCK);
+    const RefreshDecision d =
+        guard.decide(i % 3 == 0 ? RefreshRequest::SCREEN : RefreshRequest::WORD, ProfileId::STOCK);
     EXPECT_EQ(d.action, RefreshAction::STOCK_UPDATE);
     EXPECT_EQ(d.promotion, Promotion::NONE);
     guard.record(d);

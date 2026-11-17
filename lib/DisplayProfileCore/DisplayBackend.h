@@ -11,9 +11,11 @@
 //   The backend never draws. Before clear() it has drawn the frame the clearing refresh should
 //   leave on screen (for RSVP: the word band empty, guides kept, or the pause screen).
 // - Who refreshes: the backend, and only it, while a profile is in use. update() presents the frame
-//   buffer as one word update with the selected profile's waveform; clear() runs one clearing
-//   refresh (an absolute refresh, any trial waveform released). The caller makes no other refresh
-//   call in between, so the backend's timing and safety rules see every refresh.
+//   buffer (a word update marked UpdateKind::WORD with the selected profile's waveform, any other
+//   update with the stock one); clear() runs one clearing refresh (an absolute refresh, any trial
+//   waveform released). The allow rule and the exposure limits (TrialExposure.h) apply to every
+//   call. The caller makes no other refresh call in between, so the backend's timing and safety
+//   rules see every refresh.
 // - Which task: the one task that owns the display at that moment. On the device and in the
 //   simulator that is the task holding the RenderLock: the activity's render task inside render(),
 //   for RSVP inside Scheduler::step(). Never two tasks at once, never from an interrupt.
@@ -21,7 +23,8 @@
 //   BUSY wait inside displayBuffer() has ended; simulator: the modelled time has passed). Both
 //   return the call's duration in milliseconds: measured on the device, at least the modelled
 //   time in the simulator. A caller timing them with its own clock sees the same duration.
-// - select(), stats() and resetStats() belong to the same task (or run under the RenderLock).
+// - select(), setUnlockedTrials(), stats() and resetStats() belong to the same task (or run under
+//   the RenderLock).
 
 #include <Clock.h>
 

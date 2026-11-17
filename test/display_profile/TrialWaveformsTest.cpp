@@ -233,10 +233,10 @@ TEST(TrialWaveforms, EachPanelGetsItsOwnTableAndOnlyWhereAllowed) {
         const Decoded d = decode(bytesOf(w.table));
         EXPECT_EQ(w.predictedMs, d.ms < 0 ? 0 : static_cast<int>(d.ms));
         // Voltages are those of this panel's own stock fast table.
-        const Bytes& stock = sdk(panel == PanelId::DEPG0397 && info.id != ProfileId::TRIAL_D
-                                     ? "lut_picco_depg_custom_fast"
-                                 : panel == PanelId::DEPG0397 ? "lut_picco_depg_fast"
-                                                              : "lut_picco_fast");
+        const Bytes& stock =
+            sdk(panel == PanelId::DEPG0397 && info.id != ProfileId::TRIAL_D ? "lut_picco_depg_custom_fast"
+                : panel == PanelId::DEPG0397                                ? "lut_picco_depg_fast"
+                                                                            : "lut_picco_fast");
         EXPECT_EQ(Bytes(w.table + 105, w.table + LUT_SIZE), Bytes(stock.begin() + 105, stock.end()));
       }
     }
