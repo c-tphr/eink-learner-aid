@@ -555,6 +555,48 @@ The guard has been tested only with simulated hook input (the JSON Claude Code d
 
 Checker issue ids carry the round (`R1-I1`), because the checker never sees earlier rounds; `report` lists an issue a later round does not raise again as "Not raised again".
 
+## Where `/prep-book` works: the guard probe
+
+`/prep-book` can reach READY only in a session where Claude Code runs the checker's guard. Claude Code skips the hooks in a project agent's frontmatter until the folder is trusted, and a non-interactive session does not count as trusted. In a Claude Code cloud session the hook did not run (issue #75): the checker wrote its result, no record was made, and `save-check` refused it. So:
+
+- **Works:** Claude Code started in a terminal on your own computer, in this repository's folder, after you answered yes to "trust this folder" (and restarted Claude Code, if you trusted it during the session). This is what Claude Code's documentation implies; a pass there has not yet been observed by the team.
+- **Does not work:** Claude Code cloud sessions, and any session where the probe below fails.
+- **Works anywhere:** the scripts themselves: `extract`, `build`, `validate`, `verify-check` and `report` (Python 3; Java for EPUBCheck). Only the checker's step needs the guard.
+
+The probe (`probe.py`) is step 1 of the command, before anything reads the book:
+
+```sh
+python3 -m tools.prep guard-probe OUTDIR            # writes OUTDIR/guard-probe/ and prints the checker's prompt
+# the prep-checker agent, prompt: "Checker folder: OUTDIR/guard-probe/input"
+python3 -m tools.prep guard-probe OUTDIR --check    # 0 PASSED, 1 FAILED (code), 2 usage error
+```
+
+```
+OUTDIR/guard-probe/
+  input/                         the probe's checker folder: book.json (format rsvp-guard-probe-input),
+                                 INSTRUCTIONS.md (a short note), text/d01-probe.txt, sections/s0001.txt:
+                                 two made-up paragraphs and one prompt
+  result/checker-reply.txt       written by the checker, through its guard
+  result/checker-write.json      written by the guard (format rsvp-guard-probe-write)
+```
+
+`--check` judges the result with `save-check`'s own code (`loop.reply_fault`), and also requires the record to carry the probe's `prepared_sha256`. Each outcome prints its own message (stdout for a pass, stderr for a failure):
+
+| First line | Exit | Meaning |
+| --- | --- | --- |
+| `PASSED: the checker's guard is active` | 0 | The guard recorded the checker's write, and the file is exactly what it recorded (line endings and trailing white space ignored, as in `save-check`) |
+| `FAILED (guard-not-active)` | 1 | The result exists but the guard recorded nothing: the hook did not run. The message says that the book was not touched and what to do (Claude Code on your own computer, in this repository, folder trusted, restart, run `/prep-book` again), and that a cloud session cannot do this |
+| `FAILED (no-result)` | 1 | No result file: the agent did not run, did not finish, or its write was blocked |
+| `FAILED (other-folder)` | 1 | The record is not a probe record for this probe: a round's record, another round number, another `prepared_sha256`, or not a record at all |
+| `FAILED (other-file)` | 1 | The record names another file |
+| `FAILED (changed)` | 1 | The result differs from what the guard recorded |
+
+`guard-probe OUTDIR` replaces an earlier probe in `OUTDIR/guard-probe/` and refuses (exit 1) to replace anything else there. `--check` without a probe exits 1.
+
+**A probe is never a round.** Its folder is neither `checker/` nor `rounds/`, and it is outside `WORKDIR`. `start-round`, `save-check` and `report --history` look only at `WORKDIR/rounds/NN/`, so they ignore it; `save-check` refuses a probe record copied into a round (its `format` differs); `verify-check` and `report` reject a probe result for any book (its hashes are of the made-up text). The guard (`checker_guard.py`) allows reads in a folder whose `book.json` has `format` `rsvp-guard-probe-input`, and one Write to `guard-probe/result/checker-reply.txt` when `guard-probe/input/book.json` names it. A probe `book.json` cannot authorise a round's result file, and a round's checker folder (`rsvp-checker-input`) cannot authorise a probe's result file. Its rules for rounds are unchanged. All of this is tested in `tests/test_probe.py`, which runs `checker_guard.py` with simulated hook input; a real `prep-checker` run in a trusted session has not been observed.
+
+The probe only shows that the guard **allows and records** the checker's one write. It does not show that the guard **blocks** anything in the real session: the checker's normal behaviour never makes a call the guard would block, and the probe does not try to make it misbehave. The blocking rules are tested with simulated hook input only (`tests/test_loop.py`).
+
 ## Synthetic fixture book
 
 `fixture/generate.py` writes `fixtures/books/fixture.epub`, `fixture.draft.json`, `fixture.expected.json` and `README.md` from the data in `fixture/content.py`, byte for byte reproducibly and with the standard library only. `fixtures/books/README.md` has the content inventory and word counts.
