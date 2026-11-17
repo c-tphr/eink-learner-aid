@@ -12,11 +12,11 @@ _Updated 2026-11-17 (calendar date). Entries under "Last decisions" dated 2026-1
 - **In progress:** nothing. No other agent is running.
 - **Next:** the removal plan below, step 1, once the owner has seen the plan and says go.
 - **Blockers:** none.
-- **Waiting on the owner:** a go-ahead for the removal plan. Nothing else. The formal device session is cancelled (see the decisions).
+- **Waiting on the owner:** a go-ahead for the removal plan. Nothing else. The formal device session is cancelled: #40 (A2) is closed as not planned, and #110 is now "Device use: results and problems", the place for anything the owner notices on the device.
 
 ## Removal plan (RSVP and what was added only for it)
 
-Presented to the owner on 2026-11-17; not started. Each step is one pull request that leaves `main` building, with green CI. The owner's seven decisions are under "Last decisions".
+Tracked in issue #113. Presented to the owner on 2026-11-17; not started. Each step is one pull request that leaves `main` building, with green CI. The owner's seven decisions are under "Last decisions".
 
 **Stays:** checkpoints in page view (`lib/CheckpointCore`, `src/activities/checkpoint`, `src/reading` session, loader and state file), the word index that maps a section's end to a page (`lib/WordIndex`), the control map as far as checkpoint screens and the reread bar use it (`src/controls`), the two-slot layout and updates (`lib/UpdatePolicy`, `src/update`), the preparation workflow (`tools/prep`, `/prep-book`, `prep-checker`), the flashing tool (`tools/device`: identify, backup, flash, restore), the simulator and scenario harness, CI and the release workflow.
 
@@ -32,7 +32,7 @@ Presented to the owner on 2026-11-17; not started. Each step is one pull request
 | 3 | Remove the Device test menu and display profiles | Delete `src/activities/devicetest`, `src/display`, `lib/DisplayProfileCore`, the `HalDisplay` pass-through, simulator patch 0004 (and 0002 if nothing else needs it), the Settings rows, strings, scenarios and tests. `tools/device` loses the results schema and validator; the flashing commands stay | As step 2, plus the flashing-tool tests on Linux and Windows |
 | 4 | Rename code-level names | Flag `CROSSPOINT_RSVP` to `CROSSPOINT_CHECKPOINTS`, `src/RsvpFeature.h`, `docs/ARCHITECTURE-RSVP.md`, log tags, test folder names, release notes text. No file-format name changes | Builds, scenarios, a test that the format names are unchanged |
 | 5 | Documents | Rewrite `docs/PRD.md` and `docs/PLAN.md` for the checkpoint-only product; rewrite `docs/ACCEPTANCE.md`; replace the device checklist by a short install and update page (flash, SD update, restore); trim `docs/BASE.md`, `README.md`, `docs/SIMULATOR.md`, `docs/CI.md`, `docs/RELEASING.md`; delete the spike notes, evidence and pictures that are about RSVP only (git history keeps them) | Document tests, link check |
-| 6 | Release 2.1.0 | Draft release from the release workflow; the owner installs `update.bin` through Settings > System > SD Card Firmware Update and uses the device. Close #40 and #110 | Workflow run, asset hashes in `docs/ACCEPTANCE.md` |
+| 6 | Release 2.1.0 | Draft release from the release workflow; the owner installs `update.bin` through Settings > System > SD Card Firmware Update and uses the device. Close #113; #110 stays open for the owner's reports | Workflow run, asset hashes in `docs/ACCEPTANCE.md` |
 
 Risks to watch: the update from 2.0.1 to 2.1.0 must keep the owner's settings file readable (removed settings are skipped, not misread) and their saved grades; the page-view checkpoint hook must behave exactly as now once the RSVP branches are gone (step 1 pins it before anything is deleted); document tests read plan sections 7 and 10 and the checklist, so each is changed together with its test.
 
@@ -146,7 +146,8 @@ Risks to watch: the update from 2.0.1 to 2.1.0 must keep the owner's settings fi
 | A0 | #37 | M6 | merged |
 | P5 | #38 | M7 | merged |
 | A1 | #39 | M7 | done (acceptance report, draft release v2.0.1, results issue #110) |
-| A2 | #40 | M8 | open |
+| A2 | #40 | M8 | closed, not planned (no device benchmark; RSVP discontinued) |
+| Removal | #113 | M8 | open (RSVP and Device test menu removed; release 2.1.0) |
 | H1 | #72 | M7 | merged (housekeeping) |
 | P7 | #75 | M7 | merged |
 | P8 | #84 | M7 | merged (guard probe for `/prep-book`) |
