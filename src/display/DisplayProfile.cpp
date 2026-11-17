@@ -94,14 +94,20 @@ void runDisplayProfileLinkCheck() {
 void logStats(const DisplayBackend& backend) {
   const RefreshStats& u = backend.stats().updates;
   const RefreshStats& c = backend.stats().clears;
+  // Fields after the first "last=" group were added by D1; scenarios match the line's start, so
+  // new fields only ever go at the end.
   LOG_DBG("DSP",
           "stats profile=%s panel=%s updates=%lu min=%lu max=%lu mean=%lu last=%lu clears=%lu min=%lu max=%lu "
-          "mean=%lu last=%lu",
+          "mean=%lu last=%lu update_median=%lu update_p95=%lu update_timeouts=%lu clear_median=%lu clear_p95=%lu "
+          "clear_timeouts=%lu",
           backend.info().key, panelName(backend.panel()), static_cast<unsigned long>(u.count),
           static_cast<unsigned long>(u.minMs), static_cast<unsigned long>(u.maxMs),
           static_cast<unsigned long>(u.meanMs()), static_cast<unsigned long>(u.lastMs),
           static_cast<unsigned long>(c.count), static_cast<unsigned long>(c.minMs), static_cast<unsigned long>(c.maxMs),
-          static_cast<unsigned long>(c.meanMs()), static_cast<unsigned long>(c.lastMs));
+          static_cast<unsigned long>(c.meanMs()), static_cast<unsigned long>(c.lastMs),
+          static_cast<unsigned long>(u.medianMs()), static_cast<unsigned long>(u.percentileMs(95)),
+          static_cast<unsigned long>(u.timeouts), static_cast<unsigned long>(c.medianMs()),
+          static_cast<unsigned long>(c.percentileMs(95)), static_cast<unsigned long>(c.timeouts));
 }
 
 }  // namespace displayprofile
