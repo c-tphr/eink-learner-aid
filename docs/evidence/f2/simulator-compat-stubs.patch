@@ -1,0 +1,65 @@
+diff --git a/src/BoardConfig.h b/src/BoardConfig.h
+index f1de19b..c04c52b 100644
+--- a/src/BoardConfig.h
++++ b/src/BoardConfig.h
+@@ -239,6 +239,16 @@ struct ViewableInsets {
+   uint8_t left = 3;
+ };
+ 
++enum class InputStyle : uint8_t {
++  XteinkAdcLadder,
++  DigitalButtons,
++  DigitalConfirmBackHold,
++  DigitalConfirmPowerHold,
++  DigitalFiveKey,
++  DigitalTwoButton,
++  OnePageAdcLadder,
++};
++
+ struct BoardProfile {
+   Board board;
+   const char *name;
+@@ -262,6 +272,7 @@ struct BoardProfile {
+   uint8_t tabBarWidthPct = 100;
+   uint8_t wifiMaxTxPower = 0;
+   float uiScale = 1.0f;
++  InputStyle inputStyle = InputStyle::XteinkAdcLadder;
+ };
+ 
+ #if defined(SIMULATOR_DISPLAY_UC8179)
+diff --git a/src/HalDisplay.h b/src/HalDisplay.h
+index b1d6f13..b430311 100644
+--- a/src/HalDisplay.h
++++ b/src/HalDisplay.h
+@@ -31,6 +31,9 @@ public:
+   GrayscaleCapabilities grayscaleCapabilities(
+       GrayscaleMode mode = GrayscaleMode::Overlay) const;
+   const char* controllerName() const;
++  void setReaderRefresh(bool) {}
++  void controllerIdle() {}
++  bool displayRetainedGrayscaleOverlay(uint16_t, uint16_t, uint16_t, uint16_t, bool) { return false; }
+ 
+   // Constructor with pin configuration
+   HalDisplay();
+diff --git a/src/SecureHttpClient.h b/src/SecureHttpClient.h
+index 72742ae..102577c 100644
+--- a/src/SecureHttpClient.h
++++ b/src/SecureHttpClient.h
+@@ -102,6 +102,17 @@ class SecureHttpClient {
+   bool hasContentLength() const { return http_.hasContentLength(); }
+   size_t getContentLength() const { return http_.getContentLength(); }
+   std::string getHeader(const std::string& name) const { return http_.getHeader(name); }
++  std::string getCombinedHeader(const char* lowercaseName) const {
++    std::string value;
++    for (const auto& h : http_.getHeaders()) {
++      std::string n = h.first;
++      for (auto& c : n) c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
++      if (n != lowercaseName) continue;
++      if (!value.empty()) value += ", ";
++      value += h.second;
++    }
++    return value;
++  }
+   bool responseComplete() const { return http_.responseComplete() && !callbackStopped_ && !aborted_; }
+   bool aborted() const { return aborted_; }
+   std::vector<std::pair<std::string, std::string>> getHeaders() const {
