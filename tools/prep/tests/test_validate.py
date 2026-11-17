@@ -276,6 +276,37 @@ def test_exclusion_category(reason, category):
     assert V.exclusion_category(reason) == category
 
 
+def test_document_roles_from_structural_markup_only():
+    from tools.prep import matter
+    from tools.prep.epub import load_book
+    books = ORIGINAL.parent
+    paine = matter.document_roles(load_book(books / "paine-essays.epub"))
+    roles = {k.rsplit("/", 1)[1]: v.kind for k, v in paine.items()}
+    assert [name for name, kind in roles.items() if kind == matter.BODY] == [
+        "common-sense.xhtml", "the-republican-proclamation.xhtml", "anti-monarchal-essay.xhtml",
+        "declaration-of-rights.xhtml", "dissertation-on-first-principles-of-government.xhtml",
+        "the-decline-and-fall-of-the-english-system-of-finance.xhtml", "agrarian-justice.xhtml"]
+    assert {roles[n] for n in ("titlepage.xhtml", "imprint.xhtml", "endnotes.xhtml", "colophon.xhtml",
+                               "uncopyright.xhtml")} == {matter.FRONT_BACK}
+    fixture = {k: (v.kind, v.evidence) for k, v in matter.document_roles(load_book(ORIGINAL)).items()}
+    assert fixture == {
+        "OEBPS/text/title.xhtml": (matter.FRONT_BACK, "landmarks type titlepage"),
+        "OEBPS/text/chapter-1.xhtml": (matter.BODY, "landmarks type bodymatter"),
+        "OEBPS/text/chapter-2.xhtml": (matter.BODY, "inside the landmarks' body matter"),
+        "OEBPS/text/chapter-3.xhtml": (matter.BODY, "inside the landmarks' body matter"),
+        "OEBPS/text/endnotes.xhtml": (matter.FRONT_BACK, "epub:type endnotes"),
+    }
+
+
+def test_real_book_passes_with_its_committed_draft():
+    books = ORIGINAL.parent
+    out = V.validate_files(books / "paine-essays.epub", books / "paine-essays.prepared.epub",
+                           books / "paine-essays.draft.json", epubcheck=ok_epubcheck, created=TS)
+    assert out.passed, failing(out.result)
+    assert ("excluded words that count against the limit: 648 of the book's 50507 words outside footnotes "
+            "(limit 10%)") in exclusions(out)["details"]
+
+
 def test_exclusions_pass_on_the_fixture_with_and_without_its_draft():
     for draft in (None, DRAFT_BYTES):
         c = exclusions(run(draft=draft))
