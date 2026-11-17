@@ -127,9 +127,10 @@ jobs:
         run: |
           python -m venv build/venv-device
           build/venv-device/bin/python -m pip install -r tools/device/requirements-test.txt
-      - name: pytest tools/device (a skipped test fails the job)
+      - name: pytest tools/device and scripts/tests (a skipped test fails the job)
+        # scripts/tests: the release kit builder (scripts/make_release_kit.py) on synthetic images.
         run: |
-          build/venv-device/bin/python -m pytest tools/device -q -rs --junitxml=build/device-junit.xml
+          build/venv-device/bin/python -m pytest tools/device scripts/tests -q -rs --junitxml=build/device-junit.xml
           python .github/scripts/no_skips.py build/device-junit.xml
 
   device-tool-windows:
