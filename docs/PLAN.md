@@ -25,6 +25,10 @@ Nov 16, 2026 · @Christopher
 
 - Section 8, "Controls": the checker no longer has read-only tools. Since P7 it writes its own result through one guarded write, and a result without the guard's record is refused. The first real run showed that Claude Code does not run the guard's hook in a cloud session, so the plan now says that `/prep-book` needs a local Claude Code session in a trusted folder and starts with a probe that proves the guard is active. The owner chose this over a repository-wide hook.
 
+**2026-11-18.** The state file's `book_sha256` (task R4b, pull request #90). Section 1 is unchanged.
+
+- Section 7, "State file": the placeholder said "hash of the prepared file's source", which reads as if the device hashed a file. It is the checkpoint file's `book.source_sha256`, copied, and a book without checkpoint data has none. The wording now says so.
+
 ## 1. Summary and confirmed decisions
 
 The reader is built as a public fork of mainline CrossPoint: RSVP works on any EPUB, and checkpoints come from prepared EPUBs that carry their own prompt data. This plan turns the v1 PRD into work that a Fable 5.2 orchestrator can split into GitHub issues for Opus 5.5 implementers. Everything is developed and verified in a simulator, then proven on the physical Picco in one final hands-on session.
@@ -302,7 +306,7 @@ One file per book, `<book file name>.rsvp-state.json`, written to a temporary fi
 ```json
 {
   "version": 1,
-  "book_sha256": "<hash of the prepared file's source>",
+  "book_sha256": "<the checkpoint file's book.source_sha256>",
   "overrides": { "wpm": 240, "words_per_update": 1 },
   "position": { "chapter": 3, "word": 1542, "mode": "rsvp" },
   "grades": {
@@ -318,7 +322,7 @@ One file per book, `<book file name>.rsvp-state.json`, written to a temporary fi
 }
 ```
 
-`active_checkpoint` is absent during normal reading, and `reread` is absent unless a reread is in progress. On open, the firmware restores in this order: an active reread, then an active prompt with its answer hidden, then the plain reading position. For books without checkpoint data the file holds only overrides and position.
+`active_checkpoint` is absent during normal reading, and `reread` is absent unless a reread is in progress. On open, the firmware restores in this order: an active reread, then an active prompt with its answer hidden, then the plain reading position. For books without checkpoint data the file holds only overrides and position, and has no `book_sha256`. The firmware never hashes a book: `book_sha256` is copied from the checkpoint file, where the preparation tool wrote the hash of the original EPUB.
 
 ## 8. Preparation workflow
 
