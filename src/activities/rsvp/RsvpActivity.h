@@ -136,6 +136,7 @@ class RsvpActivity final : public Activity {
   bool pendingPlay = false;
   bool needClear = true;
   bool playbackScreenShown = false;  // render task only: the guides are on screen
+  char statusLine[160] = {};         // render task only: the pause screen's first line, also logged
 };
 
 #endif  // CROSSPOINT_RSVP_ENABLED

@@ -1,0 +1,61 @@
+# RSVP with the two side keys only (task R4a; S4 rows 1, 2, 3, 12 key paths; S4 section 9 tokens):
+# the card is seeded so the firmware boots straight into the fixture (as after a sleep from the
+# reader), so no other key is ever pressed. DOWN turns to chapter 1, page 1; a 0.9 s DOWN hold enters
+# RSVP ("Page turn long press: Speed read", the feature builds' default); a DOWN hold activates Play;
+# frames 0, 1, 2, ... in order; UP pauses (any key, on its press edge); two short UP presses move the
+# highlight Play -> << sentence -> Page view; an UP hold activates Page view.
+description = "RSVP by Up/Down only: hold enters, hold plays, any key pauses, short presses move, hold selects Page view"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+  { json = { openEpubPath = "/books/fixture.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+  { press = "DOWN", note = "a short press still turns the page (on release)" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=0 word=0 " },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Paused · 240 WPM target · -- actual\"" },
+  { wait_log = "\\[CTL\\] Pause armed", note = "armed only after the entering key was released" },
+  { shot = "pause_entry" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Play (the default highlight)" },
+  { wait_log = "\\[CTL\\] Pause select=Play" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=0 wpm=240 words_per_update=1" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=0 last=0 words=1 .* text=\"The\"" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=1 last=1 words=1 .* text=\"Lamp\"" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=2 last=2 words=1 .* text=\"Room\"" },
+  { shot = "frame_room" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=3 last=3 " },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=4 last=4 " },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=5 last=5 " },
+  { press = "UP", note = "any key pauses" },
+  { wait_log = "\\[CTL\\] Playing pause=key" },
+  { wait_log = "\\[RSVP\\] pause reason=pause ch=1 word=\\d+ target=240 delivered=\\d+\\.\\d .* audit=ok drawn=\\d+ segments=1 violations=0 gaps=0 repeats=0" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Paused · 240 WPM target · \\d+ actual\"" },
+  { wait_log = "\\[CTL\\] Pause armed", note = "the pausing key's release moved nothing" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceBack" },
+  { wait_log = "\\[RSVP\\] pause screen focus=SentenceBack refresh=update" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=PageView" },
+  { wait_log = "\\[RSVP\\] pause screen focus=PageView refresh=update" },
+  { shot = "pause_focus_page_view" },
+  { press = "UP", hold_ms = 900, note = "hold: Page view" },
+  { wait_log = "\\[CTL\\] Pause select=PageView" },
+  { wait_log = "\\[RSVP\\] leave to=page-view ch=1 word=\\d+ offset=\\d+" },
+  { wait_log = "Rendered page in" },
+  { screen_has = "The Lamp Room | 1/5" },
+  { shot = "page_view" },
+  { press = "DOWN", note = "the reader works as before: the held UP's release turned nothing" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { quit = true },
+  { expect_file = ".crosspoint/epub_*/progress.bin", hex_prefix = "0100 0100" },
+  { compare = "pause_entry" },
+  { compare = "frame_room" },
+  { compare = "pause_focus_page_view", mask = [[0, 0, 480, 50], [0, 124, 480, 72]] },
+  { compare = "page_view" },
+]

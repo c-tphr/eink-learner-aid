@@ -1,0 +1,66 @@
+# Sentence stepping on the pause screen by touch (task R4a; S4 rows 4 and 5).
+#
+# Expected positions come from fixtures/books/fixture.expected.json, document text/chapter-1.xhtml
+# ("words"): words 0-2 are the heading "The Lamp Room" (PARA_END on word 2), words 3-12 the sentence
+# "The supply boat reached Gannet Rock a little after noon." and word 13 starts "It had crossed the
+# strait at 3.5 knots, ...". So from word 0: forward -> 3, forward -> 13; back -> 3, back -> 0. The
+# pause screen's next-words row shows the words Play starts with (as many as fit 448 px); the checks
+# match its start, right after the "Page view" button in reading order. Then Play from word 0, a word
+# frame ("Room"), and a touch pause.
+description = "Sentence forward and back by touch on the pause screen; positions and band text match the fixture's ground truth"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+]
+
+steps = [
+  { wait_screen = "Browse Files" },
+  { tap = [240, 346] },
+  { wait_screen = "SD card | books" },
+  { tap = [240, 138] },
+  { wait_screen = "fixture | .epub" },
+  { tap = [240, 138] },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 400] },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [385, 752] },
+  { wait_screen = "More | 1/3" },
+  { tap = [240, 388], note = "Speed read" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Page view | The Lamp Room The supply boat |" },
+  { tap = [240, 444], note = "Forward one sentence" },
+  { wait_log = "\\[CTL\\] Pause select=SentenceForward" },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=0 to=3" },
+  { wait_screen = "Page view | The supply boat reached Gannet Rock ", note = "the next-words row starts at word 3 (after the Page view button)" },
+  { tap = [240, 444], note = "Forward one sentence" },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=3 to=13" },
+  { wait_screen = "Page view | It had crossed the strait at ", note = "starts at word 13" },
+  { wait_log = "\\[RSVP\\] pause screen focus=SentenceForward refresh=update" },
+  { shot = "pause_sentence_13" },
+  { tap = [240, 236], note = "Back one sentence: at a sentence start, the previous one" },
+  { wait_log = "\\[RSVP\\] sentence back ch=1 from=13 to=3" },
+  { wait_screen = "Page view | The supply boat reached Gannet Rock " },
+  { tap = [240, 236], note = "Back one sentence" },
+  { wait_log = "\\[RSVP\\] sentence back ch=1 from=3 to=0" },
+  { wait_screen = "Page view | The Lamp Room The supply boat |" },
+  { tap = [240, 236], note = "Back at the chapter's first sentence: stays" },
+  { wait_log = "\\[RSVP\\] sentence back ch=1 from=0 to=0" },
+  { tap = [240, 340], note = "Play from word 0" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=0 " },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=0 last=0 " },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=1 last=1 " },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=2 last=2 words=1 .* text=\"Room\"" },
+  { shot = "frame_room" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=3 last=3 .* text=\"The\"", note = "the sentence after the heading" },
+  { tap = [240, 600], note = "pause" },
+  { wait_log = "\\[RSVP\\] pause reason=pause ch=1 word=\\d+ .* audit=ok .* violations=0 gaps=0 repeats=0" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Exit | Menu | Page view" },
+  { compare = "pause_sentence_13" },
+  { compare = "frame_room" },
+]

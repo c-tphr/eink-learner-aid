@@ -328,8 +328,8 @@ void RsvpActivity::drawPauseScreen(const bool clearing) {
     backend.update();
   }
   needClear = false;
-  LOG_DBG("RSVP", "pause screen focus=%s refresh=%s", controls::itemName(controls::PAUSE.zones[focus].item),
-          clearing ? "clear" : "update");
+  LOG_DBG("RSVP", "pause screen focus=%s refresh=%s status=\"%s\"",
+          controls::itemName(controls::PAUSE.zones[focus].item), clearing ? "clear" : "update", statusLine);
 }
 
 void RsvpActivity::paintButton(const int i, const char* label) {
@@ -356,13 +356,13 @@ void RsvpActivity::paintPauseScreen() {
   // Status: target and delivered WPM, then the position.
   const uint32_t tenths = scheduler.meter().deliveredWpmTenths();
   if (tenths == 0) {
-    snprintf(line, sizeof(line), "%s · %u %s · -- %s", tr(STR_RSVP_PAUSED), scheduler.wpm(), tr(STR_RSVP_WPM_TARGET),
-             tr(STR_RSVP_WPM_ACTUAL));
+    snprintf(statusLine, sizeof(statusLine), "%s · %u %s · -- %s", tr(STR_RSVP_PAUSED), scheduler.wpm(),
+             tr(STR_RSVP_WPM_TARGET), tr(STR_RSVP_WPM_ACTUAL));
   } else {
-    snprintf(line, sizeof(line), "%s · %u %s · %lu %s", tr(STR_RSVP_PAUSED), scheduler.wpm(), tr(STR_RSVP_WPM_TARGET),
-             static_cast<unsigned long>((tenths + 5) / 10), tr(STR_RSVP_WPM_ACTUAL));
+    snprintf(statusLine, sizeof(statusLine), "%s · %u %s · %lu %s", tr(STR_RSVP_PAUSED), scheduler.wpm(),
+             tr(STR_RSVP_WPM_TARGET), static_cast<unsigned long>((tenths + 5) / 10), tr(STR_RSVP_WPM_ACTUAL));
   }
-  renderer.drawText(UI_10_FONT_ID, MARGIN, STATUS_Y, line);
+  renderer.drawText(UI_10_FONT_ID, MARGIN, STATUS_Y, statusLine);
 
   const uint32_t words = index.isOpen() ? index.reader().wordCount() : 0;
   const uint32_t position = source.position();
