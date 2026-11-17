@@ -7,7 +7,7 @@ Task D4 (#34). The owner's Picco moves once from Onyx's single-slot table to a t
 | | `picco` (upstream, `platformio.ini`) | `picco_2slot` (this project, `platformio.project.ini`) |
 | --- | --- | --- |
 | Partition table | `partitions_picco.csv` (stock: factory `safeboot`, one `ota_0` app at 0xE0000) | `partitions_picco_2slot.csv`: `nvs` 0x9000/0xC000, `otadata` 0x15000/0x2000 (both as stock), `app0` 0x20000 and `app1` 0x800000 of 0x7E0000 each, `coredump` 0xFF0000 |
-| Firmware | the same (`picco_2slot` extends `picco`; its `build_flags` are `picco`'s, which `scripts/picco_2slot_pre.py` checks on every build) | the same, with `CROSSPOINT_VERSION` = `<version>-picco2` (About screen, serial log) |
+| Firmware | the same (`picco_2slot` extends `picco`; its `build_flags` are `picco`'s, which `scripts/picco_2slot_pre.py` checks on every build) | the same, with `CROSSPOINT_VERSION` = `<version>-picco2` (About screen, serial log): `2.0.0-dev-picco2` in a development build, `<release version>-picco2` in a release build (`scripts/release_version.py`, `docs/RELEASING.md`) |
 | `boot_app0.bin` | 0xE000 (framework default, inside the stock NVS) | 0x15000: `board_upload.arduino.boot_app0 = 0x15000`, the board key `upload.arduino.boot_app0` that arduino-esp32 3.3.11 `tools/pioarduino-build.py` reads for `FLASH_EXTRA_IMAGES` |
 | `upload` target | exists and is unsafe (`docs/BASE.md`); never used | none (below) |
 | Self-update | never: the slot policy says `NonOtaApp` | SD card and Wi-Fi, from either slot |
@@ -88,7 +88,7 @@ In the simulator nothing is offered or written (no partition table there); the O
 | Version rule | The tag and the running `CROSSPOINT_VERSION` must both start with `MAJOR.MINOR.PATCH` (optional leading `v`; 1 to 9 digits each; not followed by a digit or `.`). Install only if the tag's numbers are greater, compared as numbers (`2.0.10` > `2.0.9`), or equal while the running version contains `-rc`. If either does not parse, never install |
 | Example | running `2.0.0-picco2`: tag `2.0.1` installs; `2.0.0`, `1.9.9`, `v2`, `latest` do not |
 
-The release workflow (a later task) must therefore publish the `picco_2slot` `firmware.bin` as `eink-learner-aid-<tag>-picco2.bin` on a non-draft, non-pre-release release whose tag is `MAJOR.MINOR.PATCH`, and must build it with a `CROSSPOINT_VERSION` whose numbers equal the tag (for example `<tag>-picco2`), or the device would offer the same release again. With `[crosspoint] version = 2.0.0` today, the first release must be tagged above `2.0.0`.
+The release workflow must therefore publish the `picco_2slot` `firmware.bin` as `eink-learner-aid-<tag>-picco2.bin` on a non-draft, non-pre-release release whose tag is `MAJOR.MINOR.PATCH`, and must build it with a `CROSSPOINT_VERSION` whose numbers equal the tag (for example `<tag>-picco2`), or the device would offer the same release again. With `[crosspoint] version = 2.0.0` today, the first release must be tagged above `2.0.0`. Task A0 does this: `.github/workflows/release-kit.yml` tags `v<version>`, builds `<version>-picco2` and publishes `eink-learner-aid-v<version>-picco2.bin` (`docs/RELEASING.md`).
 
 Wrong-device protection is upstream's and unchanged: the image's chip id must match and its board tag must be `picco` (`src/network/FirmwareBoardTag.h`).
 
