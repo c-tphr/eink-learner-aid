@@ -9,7 +9,7 @@ A tiny made-up book by the made-up author Mara Ellery Quill, used by automated t
 | File | What it is |
 | --- | --- |
 | `fixture.epub` | The original (unprepared) EPUB 3: title page plus three chapters, nav document and NCX. Every zip entry is stored (no compression) with a fixed timestamp, so the bytes do not depend on the zlib build. |
-| `fixture.draft.json` | The draft a drafter session would write for it (plan section 8, step 2): sections as paragraph ranges, excluded front matter, checkpoints with cited paragraphs. Schema: `tools/prep/schema/draft.schema.json`, documented in `tools/prep/README.md`. |
+| `fixture.draft.json` | The draft a drafter session would write for it (plan section 8, step 2): sections as ranges of `prep extract` paragraph references, excluded front matter, checkpoints with cited paragraphs. Schema: `tools/prep/schema/draft.schema.json`, documented in `tools/prep/README.md`. |
 | `fixture.expected.json` | Ground truth for other layers, computed from the source data (not by parsing the EPUB): each spine document's word stream, block boundaries, non-prose blocks, footnote marks and bodies, and the first and last word of every draft section. Its `rules` member defines a word. |
 | `README.md` | This file. |
 
@@ -25,37 +25,37 @@ python3 -m pytest tools/prep -q                 # includes tools/prep/tests/test
 
 Word counts follow the rules in `fixture.expected.json` (headings included, footnote bodies and the inner text of figures, tables and code excluded).
 
-| Spine | File (relative to `OEBPS/`) | Role | Title | Blocks | Words |
+| Spine | File (relative to `OEBPS/`) | Role | Title | Paragraphs (XHTML ids) | Words |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `text/title.xhtml` | front-matter | Title page | fm-p001 to fm-p003 | 20 |
-| 2 | `text/chapter-1.xhtml` | chapter | The Lamp Room | c1-p001 to c1-p010 | 417 |
-| 3 | `text/chapter-2.xhtml` | chapter | The Fog Season | c2-p001 to c2-p013 | 550 |
-| 4 | `text/chapter-3.xhtml` | chapter | The Keeper's Log | c3-p001 to c3-p008 | 294 |
+| 1 | `text/title.xhtml` | front-matter | Title page | d01-p001 to d01-p003 (fm-p001 to fm-p003) | 20 |
+| 2 | `text/chapter-1.xhtml` | chapter | The Lamp Room | d02-p001 to d02-p010 (c1-p001 to c1-p010) | 417 |
+| 3 | `text/chapter-2.xhtml` | chapter | The Fog Season | d03-p001 to d03-p013 (c2-p001 to c2-p013) | 550 |
+| 4 | `text/chapter-3.xhtml` | chapter | The Keeper's Log | d04-p001 to d04-p008 (c3-p001 to c3-p008) | 294 |
 
 ### Sections and checkpoints (from the draft)
 
 | Section | Chapter | Paragraphs | Words (index range) | Ends chapter | Checkpoint |
 | --- | --- | --- | --- | --- | --- |
-| s0001 Arrival at Gannet Rock | `text/chapter-1.xhtml` | c1-p001 to c1-p006 | 223 (0 to 222) | no | c0001, 1 prompt |
-| s0002 Winding the clockwork | `text/chapter-1.xhtml` | c1-p007 to c1-p010 | 194 (223 to 416) | yes | none |
-| s0003 Fog signals | `text/chapter-2.xhtml` | c2-p001 to c2-p007 | 255 (0 to 254) | no | none |
-| s0004 The visitor from the mainland | `text/chapter-2.xhtml` | c2-p008 to c2-p013 | 295 (255 to 549) | yes | c0002, 3 prompts |
-| s0005 The keeper's log | `text/chapter-3.xhtml` | c3-p001 to c3-p008 | 294 (0 to 293) | yes | none |
+| s0001 Arrival at Gannet Rock | `text/chapter-1.xhtml` | d02-p001 to d02-p006 | 223 (0 to 222) | no | c0001, 1 prompt |
+| s0002 Winding the clockwork | `text/chapter-1.xhtml` | d02-p007 to d02-p010 | 194 (223 to 416) | yes | none |
+| s0003 Fog signals | `text/chapter-2.xhtml` | d03-p001 to d03-p007 | 255 (0 to 254) | no | none |
+| s0004 The visitor from the mainland | `text/chapter-2.xhtml` | d03-p008 to d03-p013 | 295 (255 to 549) | yes | c0002, 3 prompts |
+| s0005 The keeper's log | `text/chapter-3.xhtml` | d04-p001 to d04-p008 | 294 (0 to 293) | yes | none |
 
-`text/title.xhtml` (fm-p001 to fm-p003) is excluded front matter.
+`text/title.xhtml` (d01-p001 to d01-p003) is excluded front matter.
 
 ### Content inventory
 
 | Content | Document | Block | Detail |
 | --- | --- | --- | --- |
-| Image | `text/chapter-1.xhtml` | c1-p004 | `<figure>` with `<img>` of `images/gannet-rock.png` (120x160 1-bit PNG, alt text) and `<figcaption>`; after word 107 |
-| Footnote 1 | `text/chapter-1.xhtml` | c1-p005 | `<sup><a epub:type="noteref" href="#fn1">`, after word 173 ("one."); body in `<aside epub:type="footnote" id="fn1">` at chapter end |
-| Table | `text/chapter-2.xhtml` | c2-p005 | `<table>` with caption, header row and 3 body rows; after word 160 |
-| Footnote 2 | `text/chapter-2.xhtml` | c2-p010 | `<sup><a epub:type="noteref" href="#fn2">`, after word 396 ("disturbed."); body in `<aside epub:type="footnote" id="fn2">` at chapter end |
-| Footnote 3 | `text/chapter-2.xhtml` | c2-p013 | `<sup><a epub:type="noteref" href="#fn3">`, after word 533 ("engine."); body in `<aside epub:type="footnote" id="fn3">` at chapter end |
-| `<em>` word | `text/chapter-2.xhtml` | c2-p011 | "not" is word 406 ("not,") |
-| `<strong>` word | `text/chapter-2.xhtml` | c2-p013 | "never" is word 522 ("never") |
-| Code | `text/chapter-3.xhtml` | c3-p004 | `<pre><code>`, 6 lines; after word 113 |
+| Image | `text/chapter-1.xhtml` | d02-p004 (c1-p004) | `<figure>` with `<img>` of `images/gannet-rock.png` (120x160 1-bit PNG, alt text) and `<figcaption>`; after word 107 |
+| Footnote 1 | `text/chapter-1.xhtml` | d02-p005 (c1-p005) | `<sup><a epub:type="noteref" href="#fn1">`, after word 173 ("one."); body in `<aside epub:type="footnote" id="fn1">` at chapter end |
+| Table | `text/chapter-2.xhtml` | d03-p005 (c2-p005) | `<table>` with caption, header row and 3 body rows; after word 160 |
+| Footnote 2 | `text/chapter-2.xhtml` | d03-p010 (c2-p010) | `<sup><a epub:type="noteref" href="#fn2">`, after word 396 ("disturbed."); body in `<aside epub:type="footnote" id="fn2">` at chapter end |
+| Footnote 3 | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | `<sup><a epub:type="noteref" href="#fn3">`, after word 533 ("engine."); body in `<aside epub:type="footnote" id="fn3">` at chapter end |
+| `<em>` word | `text/chapter-2.xhtml` | d03-p011 (c2-p011) | "not" is word 406 ("not,") |
+| `<strong>` word | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | "never" is word 522 ("never") |
+| Code | `text/chapter-3.xhtml` | d04-p004 (c3-p004) | `<pre><code>`, 6 lines; after word 113 |
 
 ### Tokenisation cases
 
@@ -86,4 +86,4 @@ Each case is a word of the named block, exactly as it appears in `fixture.expect
 
 - Identifier `urn:uuid:2b6afafc-70f4-5bfc-99c8-9b5cc02d7b39`, `dcterms:modified` `2026-01-01T00:00:00Z`, language `en`.
 - Zip entries in a fixed order, `mimetype` first, all stored, timestamp 2026-01-01 00:00:00.
-- Block ids `<prefix>-pNNN` number every heading, paragraph, figure, table and pre of a document in order (`fm`, `c1`, `c2`, `c3`); footnote paragraphs are `<prefix>-nNNN`.
+- XHTML block ids `<prefix>-pNNN` number every heading, paragraph, figure, table and pre of a document in order (`fm`, `c1`, `c2`, `c3`); footnote paragraphs are `<prefix>-nNNN`. They exist only to show that `prep extract` records source ids: the draft cites paragraph references (`d02-p006`: spine document 2, block 6), which `prep extract` derives from spine position and block order alone (`tools/prep/refs.py`). `content.py` cites the XHTML ids and the generator translates them.
