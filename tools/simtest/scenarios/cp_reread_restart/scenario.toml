@@ -1,0 +1,146 @@
+# Closing the book during a reread (task C4; restoring it is task C5). The prepared fixture's c0002
+# (section s0004, chapter 2 words 311-607; chapter 2's pages hold 282-380, 381-489 and 490-607 at its
+# end). The state file must already hold what task C5 needs: active_checkpoint with prompt_index, the
+# unchanged resume and reread {mode, chapter, word}, kept up to date at page turns and pauses. Reopening
+# does not restore the reread yet: the reader opens at its own progress (a page of the section), and
+# reading on to the section's end fires c0002 again from its first prompt, with the grades intact.
+#
+# Run 1, touch, power loss: c0002 fires in page view; p1 Correct; p2 Incorrect; Reread in page view; one
+# swipe (the reread place moves to word 381); kill. The file: grades p1 correct, p2 incorrect;
+# position = before the break (chapter 2 word 490, page); active_checkpoint c0002, prompt_index 1,
+# resume chapter 3 word 0 page, reread page chapter 2 word 381.
+# Run 2, touch: Home's continue-reading card reopens the book at the reread page (no bar: nothing
+# restores the reread); two swipes fire c0002 again from p1 (recorded correct). p1 Skip question; p2
+# Reveal, Incorrect (nothing saved); Reread in RSVP; a touch-down pauses; sleep.
+# Run 3, keys, after the wake: the reader reopens by itself; the file holds the RSVP reread place. Down
+# to the section's last page and on: c0002 fires again; p1 and p2 Skip question; p3 Skip checkpoint. The
+# grades are run 1's, nothing is in progress, the position is after the break.
+description = "Kill and sleep during a reread: the state file holds the reread with prompt_index and the unchanged resume; reopening reads on before the break, fires the checkpoint again from its first prompt and keeps every grade"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}}\n", dst = "books/fixture.prepared.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # Run 1: touch, then a power loss during a page-view reread.
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 532], note = "The Fog Season" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 section=s0004 " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [120, 620], note = "Correct" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 348], note = "Reread in page view" },
+  { wait_log = "\\[CPT\\] reread bar shown" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] saved after=reread-moved prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:381:page" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { kill = true, note = "power loss during the reread" },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint", equals = { id = "c0002", prompt_index = 1, resume = { chapter = 3, word = 0, mode = "page" }, reread = { mode = "page", chapter = 2, word = 381 } }, note = "what C5 needs: the prompt, the unchanged resume, the reread place" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 2, word = 490, mode = "page" }, note = "before the break, as written when the checkpoint fired" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "correct" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p2/first", equals = "incorrect" },
+
+  # Run 2: touch; reopen, the checkpoint fires again; a reread in RSVP, then sleep.
+  { start = true },
+  { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home" },
+  { tap = [240, 175], note = "the continue-reading card" },
+  { wait_log = "\\[CPT\\] session open checkpoints=1 " },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4", note = "the reader's own progress: the reread page" },
+  { screen_lacks = "Back to the question", note = "nothing restores the reread yet (task C5)" },
+  { shot = "t_reopened_page" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] page advance ch=2 first=381 from=381 last=489 step=none reread=-" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 section=s0004 ch=2 last_word=607 resume_ch=3 resume_word=0 crossed=1", note = "reading on fires it again, from its first prompt" },
+  { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=page resume_ch=3 resume_word=0 state=read grades=2 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=correct focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [364, 712], note = "Skip question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect: nothing saved" },
+  { wait_log = "\\[CPT\\] event=incorrect prompt=c0002-p2 accepted=1 refusal=0 state=incorrect-choice grade_recorded=0 save=no" },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 256], note = "Reread in RSVP" },
+  { wait_log = "\\[RSVP\\] enter ch=2 page_offset=\\d+ word=311 .* from=reread" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { tap = [240, 340], note = "Play" },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=340 last=340 " },
+  { tap = [240, 600], note = "touch-down pauses" },
+  { wait_log = "\\[RSVP\\] pause reason=pause ch=2 word=(\\d+) " },
+  { wait_log = "\\[CPT\\] reread moved by=pause source=rsvp-playback mode=rsvp ch=2 word=3\\d\\d state=rereading left_section=0" },
+  { wait_log = "\\[CPT\\] saved after=reread-moved prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:3\\d\\d:rsvp", note = "the RSVP reread place, saved at the pause" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { sleep = true },
+  { wait_log = "Entering deep sleep" },
+  { wake = "POWER" },
+
+  # Run 3: keys, after the wake.
+  { wait_log = "\\[RSVP\\] book state read mode=page ch=2 word=490", note = "position: still before the break, in the mode the checkpoint fired in" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3", note = "the reader's progress: the page RSVP was reading in" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 section=s0004 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=correct focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN", hold_ms = 900, note = "Skip question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN", hold_ms = 900, note = "Skip question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipCheckpoint" },
+  { press = "DOWN", hold_ms = 900, note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=2 ch=3 word=0 mode=page saved=1" },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { quit = true },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "correct" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p2/first", equals = "incorrect" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "page" } },
+  { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_reread_restart/final.schema.json" },
+  { compare = "t_reopened_page" },
+]

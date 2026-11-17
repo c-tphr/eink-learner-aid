@@ -21,6 +21,7 @@
 #include "WordBand.h"
 #include "activities/Activity.h"
 #include "controls/ControlInput.h"
+#include "controls/ControlMap.h"
 #include "display/DisplayProfile.h"
 #include "reading/BookStateFile.h"
 #include "reading/ChapterWordIndex.h"
@@ -90,6 +91,8 @@ class RsvpActivity final : public Activity {
 
   // --- Render task (holding the RenderLock) ---
   void load();
+  // The usual entry (README.md, "Where RSVP opens"): the reader's page, or the saved word.
+  void openAtPage(const reading::SavedWord& saved);
   void loadContinued();
   reading::SavedWord loadState();
   void startPlayback();
@@ -130,11 +133,22 @@ class RsvpActivity final : public Activity {
   void saveForBook();
   void openCheckpoint();
   void returnFromCheckpoint(const readingsession::CheckpointRun& run);
+  // The checkpoint's screens closed and reading goes on in page view (task C4): a reread in page view,
+  // or a checkpoint that fired in page view ended after a reread in RSVP. RSVP closes.
+  void leaveAfterCheckpoint(const readingsession::CheckpointRun& run);
+  // "Back to the question" on the pause screen during a reread (S4 row 30).
+  void backToQuestion();
 
   // --- Either task, holding the RenderLock (the render task holds it inside render()) ---
   // Writes the position (the next word) and `mode` to the book's state file, unless it is what was
-  // written last.
-  void savePosition(checkpoint::ReadingMode mode, const char* reason);
+  // written last. During a reread it records the reread place instead (task C4): `position` keeps the
+  // place before the break. `rereadSource`: why the reread moved.
+  void savePosition(checkpoint::ReadingMode mode, const char* reason,
+                    checkpoint::NavSource rereadSource = checkpoint::NavSource::RsvpPlayback);
+  // The pause screen's items: PAUSE, or PAUSE_REREAD with "Back to the question" during a reread.
+  const controls::Screen& pauseLayout() const { return rereadScreen.load() ? controls::PAUSE_REREAD : controls::PAUSE; }
+  // Updates rereadScreen from the session (RenderLock held).
+  void noteRereading();
   // Home gesture and sleep: the reader's own progress, through HandOff (once), at the next word or,
   // while a checkpoint shows, at the word before the break.
   void saveReaderProgress();
@@ -167,6 +181,7 @@ class RsvpActivity final : public Activity {
   std::atomic<bool> guardRestartPending{false};
   std::atomic<bool> leavePending{false};       // Phase::Leaving: finish() on the next main-loop pass
   std::atomic<bool> checkpointPending{false};  // Phase::Checkpoint: show it on the next main-loop pass
+  std::atomic<bool> rereadScreen{false};       // the session is rereading: the pause screen has its row
 
   // Phase::Checkpoint (RenderLock): the step that fired, and the first word of the frame on screen,
   // which is the reading position before the break.

@@ -50,6 +50,9 @@ struct HandOff {
     ExitBook,    // save the position as the reader's progress and go Home
     ShowItem,    // RSVP stopped at an image, table or code block: show its page with the banner
     Continue,    // the banner's Continue: open RSVP again after the item
+    // A checkpoint that fired in page view ended in RSVP after a reread there (task C4): page view
+    // resumes after its break (the session's checkpoint run, readingsession::afterPageCheckpoint()).
+    CheckpointDone,
   };
   Then then = Then::None;
   int spineIndex = 0;

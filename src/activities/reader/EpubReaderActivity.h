@@ -204,6 +204,12 @@ class EpubReaderActivity final : public ReaderActivity {
   bool checkpointBeforeTurn(bool forward);
   bool openPageCheckpoint();
   void resumeAfterCheckpoint(const readingsession::CheckpointRun& run);
+  // RSVP builds, task C4: the checkpoint screens over the page (false without `run`); the prompt again
+  // after a page-view reread; the list a hold opens during one; the page drawn, for the reread bar.
+  bool showCheckpoint(std::unique_ptr<Activity> activity, const std::shared_ptr<readingsession::CheckpointRun>& run);
+  bool openRereadPrompt();
+  bool openRereadChoices();
+  void notePageShown(int textBottom);
   // Toolbar reader menu (see Overlay above).
   bool usesToolbarMenu() const;
   void openOverlay(Overlay target);

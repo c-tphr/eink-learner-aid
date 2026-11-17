@@ -49,7 +49,7 @@ Portrait layout, 480x800 logical pixels. Zones are `x,y,w,h`. "Hold" means holdi
 | 28 | After Incorrect | Skip prompt | 264,680,200,64 | Down×2 or ×3, hold | |
 | 29 | After Incorrect | Skip checkpoint | 16,680,200,64 | Down×3 or ×4, hold | |
 | 30 | Reread in RSVP | Return early | Any touch pauses, then tap "↩ Back to the question" at 16,128,448,64 | Any key pauses, then Up×2, hold | The pause screen gains this row. All of rows 2-14 still apply |
-| 31 | Reread in page view | Return early | "↩ Back to the question" in a top bar, 248,4,216,64 | Hold opens a short list whose default row is "Back to the question". Hold again | A short press turns pages as usual. Reading past the section end returns by itself |
+| 31 | Reread in page view | Return early | "↩ Back to the question" in a top bar, 248,4,216,64 | Hold opens a short list whose default row is "Back to the question". Hold again | A short press turns pages as usual. Reading past the section end returns by itself. Superseded (task C4): see src/activities/rsvp/README.md |
 | 32 | Back at the prompt after a reread | Retry / continue / skip | Same as rows 17-19 | Same as rows 17-19 | "Retry" is Reveal. "Continue" is Skip prompt (`lib/CheckpointCore/README.md:321`) |
 | 33 | Checkpoint finished or skipped | none | RSVP: the pause screen at the first word after the break, Play highlighted, status line "Checkpoint done". Page view: the page holding that word, nothing added | | Nothing advances by itself (`lib/CheckpointCore/README.md:224`) |
 | 34 | Device test lists (benchmark, ratings, pass/fail, profile choice) | Choose a row | Rows 448x72 from y=72, 8 px apart. Tap a row | Short press moves, hold chooses | The default row never commits anything: "Show again", "Repeat step" or the current profile |

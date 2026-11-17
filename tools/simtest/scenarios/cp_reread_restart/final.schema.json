@@ -1,0 +1,18 @@
+{
+  "description": "cp_reread_restart at the end: run 1's two first grades kept through a kill and a sleep, p3 never graded, nothing in progress.",
+  "type": "object",
+  "required": ["version", "book_sha256", "overrides", "position", "grades"],
+  "not": { "required": ["active_checkpoint"] },
+  "properties": {
+    "book_sha256": { "const": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+    "grades": {
+      "type": "object",
+      "required": ["c0002-p1", "c0002-p2"],
+      "additionalProperties": false,
+      "properties": {
+        "c0002-p1": { "type": "object", "required": ["first"], "properties": { "first": { "const": "correct" } } },
+        "c0002-p2": { "type": "object", "required": ["first"], "properties": { "first": { "const": "incorrect" } } }
+      }
+    }
+  }
+}

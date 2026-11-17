@@ -126,6 +126,44 @@ std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& inpu
   return activity;
 }
 
+bool saveTransition(const std::string& bookPath, const reading::CheckpointBook& book,
+                    const checkpoint::BookState& state, const checkpoint::Transition& t, const char* gradedPrompt,
+                    const char* reason, const checkpoint::Place* place) {
+  checkpointui::StateChange change = checkpointui::changeFor(state, t, gradedPrompt);
+  if (place != nullptr) {
+    change.positionMoved = true;
+    change.position = *place;
+  }
+  struct Edit {
+    const checkpointui::StateChange* change;
+    const char* sha;
+  } edit{&change, book.sourceSha256()};
+  reading::BookIdentity identity;
+  identity.sha256 = book.sourceSha256();
+  identity.index = &book.index();
+  const bool ok = reading::editBookState(
+      bookPath, identity,
+      [](checkpoint::BookState& file, const void* context) {
+        const auto* e = static_cast<const Edit*>(context);
+        checkpointui::applyChange(file, *e->change, e->sha);
+      },
+      &edit);
+  char position[40] = "none";
+  if (change.positionMoved) {
+    snprintf(position, sizeof(position), "%u:%lu:%s", change.position.position.chapter,
+             static_cast<unsigned long>(change.position.position.word), modeName(change.position.mode));
+  }
+  char reread[40] = "none";
+  if (change.hasActive && change.active.rereading) {
+    snprintf(reread, sizeof(reread), "%u:%lu:%s", change.active.reread.position.chapter,
+             static_cast<unsigned long>(change.active.reread.position.word), modeName(change.active.reread.mode));
+  }
+  LOG_DBG("CPT", "saved after=%s prompt=%s grade=%s active=%s prompt_index=%u position=%s ok=%d reread=%s", reason,
+          change.gradeRecorded ? change.promptId : "-", gradeLog(change.grade),
+          change.hasActive ? change.active.id : "none", change.active.promptIndex, position, ok ? 1 : 0, reread);
+  return ok;
+}
+
 }  // namespace checkpointentry
 
 CheckpointActivity::CheckpointActivity(GfxRenderer& renderer, MappedInputManager& input, std::string bookPath,
@@ -158,11 +196,11 @@ void CheckpointActivity::onEnter() {
 void CheckpointActivity::onExit() {
   Activity::onExit();
   // Left without an ending (Home gesture, sleep): every transition is already in the state file.
-  if (!ended && session) {
-    LOG_DBG("CPT", "left checkpoint=%u prompt=%u state=%s (saved)", session->flow.checkpoint(),
-            session->flow.promptIndex(), checkpoint::flowStateName(session->flow.state()));
+  if (!ended && progress) {
+    LOG_DBG("CPT", "left checkpoint=%u prompt=%u state=%s (saved)", progress->flow.checkpoint(),
+            progress->flow.promptIndex(), checkpoint::flowStateName(progress->flow.state()));
   }
-  session.reset();
+  progress.reset();  // the session keeps its own reference while the checkpoint is in progress
   ReaderUtils::applyOrientation(renderer, SETTINGS.orientation);
 }
 
@@ -181,16 +219,26 @@ bool CheckpointActivity::start() {
     LOG_ERR("CPT", "open failed: no checkpoint data");
     return false;
   }
-  // The flow and the state it changes, for the activity's life (78 KB; PSRAM on the Picco).
-  session = makeUniqueNoThrow<Session>(book->index());
-  if (!session) {
-    LOG_ERR("CPT", "OOM: checkpoint session (%u bytes)", static_cast<unsigned>(sizeof(Session)));
+  // The flow and the state it changes: ReadingSession's block (78 KB; PSRAM on the Picco), which it
+  // could not allocate when this is null.
+  progress = request.progress;
+  if (!progress) {
+    LOG_ERR("CPT", "open failed: no checkpoint session (%u bytes)",
+            static_cast<unsigned>(sizeof(checkpointentry::Progress)));
     return false;
   }
+  if (progress->flow.state() == checkpoint::FlowState::PromptHidden) {
+    // Back at the prompt after a reread (task C4): the flow already went back to it and saved that.
+    LOG_DBG("CPT", "back checkpoint=%s prompt=%u/%u mode=%s activity_bytes=%u",
+            book->index().checkpointId(progress->flow.checkpoint()), progress->flow.promptIndex() + 1,
+            progress->flow.promptCount(), modeName(request.mode), static_cast<unsigned>(sizeof(CheckpointActivity)));
+    enterScreen();
+    return true;
+  }
   // The library's rule for another edition (applyBookChangeRule()) applies as the file is read.
-  const reading::StateLoad load = reading::loadBookState(bookPath, identity(), session->state);
+  const reading::StateLoad load = reading::loadBookState(bookPath, identity(), progress->state);
 
-  const checkpoint::Transition t = session->flow.start(request.fire, request.mode);
+  const checkpoint::Transition t = progress->flow.start(request.fire, request.mode);
   const checkpoint::CheckpointIndex& index = book->index();
   LOG_DBG("CPT",
           "open checkpoint=%s prompts=%u section=%s mode=%s resume_ch=%u resume_word=%lu state=%s grades=%u "
@@ -198,8 +246,8 @@ bool CheckpointActivity::start() {
           index.checkpointId(request.fire.checkpoint), index.promptCount(request.fire.checkpoint),
           index.sectionId(request.fire.section.section), modeName(request.mode), request.fire.resume.chapter,
           static_cast<unsigned long>(request.fire.resume.word), reading::stateSourceName(load.source),
-          session->state.grades.count(), static_cast<unsigned>(sizeof(CheckpointActivity)),
-          static_cast<unsigned>(sizeof(Session)), t.accepted ? 1 : 0);
+          progress->state.grades.count(), static_cast<unsigned>(sizeof(CheckpointActivity)),
+          static_cast<unsigned>(sizeof(checkpointentry::Progress)), t.accepted ? 1 : 0);
   if (!t.accepted) {
     LOG_ERR("CPT", "open refused: refusal=%u", static_cast<unsigned>(t.refusal));
     return false;
@@ -284,7 +332,7 @@ void CheckpointActivity::activate(const Item item) {
     return;
   }
   FlowEvent event = FlowEvent::Reveal;
-  if (!checkpointui::flowEventFor(item, event) || !checkpointui::offered(item, session->flow.state())) return;
+  if (!checkpointui::flowEventFor(item, event) || !checkpointui::offered(item, progress->flow.state())) return;
   apply(event);
 }
 
@@ -315,10 +363,10 @@ void CheckpointActivity::apply(const FlowEvent event) {
     RenderLock lock;  // the flow, the index and the screen belong to the render task too
     char gradedId[checkpoint::ID_BUFFER_BYTES];
     std::memcpy(gradedId, promptId, sizeof(gradedId));
-    const uint16_t prompt = session->flow.promptIndex();  // a finish clears it
+    const uint16_t prompt = progress->flow.promptIndex();  // a finish clears it
     char at[checkpoint::TIMESTAMP_CHARS + 1] = {};
     const bool grading = event == FlowEvent::Correct || event == FlowEvent::Incorrect;
-    const checkpoint::Transition t = session->flow.handle(event, grading ? gradeTime(at) : nullptr);
+    const checkpoint::Transition t = progress->flow.handle(event, grading ? gradeTime(at) : nullptr);
     LOG_DBG("CPT", "event=%s prompt=%s accepted=%d refusal=%u state=%s grade_recorded=%d save=%s",
             checkpoint::flowEventName(event), gradedId, t.accepted ? 1 : 0, static_cast<unsigned>(t.refusal),
             checkpoint::flowStateName(t.state), t.gradeRecorded ? 1 : 0,
@@ -342,31 +390,9 @@ void CheckpointActivity::apply(const FlowEvent event) {
 
 void CheckpointActivity::persist(const checkpoint::Transition& t, const char* gradedPrompt, const char* reason,
                                  const checkpoint::Place* place) {
-  checkpointui::StateChange change = checkpointui::changeFor(session->state, t, gradedPrompt);
-  if (place != nullptr) {
-    change.positionMoved = true;
-    change.position = *place;
+  if (!checkpointentry::saveTransition(bookPath, *book, progress->state, t, gradedPrompt, reason, place)) {
+    outcome->saved = false;
   }
-  struct Edit {
-    const checkpointui::StateChange* change;
-    const char* sha;
-  } edit{&change, book->sourceSha256()};
-  const bool ok = reading::editBookState(
-      bookPath, identity(),
-      [](checkpoint::BookState& state, const void* context) {
-        const auto* e = static_cast<const Edit*>(context);
-        checkpointui::applyChange(state, *e->change, e->sha);
-      },
-      &edit);
-  if (!ok) outcome->saved = false;
-  char position[40] = "none";
-  if (change.positionMoved) {
-    snprintf(position, sizeof(position), "%u:%lu:%s", change.position.position.chapter,
-             static_cast<unsigned long>(change.position.position.word), modeName(change.position.mode));
-  }
-  LOG_DBG("CPT", "saved after=%s prompt=%s grade=%s active=%s prompt_index=%u position=%s ok=%d", reason,
-          change.gradeRecorded ? change.promptId : "-", gradeLog(change.grade),
-          change.hasActive ? change.active.id : "none", change.active.promptIndex, position, ok ? 1 : 0);
 }
 
 void CheckpointActivity::end(const checkpointui::End how, const checkpoint::Transition& t, const uint16_t prompt) {
@@ -376,7 +402,7 @@ void CheckpointActivity::end(const checkpointui::End how, const checkpoint::Tran
   if (t.finished) {
     outcome->resume = t.resume;
   } else {
-    outcome->reread = session->state.active.reread;
+    outcome->reread = progress->state.active.reread;
   }
   const checkpoint::Place& place = t.finished ? outcome->resume : outcome->reread;
   LOG_DBG("CPT", "end result=%s prompt=%u ch=%u word=%lu mode=%s saved=%d", checkpointui::endName(how),
@@ -385,7 +411,7 @@ void CheckpointActivity::end(const checkpointui::End how, const checkpoint::Tran
 }
 
 void CheckpointActivity::enterScreen() {
-  const checkpoint::CheckpointFlow& flow = session->flow;
+  const checkpoint::CheckpointFlow& flow = progress->flow;
   screen = checkpointui::screenFor(flow.state());
   focus = checkpointui::defaultFocus(screen, request.mode);
   answerPart = 0;
@@ -418,7 +444,7 @@ void CheckpointActivity::enterScreen() {
 // Render task
 
 void CheckpointActivity::render(RenderLock&&) {
-  if (ended || startFailed || !session || screen == Screen::None) return;
+  if (ended || startFailed || !progress || screen == Screen::None) return;
   paint();
   const bool clearing = needClear;
   if (clearing) {
@@ -428,7 +454,7 @@ void CheckpointActivity::render(RenderLock&&) {
   }
   needClear = false;
   LOG_DBG("CPT", "screen=%s question=%u/%u prompt=%s recorded=%s focus=%s part=%u/%u lines=%lu refresh=%s",
-          checkpointui::screenName(screen), session->flow.promptIndex() + 1, session->flow.promptCount(), promptId,
+          checkpointui::screenName(screen), progress->flow.promptIndex() + 1, progress->flow.promptCount(), promptId,
           gradeLog(recorded), controls::itemName(checkpointui::layoutOf(screen).zones[focus].item), answerPart + 1,
           answerParts, static_cast<unsigned long>(answerLines), clearing ? "clear" : "update");
 }
@@ -459,7 +485,8 @@ void CheckpointActivity::paint() {
 void CheckpointActivity::paintHeader(const bool capital, const char* suffix) {
   char question[48];
   snprintf(question, sizeof(question), capital ? tr(STR_CP_QUESTION_OF_CAPITAL) : tr(STR_CP_QUESTION_OF),
-           static_cast<unsigned>(session->flow.promptIndex() + 1), static_cast<unsigned>(session->flow.promptCount()));
+           static_cast<unsigned>(progress->flow.promptIndex() + 1),
+           static_cast<unsigned>(progress->flow.promptCount()));
   char line[160];
   if (capital) {
     snprintf(line, sizeof(line), "%s%s%s", question, suffix ? " · " : "", suffix ? suffix : "");

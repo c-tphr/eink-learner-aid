@@ -135,6 +135,11 @@ enum class Item : uint8_t {
   RereadRsvp,
   RereadPage,
   ContinueOn,  // "Continue" after Incorrect
+  // Rereading a section (task C4; S4 rows 30-31): the RSVP pause screen's row, the page-view bar's
+  // button and the first row of the list a side-key hold opens there; the list's other two rows.
+  BackToQuestion,
+  SpeedReadHere,
+  KeepReading,
 };
 
 struct Zone {
@@ -168,6 +173,81 @@ inline constexpr Zone PAUSE_ZONES[] = {
     {Item::SaveDefault, 16, 640, 216, 64, false}, {Item::SaveBook, 248, 640, 216, 64, false},
 };
 inline constexpr Screen PAUSE{PAUSE_ZONES, static_cast<uint8_t>(sizeof(PAUSE_ZONES) / sizeof(PAUSE_ZONES[0])), 4};
+
+// The pause screen during a reread (task C4; S4 row 30 and section 2): the row under Exit, Menu and Page
+// view, which shows the next words otherwise, becomes "Back to the question". Play stays the default, so
+// the key path is Up x2 and hold.
+inline constexpr Zone PAUSE_REREAD_ZONES[] = {
+    {Item::Exit, 16, 52, 136, 64, false},
+    {Item::Menu, 172, 52, 136, 64, false},
+    {Item::PageView, 328, 52, 136, 64, false},
+    {Item::BackToQuestion, 16, 128, 448, 64, false},
+    {Item::SentenceBack, 16, 204, 448, 64, true},
+    {Item::Play, 16, 280, 448, 120, false},
+    {Item::SentenceForward, 16, 412, 448, 64, true},
+    {Item::WpmDown, 16, 488, 96, 64, true},
+    {Item::WpmUp, 368, 488, 96, 64, true},
+    {Item::WordsDown, 16, 564, 96, 64, true},
+    {Item::WordsUp, 368, 564, 96, 64, true},
+    {Item::SaveDefault, 16, 640, 216, 64, false},
+    {Item::SaveBook, 248, 640, 216, 64, false},
+};
+inline constexpr Screen PAUSE_REREAD{
+    PAUSE_REREAD_ZONES, static_cast<uint8_t>(sizeof(PAUSE_REREAD_ZONES) / sizeof(PAUSE_REREAD_ZONES[0])), 5};
+
+// Page view during a reread (task C4; replaces S4 row 31's top bar, which hid the page's first lines):
+// a strip over the reader's status-bar row, from the bottom of its text area to the bottom of the
+// screen, with the label at the left and the "Back to the question" button at the right. The reader
+// checks a tap against the button before its own taps (links, menu, page-turn zones).
+inline constexpr int16_t REREAD_BAR_MIN_H = 24;      // smallest strip: a line of the small UI font and the rule
+inline constexpr int16_t REREAD_BAR_BUTTON_W = 248;  // wide enough for the label on one line
+inline constexpr int16_t REREAD_BAR_MARGIN = 16;
+inline constexpr int16_t REREAD_BAR_RULE = 1;  // the rule along the strip's top edge
+inline constexpr int16_t REREAD_BAR_GAP = 0;   // between the rule, the button and the screen's edge
+
+struct RereadBarLayout {
+  int16_t top;     // the strip's top edge (its rule)
+  Zone button;     // BackToQuestion
+  int16_t labelW;  // the label's width, from x = REREAD_BAR_MARGIN
+  // The strip is below the text area (covers no line of text): `top` >= the text area's bottom.
+  bool clearOfText;
+};
+
+// The bar on a screen of `width` x `height` whose text area ends at `textBottom` (the reader's
+// screen height minus its bottom margin: inset, screen margin, status-bar lane). When the space below
+// is smaller than REREAD_BAR_MIN_H the strip grows upward, but by at most `maxCover` (one line of the
+// reader's text) into the text area, so it can cover the bottom margin and the last line, never more and
+// never the top of the page.
+constexpr RereadBarLayout rereadBarLayout(const int16_t width, const int16_t height, const int16_t textBottom,
+                                          const int16_t maxCover) {
+  const int16_t bottom = textBottom < 0 ? 0 : (textBottom > height ? height : textBottom);
+  int16_t top = bottom;
+  if (height - bottom < REREAD_BAR_MIN_H) {
+    const int16_t wanted = static_cast<int16_t>(height - REREAD_BAR_MIN_H);
+    const int16_t limit = static_cast<int16_t>(bottom - (maxCover > 0 ? maxCover : 0));
+    top = wanted > limit ? wanted : limit;
+    if (top < 0) top = 0;
+  }
+  const int16_t y = static_cast<int16_t>(top + REREAD_BAR_RULE + REREAD_BAR_GAP);
+  const int16_t h = static_cast<int16_t>(height - REREAD_BAR_GAP - y);
+  const int16_t buttonW = width - 3 * REREAD_BAR_MARGIN < REREAD_BAR_BUTTON_W
+                              ? static_cast<int16_t>(width - 3 * REREAD_BAR_MARGIN)
+                              : REREAD_BAR_BUTTON_W;
+  const int16_t x = static_cast<int16_t>(width - REREAD_BAR_MARGIN - buttonW);
+  return RereadBarLayout{top, Zone{Item::BackToQuestion, x, y, buttonW, h > 0 ? h : int16_t{0}, false},
+                         static_cast<int16_t>(x - 2 * REREAD_BAR_MARGIN), top >= bottom};
+}
+
+// The list a side-key hold opens in page view during a reread (S4 row 31 and section 8): rows of
+// 448x72 from y=72 as in the generic list (CHOICE_ZONES), "Back to the question" the default. The hold
+// would enter RSVP outside a reread, so that is the second row.
+inline constexpr Zone REREAD_CHOICE_ZONES[] = {
+    {Item::BackToQuestion, 16, 72, 448, 72, false},
+    {Item::SpeedReadHere, 16, 152, 448, 72, false},
+    {Item::KeepReading, 16, 232, 448, 72, false},
+};
+inline constexpr Screen REREAD_CHOICES{
+    REREAD_CHOICE_ZONES, static_cast<uint8_t>(sizeof(REREAD_CHOICE_ZONES) / sizeof(REREAD_CHOICE_ZONES[0])), 0};
 
 // Device test lists (S4 row 34; task D3a): rows 448x72 from y=72, 8 px apart, in focus order.
 // A ChoiceList (src/activities/devicetest/ChoiceList.h) shows the first `count` of them; which rows

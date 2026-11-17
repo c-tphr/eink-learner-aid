@@ -1,0 +1,150 @@
+# A reread never fires a checkpoint (task C4; docs/PLAN.md section 7, "Trigger rules" sixth bullet: "During
+# a reread, the linked section's own checkpoint is suppressed"; lib/CheckpointCore/README.md trigger rule
+# 6). The prepared fixture's c0001: section s0001, chapter 1 words 0-232, single prompt; its last word is on
+# chapter 1's third page (index 2, words 184-294). The book's state file sets 1000 WPM.
+#
+# Pass 1, touch, page view: leaving that page fires c0001. Reveal, Incorrect, Reread in page view: chapter 1's
+# first page with the bar. Paging on to the section's end: leaving the third page gives step=reread-end, not a
+# fire, and the prompt returns by itself. Reveal, Incorrect, Reread in page view again; the toolbar's
+# Contents jumps to chapter 2: the page holds no word of the section, so the reread goes back to the
+# prompt (as Return early) and nothing fires. Skip question: the checkpoint ends and page view resumes at
+# the first word after the break (chapter 1 word 233, the third page), not where the jump went.
+# Pass 2, keys, RSVP: Up, Down to the third page, Down fires c0001 again. Reveal, Incorrect, Up to Reread in RSVP,
+# hold: RSVP at chapter 1 word 0; Play stops before the image inside s0001, which page view shows with
+# the banner and the reread bar (task R5); Continue opens RSVP again inside the reread; Play plays on and
+# stops after "same." (step=reread-end: the section's own checkpoint does not fire, nothing after the
+# break is drawn); the prompt returns. Skip
+# checkpoint: the checkpoint fired in page view, so RSVP closes and page view resumes at word 233.
+description = "During a reread no checkpoint fires: paging past the reread section's end and playing to it in RSVP return to the prompt instead of firing; a jump out of the section returns to the prompt; resume stays after the original break"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}}\n", dst = "books/fixture.prepared.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # Pass 1: touch, page view.
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=184 from=184 last=294 step=fire reread=-" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0001 section=s0001 ch=1 last_word=232 resume_ch=1 resume_word=233 crossed=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CPT\\] saved after=incorrect prompt=c0001-p1 grade=incorrect active=c0001 prompt_index=0 position=none ok=1" },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 348], note = "Reread in page view" },
+  { wait_log = "\\[CPT\\] reread start mode=page checkpoint=c0001 section=s0001 prompt=0 ch=1 start=0 last_word=232" },
+  { wait_log = "\\[CPT\\] reread page ch=1 first=0 last=107 any=1 inside=1 word=0" },
+  { wait_log = "\\[CPT\\] reread bar shown" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=0 from=0 last=107 step=none reread=s0001" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=108 from=108 last=183 step=none reread=s0001" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400], note = "leave the page with the section's last word" },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=184 from=184 last=294 step=reread-end reread=s0001", note = "suppressed: no fire" },
+  { wait_log = "\\[CPT\\] reread end by=next-page event=reread-reached-end accepted=1 state=prompt-hidden" },
+  { wait_log = "\\[CPT\\] back checkpoint=c0001 prompt=1/1 mode=page " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 348], note = "Reread in page view again" },
+  { wait_log = "\\[CPT\\] reread start mode=page checkpoint=c0001 " },
+  { wait_log = "\\[CPT\\] reread bar shown" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 532], note = "The Fog Season: a jump out of the section" },
+  { wait_log = "\\[CPT\\] reread page ch=2 first=0 last=0 any=0 inside=0 word=0" },
+  { wait_log = "\\[CPT\\] reread moved by=page source=table-of-contents mode=page ch=2 word=0 state=prompt-hidden left_section=1" },
+  { wait_log = "\\[CPT\\] saved after=reread-left-section prompt=- grade=none active=c0001 prompt_index=0 position=none ok=1 reread=none" },
+  { wait_log = "\\[CPT\\] back checkpoint=c0001 prompt=1/1 mode=page ", note = "the prompt, not another checkpoint" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [364, 712], note = "Skip question: the last prompt, the checkpoint ends" },
+  { wait_log = "\\[CPT\\] end result=finished prompt=0 ch=1 word=233 mode=page saved=1" },
+  { wait_log = "\\[CPT\\] resume end=finished mode=page ch=1 word=233 reread=1" },
+  { wait_log = "\\[CPT\\] page resume later-page ch=1 word=233 ", note = "after the original break, not where the jump went" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { screen_lacks = "Back to the question" },
+
+  # Pass 2: keys, RSVP.
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0001 section=s0001 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN", hold_ms = 900, note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=Correct" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=Incorrect" },
+  { press = "DOWN", hold_ms = 900, note = "Incorrect" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=1/1 prompt=c0001-p1 recorded=incorrect focus=RereadPage " },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Incorrect focus=RereadRsvp" },
+  { press = "UP", hold_ms = 900, note = "Reread in RSVP" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=0 .* from=reread" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN", hold_ms = 900, note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=0 wpm=1000 words_per_update=1" },
+  { wait_log = "\\[RSVP\\] leave to=item kind=image ch=1 word=108 ", timeout_ms = 60000, note = "the image inside s0001: page view with the banner (task R5)" },
+  { wait_log = "\\[CPT\\] reread page ch=1 first=108 last=183 any=1 inside=1 word=108" },
+  { wait_log = "\\[CPT\\] reread bar shown", note = "the reread goes on in page view while the item shows" },
+  { wait_log = "\\[RSVP\\] banner screen focus=Continue" },
+  { shot = "k_reread_item_banner" },
+  { wait_log = "\\[CTL\\] Banner armed" },
+  { press = "DOWN", hold_ms = 900, note = "Continue: back into the reread, not into ordinary reading" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=108 .* from=continue" },
+  { wait_log = "\\[CPT\\] reread moved by=enter source=mode-switch mode=rsvp ch=1 word=108 state=rereading left_section=0" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Rereading · " },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN", hold_ms = 900, note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=108 wpm=1000 words_per_update=1" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=232 last=232 words=1 .* text=\"same.\"", timeout_ms = 90000 },
+  { wait_log = "\\[CPT\\] rsvp stop ch=1 last=232 next=233 step=reread-end reread=s0001", note = "suppressed: no fire" },
+  { wait_log = "\\[RSVP\\] pause reason=reread-end ch=1 word=233 .* audit=ok .* violations=0 ", note = "nothing after the break was drawn" },
+  { wait_log = "\\[CPT\\] back checkpoint=c0001 prompt=1/1 mode=page " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipCheckpoint" },
+  { press = "DOWN", hold_ms = 900, note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=0 ch=1 word=233 mode=page saved=1" },
+  { wait_log = "\\[RSVP\\] leave to=checkpoint-done end=skipped" },
+  { wait_log = "\\[CPT\\] page resume later-page ch=1 word=233 " },
+  { wait_log = "Rendered page in", note = "the page that holds word 233, where the checkpoint fired" },
+  { quit = true },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0001-p1/first", equals = "incorrect" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 1, word = 233, mode = "page" } },
+  { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_reread_no_other_fire/final.schema.json" },
+  { compare = "k_reread_item_banner" },
+]

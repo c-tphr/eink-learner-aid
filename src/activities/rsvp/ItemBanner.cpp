@@ -205,6 +205,18 @@ void ItemBanner::stay(const int8_t pageTurn) {
   place.position.chapter = static_cast<uint16_t>(handOff->spineIndex);
   place.position.word = handOff->item.nextWord;
   place.mode = checkpoint::ReadingMode::Page;
+  if (handOff->session && handOff->session->rereading()) {
+    // During a reread (task C4) the reread goes on in page view: its place moves, `position` keeps the
+    // place before the break. The page under the banner already reported it (readingsession::pageShown()).
+    {
+      RenderLock lock;
+      handOff->session->rereadMoved(place, checkpoint::NavSource::ModeSwitch, "stay");
+    }
+    handOff->then = rsvpentry::HandOff::Then::None;
+    handOff->pageTurn = pageTurn;
+    finish();
+    return;
+  }
   const bool ok = reading::editBookState(
       epub->getPath(), handOff->session ? handOff->session->identity() : reading::BookIdentity{},
       [](checkpoint::BookState& state, const void* context) {

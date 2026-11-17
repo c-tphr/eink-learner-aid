@@ -215,3 +215,114 @@ TEST(ControlMap, BannerMatchesS4Rows15And16) {
   EXPECT_STREQ(itemName(Item::Continue), "Continue");
   EXPECT_STREQ(itemName(Item::Stay), "Stay");
 }
+
+TEST(ControlMap, RereadPauseScreenAddsBackToTheQuestion) {
+  // Task C4, S4 row 30 and section 2: the pause screen's focus order during a reread is the normal one
+  // with "Back to the question" after Page view; Play stays the default, so the key path is Up x2.
+  ASSERT_EQ(PAUSE_REREAD.count, PAUSE.count + 1);
+  EXPECT_EQ(PAUSE_REREAD.zones[PAUSE_REREAD.defaultIndex].item, Item::Play);
+  int j = 0;
+  for (int i = 0; i < PAUSE_REREAD.count; ++i) {
+    if (PAUSE_REREAD.zones[i].item == Item::BackToQuestion) continue;
+    const Zone& a = PAUSE_REREAD.zones[i];
+    const Zone& b = PAUSE.zones[j++];
+    EXPECT_EQ(a.item, b.item) << i;
+    EXPECT_TRUE(a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h && a.repeats == b.repeats) << itemName(a.item);
+  }
+  const int back = indexOf(PAUSE_REREAD, Item::BackToQuestion);
+  ASSERT_EQ(back, 3);
+  const Zone& z = PAUSE_REREAD.zones[back];
+  EXPECT_EQ(z.x, 16);
+  EXPECT_EQ(z.y, 128);
+  EXPECT_EQ(z.w, 448);
+  EXPECT_EQ(z.h, 64);
+  EXPECT_FALSE(z.repeats);
+  int f = PAUSE_REREAD.defaultIndex;
+  f = focusPrev(f);
+  EXPECT_EQ(PAUSE_REREAD.zones[f].item, Item::SentenceBack);
+  f = focusPrev(f);
+  EXPECT_EQ(PAUSE_REREAD.zones[f].item, Item::BackToQuestion) << "Up x2 from Play";
+  // Page view, Menu and Exit are one more Up away than outside a reread (S4 rows 12-14).
+  EXPECT_EQ(PAUSE_REREAD.zones[focusPrev(f)].item, Item::PageView);
+  for (int a = 0; a < PAUSE_REREAD.count; ++a) {
+    for (int b = a + 1; b < PAUSE_REREAD.count; ++b) {
+      const Zone& p = PAUSE_REREAD.zones[a];
+      const Zone& q = PAUSE_REREAD.zones[b];
+      EXPECT_FALSE(p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h)
+          << itemName(p.item) << " / " << itemName(q.item);
+    }
+  }
+  // The simulator tokens of S4 section 9, row 30.
+  EXPECT_EQ(hit(PAUSE_REREAD, 240, 160)->item, Item::BackToQuestion);
+  EXPECT_EQ(hit(PAUSE_REREAD, 240, 340)->item, Item::Play);
+  EXPECT_STREQ(itemName(Item::BackToQuestion), "BackToQuestion");
+}
+
+TEST(ControlMap, RereadBarSitsBelowTheTextAreaWithTheDefaultSettings) {
+  // The Picco's reader with the default settings (measured in the simulator: `reread bar metrics`): the
+  // text area ends at y 773 of 800, one line of text is 40 px. The strip covers the status-bar row only.
+  const RereadBarLayout bar = rereadBarLayout(480, 800, 773, 40);
+  EXPECT_EQ(bar.top, 773);
+  EXPECT_TRUE(bar.clearOfText);
+  EXPECT_GE(bar.top, 773) << "the bar's top is at or below the text area's bottom";
+  EXPECT_EQ(bar.button.item, Item::BackToQuestion);
+  EXPECT_EQ(bar.button.x, 216);
+  EXPECT_EQ(bar.button.y, 774);
+  EXPECT_EQ(bar.button.w, 248);
+  EXPECT_EQ(bar.button.h, 26);
+  EXPECT_EQ(bar.button.y + bar.button.h, 800) << "down to the screen's edge";
+  EXPECT_EQ(bar.labelW, 184);
+  const Screen screen{&bar.button, 1, 0};
+  EXPECT_EQ(hit(screen, 340, 787)->item, Item::BackToQuestion) << "the scenarios' tap";
+  EXPECT_EQ(hit(screen, 340, 772), nullptr) << "the text area is not the bar";
+  EXPECT_EQ(hit(screen, 100, 787), nullptr) << "the bar's label is not a target";
+}
+
+TEST(ControlMap, RereadBarWithOtherReaderSettings) {
+  // Measured in the simulator. More space below the text: a taller button, still clear of the text.
+  RereadBarLayout bar = rereadBarLayout(480, 800, 738, 40);  // screen margin 40
+  EXPECT_EQ(bar.top, 738);
+  EXPECT_TRUE(bar.clearOfText);
+  EXPECT_EQ(bar.button.h, 61);
+  bar = rereadBarLayout(480, 800, 768, 40);  // the progress bar shown
+  EXPECT_TRUE(bar.clearOfText);
+  EXPECT_EQ(bar.button.h, 31);
+  // Landscape: the same strip along the 800 px side.
+  bar = rereadBarLayout(800, 480, 453, 40);
+  EXPECT_EQ(bar.top, 453);
+  EXPECT_TRUE(bar.clearOfText);
+  EXPECT_EQ(bar.button.x, 536);
+  EXPECT_EQ(bar.button.h, 26);
+  // The status bar hidden: 8 px below the text area. The strip takes REREAD_BAR_MIN_H and so covers the
+  // bottom 16 px of the text area: at most the last line, never more.
+  bar = rereadBarLayout(480, 800, 792, 40);
+  EXPECT_EQ(bar.top, 800 - REREAD_BAR_MIN_H);
+  EXPECT_FALSE(bar.clearOfText);
+  EXPECT_LE(792 - bar.top, 40);
+  EXPECT_EQ(bar.button.h, 23);
+  // Never more than one line into the text area, however little space there is.
+  bar = rereadBarLayout(480, 800, 800, 10);
+  EXPECT_EQ(bar.top, 790);
+  bar = rereadBarLayout(480, 800, 800, 0);
+  EXPECT_EQ(bar.top, 800) << "no line may be covered: no strip";
+  EXPECT_EQ(bar.button.h, 0);
+}
+
+TEST(ControlMap, RereadListMatchesS4Row31) {
+  // The list of the side-key hold: "Back to the question" the default, then Speed read and Keep reading,
+  // on the generic list's rows.
+  const Item order[] = {Item::BackToQuestion, Item::SpeedReadHere, Item::KeepReading};
+  ASSERT_EQ(REREAD_CHOICES.count, 3);
+  EXPECT_EQ(REREAD_CHOICES.defaultIndex, 0);
+  for (int i = 0; i < REREAD_CHOICES.count; ++i) {
+    const Zone& z = REREAD_CHOICES.zones[i];
+    EXPECT_EQ(z.item, order[i]);
+    EXPECT_EQ(z.x, CHOICE_ZONES[i].x);
+    EXPECT_EQ(z.y, CHOICE_ZONES[i].y);
+    EXPECT_EQ(z.w, CHOICE_ZONES[i].w);
+    EXPECT_EQ(z.h, CHOICE_ZONES[i].h);
+    EXPECT_FALSE(z.repeats);
+  }
+  EXPECT_STREQ(itemName(Item::SpeedReadHere), "SpeedReadHere");
+  EXPECT_STREQ(itemName(Item::KeepReading), "KeepReading");
+}

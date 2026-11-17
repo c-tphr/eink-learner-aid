@@ -59,12 +59,13 @@ uint8_t sectionEndFlags(const checkpoint::ChapterSections& sections, const uint3
 }
 
 checkpoint::Step rsvpCheckpointStep(const checkpoint::ChapterSections& sections, const uint32_t lastShown,
-                                    const uint32_t next) {
-  const checkpoint::Step step = checkpoint::rsvpStep(sections, lastShown);
+                                    const uint32_t next, const uint16_t rereadSection) {
+  const checkpoint::Step step = checkpoint::rsvpStep(sections, lastShown, rereadSection);
   if (step.kind != checkpoint::StepKind::None || next <= lastShown + 1) return step;
   const uint16_t chapter = sections.chapter();
   return checkpoint::evaluateMove(sections, checkpoint::Position{chapter, lastShown},
-                                  checkpoint::Position{chapter, next}, checkpoint::NavSource::RsvpPlayback);
+                                  checkpoint::Position{chapter, next}, checkpoint::NavSource::RsvpPlayback,
+                                  rereadSection);
 }
 
 PageWords pageWords(wordindex::WordIndexReader& reader, const uint32_t pageStartOffset,
@@ -106,6 +107,29 @@ const char* pageResumeName(const PageResume resume) {
       return "end-of-book";
   }
   return "?";
+}
+
+uint32_t intoSection(const checkpoint::SectionRange& range, const uint32_t word) {
+  if (range.end <= range.start) return range.start;
+  if (word < range.start) return range.start;
+  if (word >= range.end) return range.end - 1;
+  return word;
+}
+
+RereadPagePlace rereadPagePlace(const PageWords& page, const uint16_t chapter, const PageReading& reading,
+                                const checkpoint::SectionRange& range) {
+  RereadPagePlace place;
+  place.word = page.first;
+  if (chapter != range.chapter || range.end <= range.start) return place;
+  const uint32_t last = page.any ? page.last : page.first;
+  if (last < range.start || page.first >= range.end) return place;
+  place.inside = true;
+  place.word = intoSection(range, page.any ? pageFromWord(page, chapter, reading) : page.first);
+  return place;
+}
+
+bool rereadStepStays(const checkpoint::SectionRange& range, const uint32_t to) {
+  return to >= range.start && to < range.end;
 }
 
 }  // namespace reading

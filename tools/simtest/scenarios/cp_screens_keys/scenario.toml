@@ -18,9 +18,10 @@
 # Each checkpoint is reached by reading with the same two keys (task C3; C3a used a temporary
 # simulator entry): A by paging forward off chapter 1's page 3 (the end of s0001); B by paging on off
 # chapter 2's last page (s0004 ends the chapter); C, D and E by Up (back to that page) and Down; F by
-# Up, then Speed read and Play by holds, so it fires in RSVP. Rereads are task C4: E and F resume
-# after the break, as for Finished (E in page view, F on RSVP's pause screen), and the file then
-# holds no checkpoint in progress.
+# Up, then Speed read and Play by holds, so it fires in RSVP. E and F start the reread (task C4), go
+# back to the question at once (E: RSVP's pause screen, Up x2, hold; F: page view's hold list, hold)
+# and skip the checkpoint (Down x2, hold), so reading resumes after the break in the mode it fired in
+# (E in page view, F on RSVP's pause screen) and the file then holds no checkpoint in progress.
 #
 # Shots show the highlight on each item it reaches; the grades in the file at the end are the same as
 # in cp_screens_touch (the same schema checks them).
@@ -250,12 +251,26 @@ steps = [
   { wait_log = "\\[CTL\\] Incorrect focus=RereadRsvp" },
   { press = "UP", hold_ms = 900, note = "hold: Reread in RSVP" },
   { wait_log = "\\[CTL\\] Incorrect select=RereadRsvp" },
-  { wait_log = "\\[CPT\\] saved after=reread-rsvp prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1" },
+  { wait_log = "\\[CPT\\] saved after=reread-rsvp prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1 reread=2:311:rsvp" },
   { wait_log = "\\[CPT\\] end result=reread-rsvp prompt=0 ch=2 word=311 mode=rsvp saved=1" },
 
-  # The reread is task C4: reading resumes after the break in page view, the mode in use.
-  { wait_log = "\\[CPT\\] reread in rsvp not implemented yet \\(task C4\\): reading resumes after the break" },
-  { wait_log = "\\[CPT\\] resume end=reread-rsvp mode=page ch=3 word=0" },
+  # The reread (task C4): RSVP at the section's first word; Up x2, hold: Back to the question; Down x2,
+  # hold: Skip checkpoint. It fired in page view, so page view resumes after the break.
+  { wait_log = "\\[RSVP\\] enter ch=2 page_offset=\\d+ word=311 .* from=reread" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceBack" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=BackToQuestion" },
+  { press = "UP", hold_ms = 900, note = "hold: Back to the question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipCheckpoint" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Skip checkpoint" },
+  { wait_log = "\\[CPT\\] resume end=skipped mode=page ch=3 word=0 reread=1" },
   { wait_log = "\\[CPT\\] page resume chapter ch=3 word=0 " },
   { wait_log = "Progress saved: spine=3 offset=0 page=0" },
 
@@ -284,10 +299,23 @@ steps = [
   { wait_log = "\\[CTL\\] Incorrect focus=RereadPage" },
   { press = "DOWN", hold_ms = 900, note = "hold: Reread in page view" },
   { wait_log = "\\[CTL\\] Incorrect select=RereadPage" },
-  { wait_log = "\\[CPT\\] saved after=reread-page prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1", note = "the reread request is saved (task C4 will act on it)" },
+  { wait_log = "\\[CPT\\] saved after=reread-page prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1 reread=2:311:page" },
   { wait_log = "\\[CPT\\] end result=reread-page prompt=0 ch=2 word=311 mode=page saved=1" },
-  { wait_log = "\\[CPT\\] reread in page not implemented yet \\(task C4\\): reading resumes after the break" },
-  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · \\d+ actual\"", note = "RSVP, the mode in use, at chapter 3 word 0" },
+  # The reread (task C4): page view with the bar; a hold opens the list, a hold on its default row goes
+  # back to the question; Skip checkpoint. It fired in RSVP, so RSVP opens after the break.
+  { wait_log = "\\[CPT\\] reread bar shown" },
+  { press = "DOWN", hold_ms = 900, note = "hold: the list" },
+  { wait_log = "\\[CTL\\] RereadList armed" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Back to the question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipCheckpoint" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Skip checkpoint" },
+  { wait_log = "\\[CPT\\] resume end=skipped mode=rsvp ch=3 word=0 reread=1" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · -- actual\"", note = "RSVP, the mode the checkpoint fired in, at chapter 3 word 0: a new RSVP session, so no delivered WPM yet" },
   { quit = true },
 
   { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_screens_touch/state.schema.json", note = "exactly three grades: c0002-p3 was only skipped" },
