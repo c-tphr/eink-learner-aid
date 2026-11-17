@@ -1,0 +1,24 @@
+HalDisplay::setCustomLut() stub for crosspoint-simulator 84c3421d
+
+Applied by scripts/patch_simulator.py after 0001 to 0003 (it edits a line
+0001 added next to).
+
+src/HalDisplay.h: setCustomLut(bool, const unsigned char*)
+  Task D2 (#31) adds this pass-through to the firmware's lib/hal/HalDisplay.h
+  (to FreeInkDisplay::setCustomLUT) for the RSVP trial display profiles. Only
+  the device backend calls it (src/display/DeviceDisplayBackend.cpp, built
+  without SIMULATOR); the simulator models refresh time, not waveforms, so the
+  stub is a no-op and keeps the HAL surfaces the same.
+
+diff --git a/src/HalDisplay.h b/src/HalDisplay.h
+index b430311..db9edff 100644
+--- a/src/HalDisplay.h
++++ b/src/HalDisplay.h
+@@ -32,6 +32,7 @@ public:
+       GrayscaleMode mode = GrayscaleMode::Overlay) const;
+   const char* controllerName() const;
+   void setReaderRefresh(bool) {}
++  void setCustomLut(bool, const unsigned char* = nullptr) {}
+   void controllerIdle() {}
+   bool displayRetainedGrayscaleOverlay(uint16_t, uint16_t, uint16_t, uint16_t, bool) { return false; }
+ 

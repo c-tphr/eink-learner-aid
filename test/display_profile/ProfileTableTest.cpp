@@ -101,13 +101,14 @@ TEST(PanelIdentity, NamesAndSdkVariants) {
   EXPECT_EQ(panelFromVariant(100), PanelId::UNKNOWN);
 }
 
-TEST(PanelIdentity, StockIsAlwaysAllowedTrialsOnlyInTheSimulatorUntilD2) {
+TEST(PanelIdentity, StockIsAlwaysAllowedTrialsNeverWithoutAnUnlock) {
+  // The full truth table is in TrialRulesTest.cpp.
   for (const PanelId panel : {PanelId::UNKNOWN, PanelId::YRD0426, PanelId::DEPG0397, PanelId::OPM040B3,
                               PanelId::SE0400NQW47, PanelId::SIMULATED}) {
-    EXPECT_TRUE(defaultProfileAllowed(ProfileId::STOCK, panel)) << panelName(panel);
+    EXPECT_TRUE(profileAllowed(ProfileId::STOCK, panel, false, false)) << panelName(panel);
+    EXPECT_TRUE(profileAllowed(ProfileId::STOCK, panel, true, false)) << panelName(panel);
     for (const ProfileId trial : {ProfileId::TRIAL_A, ProfileId::TRIAL_B, ProfileId::TRIAL_C, ProfileId::TRIAL_D}) {
-      EXPECT_EQ(defaultProfileAllowed(trial, panel), panel == PanelId::SIMULATED)
-          << panelName(panel) << " " << profileInfo(trial).key;
+      EXPECT_FALSE(profileAllowed(trial, panel, false, false)) << panelName(panel) << " " << profileInfo(trial).key;
     }
   }
 }

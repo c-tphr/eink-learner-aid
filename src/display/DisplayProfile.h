@@ -10,7 +10,8 @@
 // Use from the RSVP activity:
 //
 //   displayprofile::DisplayBackend& backend = displayprofile::firmwareBackend(renderer);
-//   backend.select(profileFromSettings);            // false if not allowed: keep stock
+//   backend.setUnlockedTrials(setting.unlocked);    // TrialUnlock.h; nothing unlocked by default
+//   backend.select(setting.chosen);                 // false if not allowed: Stock is selected
 //   scheduler.setClearingLimits(backend.info().clearing);
 //   displayprofile::ProfileDisplaySink sink(backend, painter);   // painter: the word band
 //   displayprofile::MillisClock clock;
@@ -20,11 +21,12 @@
 //
 // - Who draws: the caller (the RSVP activity, through its FramePainter). It draws the whole frame
 //   into the renderer's frame buffer before update() or clear(). The backend never draws.
-// - Who refreshes: the backend only. update() is one word update (on the device: the existing
-//   renderer.displayBuffer(FAST_REFRESH) path with the panel's reading waveform; D2 adds the trial
-//   waveforms). clear() is one
-//   clearing refresh (HALF_REFRESH, trial waveform released). While a profile is in use the caller
-//   makes no displayBuffer() call of its own, so every refresh is timed and counted.
+// - Who refreshes: the backend only. update() is one update (on the device: the existing
+//   renderer.displayBuffer(FAST_REFRESH) path with the panel's reading waveform); only an update
+//   marked UpdateKind::WORD (ProfileDisplaySink's word frames) may run a trial waveform, under the
+//   allow rule and exposure limits of lib/DisplayProfileCore (README, "Trial profiles"). clear() is
+//   one clearing refresh (HALF_REFRESH, trial waveform released). While a profile is in use the
+//   caller makes no displayBuffer() call of its own, so every refresh is timed and counted.
 // - Which task: the task that owns the display, holding the RenderLock. For RSVP that is the
 //   ActivityManager render task inside render(), where Scheduler::step() runs. One task at a time;
 //   never from an interrupt or a second task.

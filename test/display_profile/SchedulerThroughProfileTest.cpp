@@ -65,7 +65,12 @@ struct Result {
 Result play(const ProfileId profile, const uint16_t wpm, const uint8_t wordsPerFrame) {
   FakeClock clock(5000);
   FakeDisplayBackend backend(clock);  // simulator defaults: stock 540/1960, trial C 198/1960
+  backend.setUnlockedTrials(ALL_TRIALS);
   EXPECT_TRUE(backend.select(profile));
+  // As the activity does before Play: a clearing refresh, so a trial run starts from one.
+  backend.clear();
+  backend.resetStats();
+  backend.events.clear();
   backend.setRealMs(4, 9);  // a little real refresh time, as in the simulator; the model absorbs it
   RecordingPainter painter(backend);
   ProfileDisplaySink sink(backend, painter);
@@ -105,6 +110,8 @@ Result play(const ProfileId profile, const uint16_t wpm, const uint8_t wordsPerF
     if (e.kind == FakeEvent::UPDATE) result.maxUpdatesBetweenClears = std::max(result.maxUpdatesBetweenClears, ++run);
     if (e.kind == FakeEvent::CLEAR) run = 0;
   }
+  // The scheduler cleared at the profile's limits, so the backend's own limits never had to act.
+  EXPECT_EQ(backend.exposure().promotions(), 0u);
   // The backend saw every display operation the meter counted, and each lasted the model.
   EXPECT_EQ(backend.stats().updates.count, result.stats.updates);
   EXPECT_EQ(backend.stats().clears.count, result.stats.clearingRefreshes);
@@ -128,7 +135,12 @@ uint32_t updatesBeforeFirstClear(const ProfileId profile, const uint32_t every, 
                                  const uint32_t count = 400, const char* word = "word") {
   FakeClock clock(5000);
   FakeDisplayBackend backend(clock);
+  backend.setUnlockedTrials(ALL_TRIALS);
   EXPECT_TRUE(backend.select(profile));
+  // As the activity does before Play: a clearing refresh, so a trial run starts from one.
+  backend.clear();
+  backend.resetStats();
+  backend.events.clear();
   RecordingPainter painter(backend);
   ProfileDisplaySink sink(backend, painter);
   std::vector<rsvptest::OwnedToken> tokens;
@@ -217,4 +229,48 @@ TEST(SchedulerThroughProfile, GroupedWordsAndATrialProfileWithItsLowerLimits) {
   EXPECT_GT(r.stats.clearingRefreshes, 0u);
   std::printf("trial-c, 198/1960 ms, 240 WPM, 2 words/update: delivered %.1f WPM, arithmetic %.2f WPM\n",
               r.deliveredTenths / 10.0, expected);
+}
+
+// Task D2: a caller that passes no clearing limits to the scheduler still cannot run a trial past
+// its hard limit; the backend runs the 61st word of trial C as a clearing refresh. Nothing is
+// dropped or reordered, and the scheduler's own word count is unaffected.
+TEST(SchedulerThroughProfile, TheBackendHoldsTheHardLimitWhenTheSchedulerDoesNot) {
+  FakeClock clock(5000);
+  FakeDisplayBackend backend(clock);
+  backend.setUnlockedTrials(ALL_TRIALS);
+  ASSERT_TRUE(backend.select(ProfileId::TRIAL_C));
+  backend.clear();
+  backend.events.clear();
+  // Counts paints only: a frame the backend promotes is recorded as a clear, not an update.
+  struct CountingPainter final : FramePainter {
+    void paintFrame(const rsvp::Frame&) override { ++frames; }
+    void paintClearedBand() override {}
+    uint32_t frames = 0;
+  } painter;
+  ProfileDisplaySink sink(backend, painter);
+  std::vector<rsvptest::OwnedToken> tokens;
+  for (uint32_t i = 0; i < 300; ++i) tokens.push_back({"word", i, 0});
+  rsvptest::VectorSource source(tokens);
+  rsvp::Scheduler scheduler(source, clock, sink);
+  scheduler.setClearingLimits({0, 0});  // both rules off
+  scheduler.play();
+  while (true) {
+    const rsvp::StepResult r = scheduler.step();
+    if (r.event == rsvp::StepEvent::STOPPED || !r.wake) break;
+    clock.advanceTo(r.wakeAtMs);
+  }
+  EXPECT_TRUE(scheduler.audit().inOrder());
+  EXPECT_EQ(scheduler.meter().stats().wordsShown, 300u);
+  EXPECT_EQ(painter.frames, 300u);
+  uint32_t run = 0;
+  uint32_t maxRun = 0;
+  for (const FakeEvent& e : backend.events) {
+    if (e.kind == FakeEvent::UPDATE) maxRun = std::max(maxRun, ++run);
+    if (e.kind == FakeEvent::CLEAR) {
+      EXPECT_EQ(e.decision.promotion, Promotion::HARD_LIMIT);
+      run = 0;
+    }
+  }
+  EXPECT_EQ(maxRun, 60u);
+  EXPECT_EQ(backend.exposure().promotions(), 4u);  // words 61, 122, 183 and 244
 }

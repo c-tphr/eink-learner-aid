@@ -31,6 +31,7 @@ struct Parts {
    public:
     explicit RendererPresenter(GfxRenderer& renderer) : renderer(renderer) {}
     void present(RefreshKind kind) override;
+    bool inverted() const override;  // HalDisplay::isInverted(), for the allow rule
 
    private:
     GfxRenderer& renderer;
@@ -57,7 +58,7 @@ class SimulatorDisplayBackend final : private sim_detail::Parts, public Modelled
   explicit SimulatorDisplayBackend(GfxRenderer& renderer);
 
  protected:
-  uint32_t presentUpdate() override;
+  uint32_t presentUpdate(ProfileId waveform) override;
   uint32_t presentClear() override;
 };
 

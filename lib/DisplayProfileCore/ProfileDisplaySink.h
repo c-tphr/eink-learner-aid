@@ -26,7 +26,7 @@ class ProfileDisplaySink final : public rsvp::DisplaySink {
  public:
   ProfileDisplaySink(DisplayBackend& backend, FramePainter& painter) : backend(backend), painter(painter) {}
 
-  // paintFrame(frame), then backend.update(): blocks until the update has finished.
+  // paintFrame(frame), then backend.update(UpdateKind::WORD): blocks until the update has finished.
   void showFrame(const rsvp::Frame& frame) override;
   // paintClearedBand(), then backend.clear(): blocks until the clearing refresh has finished.
   void clearingRefresh() override;
