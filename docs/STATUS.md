@@ -6,13 +6,13 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before this update carry dates that ran up to two days ahead of the calendar; their order is right._
 
-- **Milestones:** M0 to M4 complete (RSVP: playback, settings, saved position, non-prose items in page view). M5: libraries, C3a (loader and screens) merged; **C2 and C3 in progress as one task**; C4, C5 open. M6: D4, D5, the early-check sheet, A0, D1 and D2 merged; **D3a in progress** (pull request #98 open); D3b, D6 open. M7: P5, P8 and H1 merged (the real book is READY); A1 open.
-- **Merged since the last update:** #93 C3a (PR #95), #23 R5 (PR #96), a test fix after a plan wording change (#97).
+- **Milestones:** M0 to M4 complete. M5: C1a, C1b, C3a, C2 and C3 merged (checkpoints fire in both modes and run end to end); **C4 in progress**; C5 open. M6: D1, D2, D3a, D3b, D4, D5, A0 and the early-check sheet merged; **D6 in progress**. M7: P5, P8 and H1 merged (the real book is READY); A1 open.
+- **Merged since the last update:** #32 D3a (PR #98), #26 C2 and #27 C3 (one PR, #100), #33 D3b (PR #101).
 - **Assigned, in progress:**
-  - #26 and #27 together (C2, C3): `ReadingSession`, checkpoint triggers in RSVP and page view, navigation sources that never fire, CheckpointActivity opened from real triggers, resume in the original mode after the break, removal of C3a's temporary simulator entry (branch `task/26-checkpoint-triggers`). Owns `src/reading/ReadingSession*`, the reader files, `src/activities/rsvp/`, `src/activities/checkpoint/`.
-  - #32 D3a: pull request #98 is open; it conflicted with `main` after R5 and C3a merged (no CI runs on a conflicted pull request), and the implementer is merging `main` and re-running its checks (branch `task/32-device-test-benchmark`).
-- **Next when dependencies merge:** after C2/C3: #28 C4 (reread), then #29 C5 (restore after restart). After D3a and C5: #33 D3b; then #36 D6, #39 A1.
-- **Carried into later briefs:** C4: a reread request from CheckpointActivity is stubbed in C2/C3 (resumes as Finished). D6: run from the kit folder; "What only the device session can confirm" in `src/display/README.md` and D3a's "For the session checklist"; the optional update-path step needs a published normal release with a higher version; RAM that only the device can confirm (78 KB state block, 72.5 KB checkpoint index: PSRAM or not). A1: hand the kit over as a draft release (sessions cannot publish); a `final` kit needs `docs/DEVICE_SESSION.md`.
+  - #28 C4: reread in RSVP or page view from the after-Incorrect screen, return early or at the section's end, the same prompt with the answer hidden, first grade kept (branch `task/28-reread`). Owns `src/reading/`, `src/activities/rsvp/`, `src/activities/reader/`, `src/activities/checkpoint/`.
+  - #36 D6: `docs/DEVICE_SESSION.md`, the results issue template, checks that keep both device documents true, kit completeness for a `final` kit (branch `task/36-device-session-checklist`). No firmware.
+- **Next when dependencies merge:** after C4: #29 C5 (restore after restart). After C5 and D6: #39 A1 (acceptance run, `docs/ACCEPTANCE.md`, the release with the kit as a draft, the "Device session results" issue). Then #40 A2 after the owner's session.
+- **Carried into later briefs:** C5: one `BookLayout` over any chapter for `planRestore()`; share one `BookState` in the session. A1: re-check the walk-through's step texts (`src/activities/devicetest/Acceptance.cpp`) against C4 and C5 (steps 5, 6, 9, 10) and the same steps in `docs/DEVICE_SESSION.md`; hand the kit over as a draft release (sessions cannot publish); a `final` kit needs `docs/DEVICE_SESSION.md`. Device-only unknowns: PSRAM placement of the 78 KB state block and the 72.5 KB checkpoint index, real refresh timings, every trial waveform.
 - **Blockers:** none.
 - **Waiting on the owner:**
   1. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md`. Return only the summary file.
@@ -67,6 +67,9 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 - 2026-11-18: C3a: `reading::CheckpointBook::open()` finds the `rsvp-checkpoints` manifest item by scanning the OPF itself (no upstream edit), copies the checkpoint file once into the book's cache folder and indexes it (about 72.5 KB while a prepared book is open); a book without valid checkpoint data is an ordinary book. CheckpointActivity is driven by `CheckpointFlow`; grades go through `editBookState()` before the next screen; a grade's time is written only when the device clock is plausible. C2 and C3 were then merged into one task because the real screens exist.
 - 2026-11-18: Orchestrator mistake, corrected: the plan wording change in #94 was merged without waiting for CI and broke a host test that reads the plan's state file example (`StateCodecTest`); fixed in #97. Rule from now on: wait for Project CI on every pull request, documents included, and do not edit the JSON example in plan section 7 without updating that test.
 - 2026-11-18: The container restarts every few hours. Implementers lose background jobs and sometimes their memory of earlier work; their pushed branches survive. Briefs now ask for frequent pushes, foreground commands, and deleting build output and the working copy's `.cache` folder (1.7 GB each) when done. A pull request that conflicts with `main` gets no CI runs.
+- 2026-11-19: D3a: Settings > Display > Device test holds the Controls check and the display benchmark (the sweep of plan section 10, ratings with "Repeat step" as default, results written after every step to `/rsvp-bench/NNNN-bench.json` and to the serial log; schema and validator in `tools/device`). The benchmark unlocks the trials it runs; the chosen profile stays Stock. Estimates: about 14 minutes per profile, about 50 minutes for a full sweep on DEPG0397. `idleDisplayWhileAwake()` does nothing on the Picco's drivers (the SDK's `controllerIdle()` is empty for SSD1677 and SSD2677).
+- 2026-11-19: C2 and C3 (one task): `ReadingSession` holds the book's checkpoint data and decides firing through the library's rules only. RSVP stops with the section's last word shown and opens CheckpointActivity over itself; page view fires from one hook at the top of `pageTurn()`. Jumps (contents, percent, bookmarks, chapter skip, sentence steps) never fire. After a checkpoint the original mode resumes at the first word after the break; RSVP waits for Play with "Checkpoint done". Home or sleep during a checkpoint reopens before the break. Automatic page turn counts as forward reading and is switched off by a checkpoint. The state file's `book_sha256` is now the checkpoint file's hash.
+- 2026-11-19: D3b: Guided acceptance = Part A (the passage at 240 and at a 600 WPM target, measured verdict stored apart from the owner's answers) and Part B (12 numbered steps the owner does in the reader, progress saved after every answer); Choose a profile writes the chosen profile and which trials stay kept (`rsvpProfilesKept`); the "Speed read display" setting appears only while a kept trial is unlocked. Results schema version 2. Estimate: about 50 minutes for the walk-through.
 
 ## Issue map
 
@@ -98,19 +101,19 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 | R5 | #23 | M4 | merged |
 | C1a | #24 | M5 | merged |
 | C1b | #25 | M5 | merged |
-| C2 | #26 | M5 | in progress (with C3, one pull request) |
+| C2 | #26 | M5 | merged (with C3, PR #100) |
 | C3a | #93 | M5 | merged (loader and screens, split from C3) |
-| C3 | #27 | M5 | in progress (with C2, one pull request) |
-| C4 | #28 | M5 | open |
+| C3 | #27 | M5 | merged (with C2, PR #100) |
+| C4 | #28 | M5 | in progress |
 | C5 | #29 | M5 | open |
 | D1 | #30 | M6 | merged |
 | D2 | #31 | M6 | merged |
-| D3a | #32 | M6 | in progress |
-| D3b | #33 | M6 | open |
+| D3a | #32 | M6 | merged |
+| D3b | #33 | M6 | merged |
 | D4 | #34 | M6 | merged |
 | D5 | #35 | M6 | merged |
 | D6a | #60 | M7 | merged (early read-only check sheet) |
-| D6 | #36 | M6 | open |
+| D6 | #36 | M6 | in progress |
 | A0 | #37 | M6 | merged |
 | P5 | #38 | M7 | merged |
 | A1 | #39 | M7 | open |
@@ -127,7 +130,7 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 - Host tests upstream are CMake and GoogleTest under `test/`: 924 pass at the pinned commit (about 5 minutes to build on 4 cores).
 - Cloud builds: run `./scripts/cloud-setup.sh` first in every session (about 3 minutes from empty caches, seconds afterwards). A plain `pio run` on empty caches fails with `CERTIFICATE_VERIFY_FAILED` because pioarduino replaces the CA settings; worse, its `idf_tools.py` falls back to unverified downloads, which the setup script treats as a failure. Building a `custom_sdkconfig` environment (upstream `default`) in the same core directory triggers a reinstall that hits the TLS problem again; re-run the setup script. `picco` builds in about 5.5 minutes: flash 5,449,518 B of the 7,431,782 B two-slot budget, RAM 34.4%.
 - Upload hazard confirmed by `pio run -e picco -t envdump`: `UPLOADERFLAGS` holds 0x0, 0x8000 and 0xe000 images although `FLASH_EXTRA_IMAGES` is empty.
-- Host suite on `main`: 1,451 tests. Python: `tools/prep` 708 tests, `tools/device` 190 plus `scripts/tests` 68, `tools/simtest` 99 plus 23 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
+- Host suite on `main`: 1,545 tests. Python: `tools/prep` 708 tests, `tools/device` and `scripts/tests` 283 together, `tools/simtest` 114 plus 38 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
 - The session disk is small: finished implementers' working copies keep build output under `.claude/worktrees/agent-*/.pio` and `build`; delete those folders (not the working copies of running tasks) when `df` shows little free space.
 - Simulator: `pio run -e simulator_picco` applies `scripts/simulator_patches/` automatically; headless run: `xvfb-run -a .pio/build/simulator_picco/program` with `CROSSPOINT_SIM_INPUT_SCRIPT="0:WAIT:Entering activity: Home;1500:SHOT:home;2500:QUIT"` (SHOT writes a BMP at the given path).
 - Upstream renderer quirks found by the parity test (not ours, not fixed): the last word of a table caption is never drawn; rows of a grid table split across pages are drawn line by line. Neither affects RSVP positions or anchors.
