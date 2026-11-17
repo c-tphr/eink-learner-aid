@@ -213,7 +213,8 @@ TEST(SlotPolicy, TwoOtadataPartitionsAreRefused) {
 
 TEST(SlotPolicy, FactoryAppIsRefusedEvenWithTwoOtaSlots) {
   auto rows = twoSlot();
-  rows.push_back({"factory", Partition{update_policy::TYPE_APP, update_policy::SUBTYPE_APP_FACTORY, 0xFE0000, 0x10000}});
+  rows.push_back(
+      {"factory", Partition{update_policy::TYPE_APP, update_policy::SUBTYPE_APP_FACTORY, 0xFE0000, 0x10000}});
   Case running0(rows, "app0", "app1");
   EXPECT_EQ(decide(running0.layout), Verdict::NonOtaApp);
   Case runningFactory(rows, "factory", "app0");
@@ -283,16 +284,16 @@ TEST(SlotPolicy, WriteToRunningSlotIsRefused) {
 
 TEST(SlotPolicy, WriteToAnythingButTheNextSlotIsRefused) {
   Case c(twoSlot(), "app0", "app1");
-  EXPECT_EQ(checkWrite(c.layout, 0x9000), Verdict::TargetNotNext);     // nvs
-  EXPECT_EQ(checkWrite(c.layout, 0xFF0000), Verdict::TargetNotNext);   // coredump
-  EXPECT_EQ(checkWrite(c.layout, 0xE0000), Verdict::TargetNotNext);    // the stock app offset
+  EXPECT_EQ(checkWrite(c.layout, 0x9000), Verdict::TargetNotNext);    // nvs
+  EXPECT_EQ(checkWrite(c.layout, 0xFF0000), Verdict::TargetNotNext);  // coredump
+  EXPECT_EQ(checkWrite(c.layout, 0xE0000), Verdict::TargetNotNext);   // the stock app offset
   EXPECT_EQ(checkWrite(c.layout, APP1 + 0x1000), Verdict::TargetNotNext);
 }
 
 TEST(SlotPolicy, VerdictNamesAreDistinct) {
-  const Verdict all[] = {Verdict::Allowed,       Verdict::TableIncomplete, Verdict::NonOtaApp,
-                         Verdict::NotTwoSlots,   Verdict::NoOtadata,       Verdict::NotRunningFromOta,
-                         Verdict::NoNextSlot,    Verdict::NextIsRunning,   Verdict::SlotTooSmall,
+  const Verdict all[] = {Verdict::Allowed,         Verdict::TableIncomplete, Verdict::NonOtaApp,
+                         Verdict::NotTwoSlots,     Verdict::NoOtadata,       Verdict::NotRunningFromOta,
+                         Verdict::NoNextSlot,      Verdict::NextIsRunning,   Verdict::SlotTooSmall,
                          Verdict::TargetIsRunning, Verdict::TargetNotNext};
   std::vector<std::string> names;
   for (const auto v : all) {

@@ -105,7 +105,7 @@ def crosspoint_version(text):
 
 def run_piccoflash(args):
     cmd = [sys.executable, "-m", "piccoflash"] + args
-    say("$ python -m piccoflash " + " ".join(os.path.relpath(a, REPO) if os.path.isabs(a) else a for a in args))
+    say("$ python -m piccoflash " + " ".join(a.replace(REPO + os.sep, "") for a in args))
     proc = subprocess.run(cmd, cwd=DEVICE, capture_output=True, text=True)
     for line in (proc.stdout + proc.stderr).rstrip("\n").splitlines():
         say("  " + line.replace(REPO + os.sep, ""))

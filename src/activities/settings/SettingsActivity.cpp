@@ -29,7 +29,6 @@
 #include "OtaUpdateActivity.h"
 #include "SdCardFontSystem.h"
 #include "SdFirmwareUpdateActivity.h"
-#include "update/UpdateGate.h"
 #include "SettingsList.h"
 #include "SilentRestart.h"
 #include "StatusBarSettingsActivity.h"
@@ -40,6 +39,7 @@
 #include "components/UIThemeTokens.h"
 #include "components/UiAppHelpers.h"
 #include "fontIds.h"
+#include "update/UpdateGate.h"
 #include "util/PluginEvents.h"
 #include "util/TaskWatchdog.h"
 

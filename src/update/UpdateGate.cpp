@@ -38,8 +38,7 @@ void readTable(TableSnapshot& snap) {
       break;
     }
     const esp_partition_t* p = esp_partition_get(it);
-    snap.partitions[count++] = {static_cast<uint8_t>(p->type), static_cast<uint8_t>(p->subtype), p->address,
-                                p->size};
+    snap.partitions[count++] = {static_cast<uint8_t>(p->type), static_cast<uint8_t>(p->subtype), p->address, p->size};
     it = esp_partition_next(it);  // releases the iterator after the last partition
   }
 

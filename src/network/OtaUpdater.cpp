@@ -52,7 +52,8 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   }
   char assetName[48] = {};
   bool assetNameSet = false;
-  const bool ok = HttpDownloader::fetchUrl(update_gate::releaseUrl(latestReleaseUrl), [&](const uint8_t* data, size_t len) {
+  const char* const sourceUrl = update_gate::releaseUrl(latestReleaseUrl);
+  const bool ok = HttpDownloader::fetchUrl(sourceUrl, [&](const uint8_t* data, size_t len) {
     size_t offset = 0;
     while (!assetNameSet && offset < len) {
       releaseParser.feed(reinterpret_cast<const char*>(data + offset), 1);
