@@ -1,0 +1,58 @@
+# RSVP on an ordinary EPUB that is not the fixture and carries no checkpoint data (task R4a: "RSVP
+# works on any EPUB"): test/epubs/test_kerning_ligature.epub, an English text in eleven chapters.
+# Open it, turn past the cover and the contents page to chapter 1, enter RSVP from the More list
+# (the word index is built for this book on entry), play a few words in order, pause, and open the
+# reader menu from the pause screen.
+description = "RSVP on another EPUB with no checkpoint data: enter, play words in order, pause"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "test/epubs/test_kerning_ligature.epub", dst = "books/kerning.epub" },
+]
+
+steps = [
+  { wait_screen = "Browse Files" },
+  { tap = [240, 346] },
+  { wait_screen = "SD card | books" },
+  { tap = [240, 138] },
+  { wait_screen = "kerning | .epub" },
+  { tap = [240, 138] },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "the cover" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0", note = "the contents, page 1 of 2" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0", note = "chapter 1" },
+  { tap = [240, 400] },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [385, 752] },
+  { wait_screen = "More | " },
+  { tap = [240, 388], note = "Speed read" },
+  { wait_log = "\\[RSVP\\] Index built spine=2 words=\\d+ " },
+  { wait_log = "\\[RSVP\\] enter ch=2 page_offset=0 word=0 " },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { shot = "pause_entry" },
+  { tap = [240, 340], note = "Play" },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=0 last=0 " },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=1 last=1 words=1 hold=\\d+ ms=\\d+ text=\"1\"", note = "the heading's last word: a block end, held about 560 ms" },
+  { shot = "frame_heading_end" },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=2 last=2 " },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=3 last=3 " },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=4 last=4 " },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=5 last=5 " },
+  { tap = [240, 600], note = "pause" },
+  { wait_log = "\\[RSVP\\] pause reason=pause ch=2 word=\\d+ target=240 delivered=\\d+\\.\\d .* audit=ok drawn=\\d+ segments=1 violations=0 gaps=0 repeats=0" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Exit | Menu | Page view" },
+  { tap = [240, 84], note = "Menu (S4 row 13): back to the page, with the reader's toolbar menu open" },
+  { wait_log = "\\[CTL\\] Pause select=Menu" },
+  { wait_log = "\\[RSVP\\] leave to=menu ch=2 word=\\d+ offset=\\d+" },
+  { wait_screen = "| 1/4   3% |", note = "the toolbar's progress row (three spaces; the status bar has two): the menu is open over page 1/4" },
+  { quit = true },
+  { expect_file = ".crosspoint/epub_*/rsvp/2.wix", hex_prefix = "4350 5749" },
+  { compare = "pause_entry" },
+  { compare = "frame_heading_end" },
+]

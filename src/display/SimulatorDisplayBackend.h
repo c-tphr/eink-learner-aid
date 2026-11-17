@@ -34,6 +34,8 @@ struct Parts {
 
    private:
     GfxRenderer& renderer;
+    unsigned long updates = 0;  // since start-up, for the "presented" log line
+    unsigned long clears = 0;
   };
 
   class DelaySleeper final : public Sleeper {

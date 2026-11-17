@@ -44,6 +44,7 @@
 #include "activities/ActivityManager.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
 #include "components/UITheme.h"
+#include "controls/ControlDefaults.h"
 #include "display/DisplaySelfTest.h"
 #include "fontIds.h"
 #include "platform/UsbSerialJtagHandoff.h"
@@ -651,6 +652,7 @@ void setup() {
   if (gpio.hasTouch()) {
     SETTINGS.readerMenuStyle = CrossPointSettings::READER_MENU_TOOLBAR;
   }
+  seedRsvpControlDefaults();
   SETTINGS.loadFromFile();
   // Push the saved timezone's POSIX rule into the clock (migrating the legacy
   // UTC-offset setting on first boot after the update).

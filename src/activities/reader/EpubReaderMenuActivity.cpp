@@ -65,6 +65,7 @@ void EpubReaderMenuActivity::buildMenuItems(std::vector<MenuItem>& items, const 
                                             const bool hasBookmarks, const bool hasClippings) {
   items.clear();
   items.reserve(MAX_MENU_ITEMS);
+  if (RSVP_FEATURE_ENABLED) items.push_back({MenuAction::SPEED_READ, StrId::STR_SPEED_READ});
   items.push_back({MenuAction::SELECT_CHAPTER, StrId::STR_SELECT_CHAPTER});
   if (hasFootnotes) {
     items.push_back({MenuAction::FOOTNOTES, StrId::STR_FOOTNOTES});

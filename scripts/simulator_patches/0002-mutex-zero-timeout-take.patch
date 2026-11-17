@@ -1,0 +1,34 @@
+A zero-timeout mutex take polls, as in FreeRTOS
+
+Applied by scripts/patch_simulator.py after 0001. Task R4a (#21).
+
+src/freertos/semphr.h: xSemaphoreTake() on a mutex
+  The shim ignored the timeout and always blocked. Firmware code that polls
+  the render mutex with a zero timeout, RenderLock(RenderLock::Mode::Try)
+  (src/activities/ActivityManager.cpp; used in src/main.cpp's loop() and by
+  the reader), then waited for the whole render instead of carrying on. With
+  RSVP's display timing model a render holds the mutex for a modelled 540 ms
+  word update, so the simulated main loop, which reads keys and touch,
+  stopped for that long on every word; on the device it does not. A zero
+  timeout now uses try_lock() and fails at once when another task holds the
+  mutex. Other timeouts keep the old blocking behaviour.
+
+diff --git a/src/freertos/semphr.h b/src/freertos/semphr.h
+index e4e88ab..744ce6a 100644
+--- a/src/freertos/semphr.h
++++ b/src/freertos/semphr.h
+@@ -97,7 +97,13 @@ inline bool xSemaphoreTake(SemaphoreHandle_t sem, uint32_t ticksToWait) {
+     return true;
+   }
+   auto *mtx = sim_semaphore_detail::asMutex(sem);
+-  mtx->mtx.lock();
++  if (ticksToWait == 0) {
++    // A zero timeout polls, as in FreeRTOS: fail at once if another task holds it.
++    if (!mtx->mtx.try_lock())
++      return false;
++  } else {
++    mtx->mtx.lock();
++  }
+   mtx->holder = xTaskGetCurrentTaskHandle();
+   mtx->holdCount++;
+   return true;

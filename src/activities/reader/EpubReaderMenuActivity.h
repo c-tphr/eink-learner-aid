@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "RsvpFeature.h"
 #include "activities/UiListActivity.h"
 #include "components/OptionPopup.h"
 
@@ -30,7 +31,8 @@ class EpubReaderMenuActivity final : public UiListActivity {
     GO_HOME,
     SYNC,
     DELETE_CACHE,
-    DICTIONARY
+    DICTIONARY,
+    SPEED_READ  // RSVP builds only (src/activities/rsvp/)
   };
 
   struct MenuItem {
@@ -57,7 +59,7 @@ class EpubReaderMenuActivity final : public UiListActivity {
   // fixed-capacity array avoids any heap allocation for the row list. Labels
   // are set once in the constructor (buildMenuRowItems()); buildScreen()
   // only refreshes rows whose values reflect live state.
-  static constexpr size_t MAX_MENU_ITEMS = 19;
+  static constexpr size_t MAX_MENU_ITEMS = RSVP_FEATURE_ENABLED ? 20 : 19;  // + Speed read
   freeink::ui::ListItem menuRowItems[MAX_MENU_ITEMS]{};
   void buildMenuRowItems();
 

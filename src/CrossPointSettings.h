@@ -201,6 +201,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     OFF = 0,
     CHAPTER_SKIP = 1,
     ORIENTATION_CHANGE = 2,
+    SPEED_READ = 3,  // RSVP builds only: a side-key hold enters speed reading (src/controls/ControlMap.h)
     LONG_PRESS_BUTTON_BEHAVIOR_COUNT
   };
 

@@ -19,6 +19,9 @@ namespace sim_detail {
 
 void Parts::RendererPresenter::present(const RefreshKind kind) {
   renderer.displayBuffer(kind == RefreshKind::UPDATE ? HalDisplay::FAST_REFRESH : HalDisplay::HALF_REFRESH);
+  // The frame is on screen from here until the modelled time has passed: scenarios shoot after this.
+  const unsigned long count = kind == RefreshKind::UPDATE ? ++updates : ++clears;
+  LOG_DBG("DSP", "presented %s n=%lu", kind == RefreshKind::UPDATE ? "update" : "clear", count);
 }
 
 void Parts::DelaySleeper::sleepMs(const uint32_t ms) { delay(ms); }

@@ -50,10 +50,18 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `scripts/net-smoke.sh`, `scripts/net_smoke.py` | Added | Network smoke test (task F2) |
 | `scripts/patch_simulator.py`, `scripts/simulator_patches/` | Added | Patches applied to the fetched simulator library (see "Simulator" below) (task F2) |
 | `docs/net-smoke-report.md`, `docs/evidence/f2/` | Added | Smoke test report and evidence (task F2) |
-| `test/CMakeLists.txt` | **Modified, five lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a), `add_subdirectory(word_index)` (task R3), `add_subdirectory(display_profile)` (task E3) and `add_subdirectory(update_policy)` (task D4), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
+| `test/CMakeLists.txt` | **Modified, six lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a), `add_subdirectory(word_index)` (task R3), `add_subdirectory(display_profile)` (task E3), `add_subdirectory(rsvp_activity)` (task R4a) and `add_subdirectory(update_policy)` (task D4), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
 | `platformio.ini` | **Modified, three lines added**: `-DCROSSPOINT_RSVP=1` at the end of `build_flags` in `[env:picco]`, `[env:picco-gh_release]` and `[env:picco-gh_release_rc]` | The RSVP feature flag, on for the Picco targets only (task F4). `simulator_picco` sets it in `platformio.project.ini`. See `docs/ARCHITECTURE-RSVP.md` |
 | `src/main.cpp` | **Modified, two lines added**: `#include "reading/RsvpLinkCheck.h"` and `runRsvpLinkCheck();` in `setup()`, after the "Starting CrossPoint version" log line | Temporary start-up check that links RsvpCore and CheckpointCore; an empty inline function without the flag (task F4). Task C2 replaces it with ReadingSession |
 | `src/main.cpp` | **Modified, two more lines added**: `#include "display/DisplaySelfTest.h"` (after `components/UITheme.h`) and `runDisplaySelfTestIfRequested(renderer);` in `loop()`, right after `activityManager.loop();` | Temporary simulator-only display self-test (task E3, `src/display/DisplaySelfTest.h`): runs only when `CROSSPOINT_SIM_DISPLAY_SELFTEST` is set; an empty inline function on the device and on every build without the RSVP flag. Removed when the RSVP activity exercises DisplayProfile |
+| `src/main.cpp` | **Modified, two more lines added**: `#include "controls/ControlDefaults.h"` (after `components/UITheme.h`) and `seedRsvpControlDefaults();` in `setup()`, right before `SETTINGS.loadFromFile()` | Seeds "Page turn long press: Speed read" as the default in RSVP builds, the way the lines above it seed the toolbar menu style; a saved choice still wins. An empty inline function without the flag (task R4a, `src/controls/ControlDefaults.h`) |
+| `src/CrossPointSettings.h` | **Modified, one line added**: `SPEED_READ = 3` appended to `LONG_PRESS_BUTTON_BEHAVIOR` | The "Speed read" long-press option (task R4a; `docs/spikes/S4-control-map.md` section 5.1). Other builds never offer or store it: their label list has three entries, so a stored 3 loads as the default |
+| `src/SettingsList.cpp` | **Modified**: `#include "RsvpFeature.h"`; the "Page turn long press" labels become a vector that gains "Speed Read" when `RSVP_FEATURE_ENABLED` | Offers the option in RSVP builds only (task R4a) |
+| `src/activities/reader/EpubReaderMenuActivity.h` | **Modified**: `#include "RsvpFeature.h"`, `MenuAction::SPEED_READ` appended, `MAX_MENU_ITEMS` 20 in RSVP builds (19 otherwise) | The reader menu's "Speed read" row (task R4a) |
+| `src/activities/reader/EpubReaderMenuActivity.cpp` | **Modified, one line added**: the "Speed read" row first in `buildMenuItems()` when `RSVP_FEATURE_ENABLED` | The touch path into RSVP: the first row of the list menu and of the toolbar's More panel (task R4a; S4 row 1) |
+| `src/activities/reader/EpubReaderActivity.h` | **Modified, two lines added**: the declaration of `openSpeedRead()` | Task R4a |
+| `src/activities/reader/EpubReaderActivity.cpp` | **Modified**: `#include "activities/rsvp/RsvpLaunch.h"`; `openSpeedRead()` (pushes RSVP at the page on screen; its result handler jumps to the page of the RSVP position, opens the menu, or saves that page and goes Home); a `SPEED_READ` case in `onReaderMenuConfirm()`; a long-press branch next to the chapter-skip one | Entering and leaving RSVP (task R4a; S1 section 9, S4 rows 1, 12-14). Without the flag `openSpeedRead()` returns at once and `rsvpentry::create()` is an empty inline function |
+| `lib/I18n/translations/english.yaml` | **Modified**: `STR_LONG_PRESS_BEHAVIOR_SPEED_READ`, `STR_SPEED_READ` and the `STR_RSVP_*` strings added | The RSVP screens' text, through upstream's translation workflow (task R4a). Other languages fall back to English |
 | `scripts/display_timings.py`, `scripts/gen_display_timings.py` | Added | The display timings file's validator and header generator, and the `simulator_picco` pre-script that runs it (task E3; `lib/DisplayProfileCore/README.md`, "Timing model") |
 | `src/main.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; in the `recoveryFirmwareMode` condition `!BoardConfig::isPicco()` became `update_gate::updateMenusVisible(!BoardConfig::isPicco())` in the same place; one comment line | Boot recovery SD picker on a two-slot Picco only. Without the flag the function returns its argument, so other devices are unchanged (the `x4pro` image is identical apart from the embedded ELF hash and the image checksum and hash, task D4's pull request) |
 | `src/activities/settings/SettingsActivity.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; `if (!BoardConfig::isPicco())` before "Check for updates" and "SD Card Firmware Update" became `if (update_gate::updateMenusVisible(!BoardConfig::isPicco()))`; the comment above it extended by one sentence | Feature builds show the two update entries only when the running partition table allows self-update (`lib/UpdatePolicy`); upstream behaviour without the flag |
@@ -99,6 +107,8 @@ The simulator replaces the firmware's `lib/hal` (and the SDK's `SecureNet`) with
 
 No older simulator commit builds either; each is older still. `scripts/simulator_patches/0001-compat-firmware-490813ff.patch` adds the missing members (25 lines in three headers, additive, no-op or pass-through); its header says which firmware change each hunk answers.
 
+`scripts/simulator_patches/0002-mutex-zero-timeout-take.patch` (task R4a) fixes a fidelity gap rather than a missing member: the simulator's `xSemaphoreTake()` ignored the timeout on a mutex and always blocked, so `RenderLock(RenderLock::Mode::Try)` in the main loop waited for every render. With the display timing model a render can hold the lock for a 540 ms word update, which stopped the simulated main loop (keys, touch, scripted screenshots) for that long. A zero timeout now polls with `try_lock()`, as FreeRTOS does on the device.
+
 ### How the patches are applied
 
 Following upstream's convention for fetched libraries (`scripts/patch_sdfat.py` with `scripts/sdfat_patches/`, `scripts/patch_jpegdec.py` with `scripts/jpegdec_patches/`), `scripts/patch_simulator.py` is the first `pre:` script of `[env:simulator]` (and so of `[env:simulator_picco]`). Before anything compiles it:
@@ -132,11 +142,13 @@ git merge-base --is-ancestor 490813ff4541e74e654f54f66ece9efc908361a0 HEAD && ec
 git submodule status
 
 # 3. Outside docs/ and README.md, the only upstream files modified are platformio.ini (four lines),
-#    test/CMakeLists.txt (five lines), src/main.cpp (four lines from tasks F4 and E3, plus the D4 edit),
-#    src/activities/settings/SettingsActivity.cpp, src/network/FirmwareFlasher.cpp,
-#    src/network/OtaUpdater.cpp (registration points, task D4), .gitignore (two lines), AGENTS.md (a
-#    preamble under the title) and five .github/workflows files (job conditions), all in the table above;
-#    everything else listed is an added file from the table above
+#    test/CMakeLists.txt (six lines), src/main.cpp (six lines from tasks F4, E3 and R4a, plus the D4
+#    edit), src/activities/settings/SettingsActivity.cpp, src/network/FirmwareFlasher.cpp,
+#    src/network/OtaUpdater.cpp (registration points, task D4), the RSVP registration points of task
+#    R4a (src/CrossPointSettings.h, src/SettingsList.cpp, the reader and its menu,
+#    lib/I18n/translations/english.yaml), .gitignore (two lines), AGENTS.md (a preamble under the
+#    title) and five .github/workflows files (job conditions), all in the table above; everything else
+#    listed is an added file from the table above
 git diff --stat --diff-filter=MD 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 git diff --stat 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 
