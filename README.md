@@ -14,7 +14,7 @@ The pinned CrossPoint base is recorded in [docs/BASE.md](docs/BASE.md); upstream
 | [docs/PRD.md](docs/PRD.md) | What v1 must do |
 | [docs/PLAN.md](docs/PLAN.md) | The technical plan |
 | [docs/STATUS.md](docs/STATUS.md) | Current milestone, open work, blockers |
-| [docs/IMPLEMENTER_GUIDE.md](docs/IMPLEMENTER_GUIDE.md) | Standing rules for anyone working on an issue |
+| [docs/AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | How work is done here: one agent plans, implements, verifies and merges |
 | [docs/SIMULATOR.md](docs/SIMULATOR.md) | Try the firmware in a browser tab: a Codespace and `./scripts/sim.sh` |
 
 **Do not run CrossPoint's stock upload target on a Picco.** Flashing is done only with this project's own scripts, described in the plan's section 10.
