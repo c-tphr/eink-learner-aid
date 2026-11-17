@@ -12,9 +12,9 @@ size. This script adds the project-specific rules it cannot know about:
 
 It prints the slot size and the "slot minus 10%" image budget.
 
-Usage (from the repo root):
-    python3 docs/spikes/check_2slot_table.py \
-        docs/spikes/partitions_picco_2slot.proposed.csv partitions_picco.csv
+Usage (from the repo root; the table in use is partitions_picco_2slot.csv, task D4; the spike's
+docs/spikes/partitions_picco_2slot.proposed.csv has the same rows and is kept as the record):
+    python3 docs/spikes/check_2slot_table.py partitions_picco_2slot.csv partitions_picco.csv
 """
 
 import sys

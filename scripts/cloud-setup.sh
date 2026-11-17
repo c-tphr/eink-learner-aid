@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Prepare a machine to build `picco` (firmware) and `simulator_picco` offline.
+# Prepare a machine to build `picco` and `picco_2slot` (firmware) and
+# `simulator_picco` offline.
 #
 #   ./scripts/cloud-setup.sh
 #   ./scripts/cloud-setup.sh --simulator-only
@@ -28,7 +29,7 @@
 set -euo pipefail
 
 PIO_VERSION="6.2.0"
-ENVS=(picco simulator_picco)
+ENVS=(picco picco_2slot simulator_picco)
 for arg in "$@"; do
   case "$arg" in
     --simulator-only) ENVS=(simulator_picco) ;;
@@ -224,5 +225,5 @@ fi
 if [[ ${#ENVS[@]} -eq 1 ]]; then
   say "ready: pio run -e ${ENVS[0]}"
 else
-  say "ready: pio run -e picco && pio run -e simulator_picco"
+  say "ready: pio run -e picco && pio run -e picco_2slot && pio run -e simulator_picco"
 fi

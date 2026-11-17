@@ -1,0 +1,27 @@
+$ python3 <core_dir>/packages/framework-arduinoespressif32/tools/gen_esp32part.py .pio/build/picco_2slot/partitions.bin
+Parsing binary partition input...
+Verifying table...
+# ESP-IDF Partition Table
+# Name, Type, SubType, Offset, Size, Flags
+nvs,data,nvs,0x9000,48K,
+otadata,data,ota,0x15000,8K,
+app0,app,ota_0,0x20000,8064K,
+app1,app,ota_1,0x800000,8064K,
+coredump,data,coredump,0xff0000,64K,
+[exit 0]
+
+$ sha256sum .pio/build/picco_2slot/partitions.bin <core_dir>/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin
+0d3fad517e6421219fb3754b58c1e1153505655aba69dac3fc40cbd528d4a332  .pio/build/picco_2slot/partitions.bin
+f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0  <core_dir>/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin
+
+$ python3 docs/spikes/check_2slot_table.py partitions_picco_2slot.csv partitions_picco.csv
+Offset     End        Size       Name
+0x00009000 0x00015000 0x0000c000 nvs
+0x00015000 0x00017000 0x00002000 otadata
+0x00020000 0x00800000 0x007e0000 app0
+0x00800000 0x00fe0000 0x007e0000 app1
+0x00ff0000 0x01000000 0x00010000 coredump
+slot size: 8257536 bytes (0x7e0000, 7.875 MiB)
+budget (slot minus 10%, rounded down): 7431782 bytes (0x716666)
+OK
+[exit 0]

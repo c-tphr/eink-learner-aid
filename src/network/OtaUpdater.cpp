@@ -17,6 +17,7 @@
 
 #include "FirmwareBoardTag.h"
 #include "FirmwareFlasher.h"
+#include "update/UpdateGate.h"
 
 namespace {
 constexpr char latestReleaseUrl[] = "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases/latest";
@@ -24,6 +25,9 @@ constexpr char latestReleaseUrl[] = "https://api.github.com/repos/crosspoint-rea
 
 OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   LOG_DBG("OTA", "Checking for update (current: %s)", CROSSPOINT_VERSION);
+  if (!update_gate::selfUpdateAllowed()) {
+    return NO_UPDATE;
+  }
 
   // Stream the ~32KB release JSON straight into the parser as it arrives.
   // Buffering the whole body in a std::string would add a growing allocation
@@ -48,13 +52,17 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   }
   char assetName[48] = {};
   bool assetNameSet = false;
-  const bool ok = HttpDownloader::fetchUrl(latestReleaseUrl, [&](const uint8_t* data, size_t len) {
+  const char* const sourceUrl = update_gate::releaseUrl(latestReleaseUrl);
+  const bool ok = HttpDownloader::fetchUrl(sourceUrl, [&](const uint8_t* data, size_t len) {
     size_t offset = 0;
     while (!assetNameSet && offset < len) {
       releaseParser.feed(reinterpret_cast<const char*>(data + offset), 1);
       offset++;
       if (releaseParser.foundTag()) {
-        snprintf(assetName, sizeof(assetName), "crosspoint-%s%s.bin", releaseParser.getTagName(), assetSuffix);
+        if (!update_gate::PROJECT_RELEASES ||
+            !update_gate::formatAssetName(assetName, sizeof(assetName), releaseParser.getTagName())) {
+          snprintf(assetName, sizeof(assetName), "crosspoint-%s%s.bin", releaseParser.getTagName(), assetSuffix);
+        }
         releaseParser.setFirmwareAssetName(assetName);
         assetNameSet = true;
       }
@@ -92,6 +100,9 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
 }
 
 bool OtaUpdater::isUpdateNewer() const {
+  if (update_gate::PROJECT_RELEASES) {
+    return updateAvailable && update_gate::isNewerRelease(latestVersion.c_str(), CROSSPOINT_VERSION);
+  }
   if (!updateAvailable || latestVersion.empty() || latestVersion == CROSSPOINT_VERSION) {
     return false;
   }
@@ -149,6 +160,9 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback onProgres
   const esp_partition_t* updatePartition = esp_ota_get_next_update_partition(nullptr);
   if (!updatePartition) {
     LOG_ERR("OTA", "No OTA partition available");
+    return INTERNAL_UPDATE_ERROR;
+  }
+  if (!update_gate::mayWriteUpdateSlot(updatePartition->address, "Wi-Fi update")) {
     return INTERNAL_UPDATE_ERROR;
   }
 

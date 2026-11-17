@@ -1,0 +1,19 @@
+x4pro (no feature flag): firmware.bin built from this branch vs. built with the four edited upstream
+files (src/main.cpp, SettingsActivity.cpp, FirmwareFlasher.cpp, OtaUpdater.cpp) put back to origin/main,
+everything else equal (pio run -e x4pro twice, incremental).
+
+x4pro-base.bin   5445904 bytes
+x4pro-branch.bin 5445904 bytes
+
+$ cmp -l x4pro-base.bin x4pro-branch.bin | wc -l
+65
+differing offsets (0-based), as ranges:
+  0xB0-0xCF (32 bytes)
+  0x5318EF-0x53190F (33 bytes)
+  = the application description's ELF SHA-256 (0xB0-0xCF) and the image's checksum byte and appended
+    SHA-256 (the last 33 bytes), both of which follow from the ELF file's hash.
+
+$ nm -S -C firmware.elf, both builds: symbol names and sizes
+identical (22732 symbols)
+$ objcopy --only-section=.flash.text, both builds: identical
+$ objcopy --only-section=.flash.rodata, both builds: identical

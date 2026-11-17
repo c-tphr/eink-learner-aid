@@ -14,6 +14,7 @@
 
 #include "FirmwareBoardTag.h"
 #include "OtaBootSwitch.h"
+#include "update/UpdateGate.h"
 
 namespace firmware_flash {
 
@@ -279,6 +280,9 @@ Result flashFromSdPath(const char* sdPath, ProgressCb onProgress, void* ctx, boo
   const esp_partition_t* dest = esp_ota_get_next_update_partition(nullptr);
   if (!dest) {
     LOG_ERR("FLASH", "no next-update partition");
+    return Result::NO_PARTITION;
+  }
+  if (!update_gate::mayWriteUpdateSlot(dest->address, sdPath)) {
     return Result::NO_PARTITION;
   }
 
