@@ -386,8 +386,14 @@ def build_report(work, out):
     w(f"| PlatformIO | {meta.get('pio_version', '?')} |")
     w(f"| Network | {meta['network']} |")
     w(f"| PlatformIO core dir | empty temporary directory (`PLATFORMIO_CORE_DIR`) |")
-    w(f"| Build, libdeps and build-cache dirs | empty temporary directories |")
+    w("| Checkout | fresh temporary git worktree of that commit (own submodules, `.pio` and build cache) |")
     w(f"| Result | {meta['result']} |")
+    w("")
+    w(
+        "Cloud session machines are paused and resumed now and then, so the wall-clock span above can be "
+        "longer than the run. Every duration below comes from a clock that stops while the machine is "
+        "paused (`/proc/uptime`)."
+    )
     w("")
     w("## How hosts were recorded")
     w("")
