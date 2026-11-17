@@ -137,8 +137,7 @@ void ItemBanner::paintButton(const int i) {
     if (renderer.getTextWidth(UI_12_FONT_ID, first) <= room) break;
   }
   const int top = z.y + (z.h - 2 * lineHeight) / 2;
-  renderer.drawText(UI_12_FONT_ID, z.x + (z.w - renderer.getTextWidth(UI_12_FONT_ID, first)) / 2, top, first,
-                    !focused);
+  renderer.drawText(UI_12_FONT_ID, z.x + (z.w - renderer.getTextWidth(UI_12_FONT_ID, first)) / 2, top, first, !focused);
   renderer.drawText(UI_12_FONT_ID, z.x + (z.w - renderer.getTextWidth(UI_12_FONT_ID, second)) / 2, top + lineHeight,
                     second, !focused);
 }
@@ -159,8 +158,8 @@ void ItemBanner::loop() {
       int moved = 0;
       {
         RenderLock lock;
-        focus = e.ev == controls::Ev::PrevShort ? controls::focusPrev(focus)
-                                                : controls::focusNext(controls::BANNER, focus);
+        focus =
+            e.ev == controls::Ev::PrevShort ? controls::focusPrev(focus) : controls::focusNext(controls::BANNER, focus);
         moved = focus;
       }
       LOG_DBG("CTL", "Banner focus=%s", controls::itemName(controls::BANNER.zones[moved].item));

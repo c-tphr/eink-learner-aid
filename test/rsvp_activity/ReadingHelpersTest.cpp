@@ -316,10 +316,10 @@ TEST(NonProseItem, FootnoteBodiesAreNotItems) {
 TEST(NonProseItem, LeadingRunAndItemsInsideNotes) {
   // A chapter that opens with an image directly followed by a table, then prose, a footnote holding an
   // image, and more prose. Words: x (0, TABLE) | Alpha beta. (1-2) | Fig ure (3-4, NOTE) | Gamma. (5)
-  wixtest::Built built = wixtest::buildIndex(
-      wixtest::xhtml("<figure><img src=\"a.png\" alt=\"\"/></figure><table><tr><td>x</td></tr></table>"
-                     "<p>Alpha beta.</p><aside epub:type=\"footnote\"><p>Fig<img src=\"n.png\" alt=\"\"/>ure</p></aside>"
-                     "<p>Gamma.</p>"));
+  wixtest::Built built = wixtest::buildIndex(wixtest::xhtml(
+      "<figure><img src=\"a.png\" alt=\"\"/></figure><table><tr><td>x</td></tr></table>"
+      "<p>Alpha beta.</p><aside epub:type=\"footnote\"><p>Fig<img src=\"n.png\" alt=\"\"/>ure</p></aside>"
+      "<p>Gamma.</p>"));
   ASSERT_EQ(built.status, wordindex::BuildStatus::Ok);
   wordindex::WordIndexReader reader;
   ASSERT_EQ(reader.open(built.file), ReadStatus::Ok);

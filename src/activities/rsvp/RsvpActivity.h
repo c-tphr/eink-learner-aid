@@ -157,10 +157,10 @@ class RsvpActivity final : public Activity {
   checkpoint::Place savedPlace;
   bool readerProgressSaved = false;
   bool needClear = true;
-  bool playbackScreenShown = false;  // render task only: the guides are on screen
+  bool playbackScreenShown = false;          // render task only: the guides are on screen
   reading::UpdateTimeoutWatch timeoutWatch;  // render task only
   bool timeoutPause = false;                 // render task only: the pause asked for is a timeout's
-  char statusLine[160] = {};         // render task only: the pause screen's first line, also logged
+  char statusLine[160] = {};                 // render task only: the pause screen's first line, also logged
 };
 
 #endif  // CROSSPOINT_RSVP_ENABLED

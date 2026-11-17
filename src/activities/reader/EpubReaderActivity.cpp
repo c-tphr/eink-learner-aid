@@ -762,7 +762,7 @@ void EpubReaderActivity::loop() {
     return;
   }
   // RSVP builds: the page of the item RSVP stopped at has been drawn since the hand-over.
-  if (speedReadItem && lastRenderCompleteMs != speedReadItemRenderMs) {
+  if (RSVP_FEATURE_ENABLED && speedReadItem && lastRenderCompleteMs != speedReadItemRenderMs) {
     showSpeedReadItem();
     return;
   }
@@ -1445,6 +1445,7 @@ void EpubReaderActivity::openSpeedRead(const bool resume, std::shared_ptr<rsvpen
 }
 
 void EpubReaderActivity::showSpeedReadItem() {
+  if (!RSVP_FEATURE_ENABLED) return;
   auto handOff = std::move(speedReadItem);
   speedReadItem.reset();
   // An image-only page starts at the same offset as the page after it: show the first one.

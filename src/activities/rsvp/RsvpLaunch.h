@@ -27,8 +27,8 @@ namespace rsvpentry {
 #if CROSSPOINT_RSVP_ENABLED
 // What RSVP keeps while page view shows a non-prose item (task R5; README.md, "Non-prose items").
 struct ItemStop {
-  uint8_t kind = 0;            // wordindex::MarkerKind of the first item of the run
-  uint32_t nextWord = 0;       // the first prose word after the run: where Continue opens RSVP
+  uint8_t kind = 0;                                     // wordindex::MarkerKind of the first item of the run
+  uint32_t nextWord = 0;                                // the first prose word after the run: where Continue opens RSVP
   reading::RsvpValues values = reading::RSVP_DEFAULTS;  // the pace in use, saved or not
   rsvp::DeliveredWpmMeter meter;
   rsvp::WordOrderAudit audit;
@@ -86,8 +86,8 @@ bool openedInRsvp(const Epub& epub);
 // "Non-prose items"). Pushed by the reader once that page is on screen; it draws over it. On leaving
 // it sets `handOff->then` to Continue, or keeps ShowItem when the page must be drawn again under it,
 // and `pageTurn` when a swipe left it; otherwise None (Stay).
-std::unique_ptr<Activity> createItemBanner(GfxRenderer& renderer, MappedInputManager& input,
-                                           std::shared_ptr<Epub> epub, std::shared_ptr<HandOff> handOff);
+std::unique_ptr<Activity> createItemBanner(GfxRenderer& renderer, MappedInputManager& input, std::shared_ptr<Epub> epub,
+                                           std::shared_ptr<HandOff> handOff);
 
 #else
 

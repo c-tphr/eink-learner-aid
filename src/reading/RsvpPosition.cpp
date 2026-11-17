@@ -106,9 +106,8 @@ bool pageViewOffset(wordindex::WordIndexReader& reader, const uint32_t position,
 }
 
 bool itemBefore(wordindex::WordIndexReader& reader, const uint32_t from, const uint32_t next, wordindex::Marker& out) {
-  constexpr uint8_t ITEMS =
-      wordindex::kindBit(wordindex::MARKER_IMAGE) | wordindex::kindBit(wordindex::MARKER_TABLE) |
-      wordindex::kindBit(wordindex::MARKER_CODE);
+  constexpr uint8_t ITEMS = wordindex::kindBit(wordindex::MARKER_IMAGE) | wordindex::kindBit(wordindex::MARKER_TABLE) |
+                            wordindex::kindBit(wordindex::MARKER_CODE);
   uint32_t position = 0;
   if (!reader.nextMarker(from, ITEMS, out, &position)) return false;
   // Markers are in order of their start; an item inside a note never stops playback.
