@@ -64,7 +64,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return args.func(args)
     except BuildError as exc:
-        print(f"prep {args.command}: the draft cannot be built ({len(exc.issues)} problems):", file=sys.stderr)
+        count = len(exc.issues)
+        print(f"prep {args.command}: the draft cannot be built ({count} problem{'s' if count != 1 else ''}):",
+              file=sys.stderr)
         for issue in exc.issues:
             print(f"  {issue}", file=sys.stderr)
         return EXIT_INPUT
