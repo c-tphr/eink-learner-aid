@@ -1,0 +1,118 @@
+# The pause screen's steppers and save buttons by touch (task R4b; S4 rows 6-11, S4 section 9 tokens).
+# Fresh card: no settings file values and no state file, so RSVP opens at 240 WPM and 1 word. WPM -
+# is tapped ten times: 220, 200, ..., 60, and the tenth press changes nothing (lower limit). WPM +
+# twice gives 100. Words - at 1 changes nothing (lower limit); words + three times gives 4, once more
+# changes nothing (upper limit); words - twice gives 2. Play then uses 100 WPM and two words per
+# update: the first frame is "The Lamp" (words 0-1), then "Room" alone (a heading end, so the group
+# stops there). A touch pauses; "Save as default" writes the settings file, "Save for this book" the
+# book's state file, each confirmed on the status line. Exit leaves the book in RSVP mode.
+description = "RSVP settings by touch: WPM and words-per-update steppers with both limits, used by Play, saved as default and for this book"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+  { json = { openEpubPath = "/books/fixture.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+  { swipe = [400, 400, 80, 400], note = "next page: chapter 1, page 1" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [385, 752], note = "More" },
+  { wait_screen = "More | 1/3" },
+  { tap = [240, 388], note = "Speed read" },
+  { wait_log = "\\[RSVP\\] state missing book_wpm=0 book_words=0 default_wpm=240 default_words=1 wpm=240 words_per_update=1 position=none" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=0 word=0 .* from=page" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Paused · 240 WPM target · -- actual\"" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "| 240 WPM | 1 word per update | Save as default | Save for this book |" },
+  { shot = "pause_steppers" },
+
+  { tap = [64, 520], note = "WPM -" },
+  { wait_log = "\\[CTL\\] Pause select=WpmDown" },
+  { wait_log = "\\[RSVP\\] values wpm=220 words_per_update=1 changed=1" },
+  { tap = [64, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=200 " },
+  { tap = [64, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=180 " },
+  { tap = [64, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=160 " },
+  { tap = [64, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=140 " },
+  { tap = [64, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=120 " },
+  { tap = [64, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=100 " },
+  { tap = [64, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=80 " },
+  { tap = [64, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=60 words_per_update=1 changed=1" },
+  { tap = [64, 520], note = "at 60: the lower limit holds" },
+  { wait_log = "\\[RSVP\\] values wpm=60 words_per_update=1 changed=0" },
+  { wait_log = "\\[RSVP\\] pause screen focus=WpmDown refresh=update status=\"Paused · 60 WPM target · -- actual\"" },
+  { screen_has = "| 60 WPM | 1 word per update |" },
+  { tap = [416, 520], note = "WPM +" },
+  { wait_log = "\\[RSVP\\] values wpm=80 words_per_update=1 changed=1" },
+  { tap = [416, 520] },
+  { wait_log = "\\[RSVP\\] values wpm=100 words_per_update=1 changed=1" },
+
+  { tap = [64, 596], note = "words - at 1: the lower limit holds" },
+  { wait_log = "\\[CTL\\] Pause select=WordsDown" },
+  { wait_log = "\\[RSVP\\] values wpm=100 words_per_update=1 changed=0" },
+  { tap = [416, 596], note = "words +" },
+  { wait_log = "\\[RSVP\\] values wpm=100 words_per_update=2 changed=1" },
+  { tap = [416, 596] },
+  { wait_log = "\\[RSVP\\] values wpm=100 words_per_update=3 changed=1" },
+  { tap = [416, 596] },
+  { wait_log = "\\[RSVP\\] values wpm=100 words_per_update=4 changed=1" },
+  { tap = [416, 596], note = "at 4: the upper limit holds" },
+  { wait_log = "\\[RSVP\\] values wpm=100 words_per_update=4 changed=0" },
+  { tap = [64, 596] },
+  { wait_log = "\\[RSVP\\] values wpm=100 words_per_update=3 changed=1" },
+  { tap = [64, 596] },
+  { wait_log = "\\[RSVP\\] values wpm=100 words_per_update=2 changed=1" },
+  { wait_log = "\\[RSVP\\] pause screen focus=WordsDown refresh=update status=\"Paused · 100 WPM target · -- actual\"" },
+  { screen_has = "| 100 WPM | 2 words per update |" },
+  { shot = "pause_values_changed" },
+
+  { tap = [240, 340], note = "Play: the new values apply" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=0 wpm=100 words_per_update=2" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=0 last=1 words=2 .* text=\"The Lamp\"" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=2 last=2 words=1 .* text=\"Room\"", note = "a group never crosses a paragraph end" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=3 last=4 words=2 .* text=\"The supply\"" },
+  { tap = [240, 600], note = "pause" },
+  { wait_log = "\\[RSVP\\] pause reason=pause ch=1 word=\\d+ target=100 " },
+  { wait_log = "\\[RSVP\\] position saved reason=pause ch=1 word=\\d+ mode=rsvp ok=1" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+
+  { tap = [124, 672], note = "Save as default" },
+  { wait_log = "\\[CTL\\] Pause select=SaveDefault" },
+  { wait_log = "\\[RSVP\\] saved default wpm=100 words_per_update=2 ok=1" },
+  { wait_log = "\\[RSVP\\] pause screen focus=SaveDefault refresh=update status=\"Saved as default · 100 WPM target · \\d+ actual\"" },
+  { shot = "saved_default" },
+  { tap = [356, 672], note = "Save for this book" },
+  { wait_log = "\\[CTL\\] Pause select=SaveBook" },
+  { wait_log = "\\[RSVP\\] saved book wpm=100 words_per_update=2 ok=1" },
+  { wait_log = "\\[RSVP\\] pause screen focus=SaveBook refresh=update status=\"Saved for this book · 100 WPM target · \\d+ actual\"" },
+  { shot = "saved_book" },
+
+  { tap = [84, 84], note = "Exit" },
+  { wait_log = "\\[RSVP\\] leave to=exit ch=1 word=\\d+ offset=\\d+" },
+  { wait_log = "Entering activity: Home" },
+  { quit = true },
+
+  { expect_json = ".crosspoint/settings.json", pointer = "/rsvpWpmTens", equals = 10 },
+  { expect_json = ".crosspoint/settings.json", pointer = "/rsvpWordsPerUpdate", equals = 2 },
+  { expect_json = "books/fixture.epub.rsvp-state.json", pointer = "/version", equals = 1 },
+  { expect_json = "books/fixture.epub.rsvp-state.json", pointer = "/overrides", equals = { wpm = 100, words_per_update = 2 } },
+  { expect_json = "books/fixture.epub.rsvp-state.json", pointer = "/position/chapter", equals = 1 },
+  { expect_json = "books/fixture.epub.rsvp-state.json", pointer = "/position/mode", equals = "rsvp" },
+  { expect_no_file = "books/fixture.epub.rsvp-state.json.*", note = "no temporary or set-aside file is left" },
+  { compare = "pause_steppers" },
+  { compare = "pause_values_changed" },
+  { compare = "saved_default", mask = [[0, 0, 480, 50], [0, 124, 480, 72]], note = "the delivered WPM and the pause word vary by run" },
+  { compare = "saved_book", mask = [[0, 0, 480, 50], [0, 124, 480, 72]] },
+]

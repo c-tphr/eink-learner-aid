@@ -43,6 +43,18 @@ const char* itemName(const Item item) {
       return "Play";
     case Item::SentenceForward:
       return "SentenceForward";
+    case Item::WpmDown:
+      return "WpmDown";
+    case Item::WpmUp:
+      return "WpmUp";
+    case Item::WordsDown:
+      return "WordsDown";
+    case Item::WordsUp:
+      return "WordsUp";
+    case Item::SaveDefault:
+      return "SaveDefault";
+    case Item::SaveBook:
+      return "SaveBook";
   }
   return "?";
 }

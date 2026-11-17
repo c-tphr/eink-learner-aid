@@ -8,6 +8,7 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
+#include <CheckpointTypes.h>
 #include <IndexWordSource.h>
 #include <Scheduler.h>
 
@@ -22,19 +23,14 @@
 #include "display/DisplayProfile.h"
 #include "reading/ChapterWordIndex.h"
 #include "reading/RsvpPosition.h"
+#include "reading/RsvpValues.h"
 
 class Epub;
 
-// The RSVP defaults until R4b moves them into the settings (PRD: 240 WPM, one word per update).
-struct RsvpDefaults {
-  static constexpr uint16_t WPM = rsvp::DEFAULT_WPM;
-  static constexpr uint8_t WORDS_PER_UPDATE = 1;
-};
-
 class RsvpActivity final : public Activity {
  public:
-  RsvpActivity(GfxRenderer& renderer, MappedInputManager& input, std::shared_ptr<Epub> epub, int spineIndex,
-               uint32_t pageStartOffset, std::shared_ptr<rsvpentry::HandOff> handOff);
+  RsvpActivity(GfxRenderer& renderer, MappedInputManager& input, std::shared_ptr<Epub> epub,
+               const rsvpentry::Entry& entry, std::shared_ptr<rsvpentry::HandOff> handOff);
 
   void onEnter() override;
   void onExit() override;
@@ -50,6 +46,8 @@ class RsvpActivity final : public Activity {
   enum class Phase : uint8_t { Loading, Paused, Playing };
   // The one-line note on the pause screen.
   enum class Note : uint8_t { None, ItemSkipped, EndOfBook, ChapterFailed };
+  // What the status line starts with: "Paused", or the outcome of a save button.
+  enum class Status : uint8_t { Paused, SavedDefault, SavedBook, SaveFailed };
 
   // The scheduler's word source: an IndexWordSource over the open chapter, made anew per chapter
   // (it caches marker lookups of the chapter it was made for).
@@ -81,6 +79,7 @@ class RsvpActivity final : public Activity {
 
   // --- Render task (holding the RenderLock) ---
   void load();
+  reading::SavedWord loadState();
   void startPlayback();
   void stepOnce();
   void enterPause(Note note, const char* reason);
@@ -90,7 +89,7 @@ class RsvpActivity final : public Activity {
   void paintPauseScreen();
   void paintPlaybackScreen();
   void paintBand(const rsvp::Frame* frame);
-  void paintButton(int index, const char* label);
+  void paintButton(int index);
   void logFrame();
   void logPause(const char* reason);
   static void showPreparing(void* context);
@@ -104,11 +103,21 @@ class RsvpActivity final : public Activity {
   void stepSentence(bool forward);
   void leave(rsvpentry::HandOff::Then then);
   void requestPauseNow(const char* cause);
+  void stepValue(controls::Item item);
+  void saveAsDefault();
+  void saveForBook();
+
+  // --- Either task, holding the RenderLock (the render task holds it inside render()) ---
+  // Writes the position (the next word) and `mode` to the book's state file, unless it is what was
+  // written last.
+  void savePosition(checkpoint::ReadingMode mode, const char* reason);
+  // Home gesture and sleep: the reader's own progress, through HandOff (once).
+  void saveReaderProgress();
 
   std::shared_ptr<Epub> epub;
   std::shared_ptr<rsvpentry::HandOff> handOff;
   int spine;
-  const uint32_t pageStartOffset;
+  const rsvpentry::Entry entry;
 
   displayprofile::DisplayBackend& backend;
   BandPainter painter{*this};
@@ -133,7 +142,13 @@ class RsvpActivity final : public Activity {
   // Pause-screen state: written by the main task under the RenderLock, read by the render task.
   int focus = 0;
   Note note = Note::None;
+  Status status = Status::Paused;
+  reading::RsvpValues values = reading::RSVP_DEFAULTS;  // the steppers; applied at the next Play
   bool pendingPlay = false;
+  // The last position written to the state file (RenderLock).
+  bool positionSaved = false;
+  checkpoint::Place savedPlace;
+  bool readerProgressSaved = false;
   bool needClear = true;
   bool playbackScreenShown = false;  // render task only: the guides are on screen
   char statusLine[160] = {};         // render task only: the pause screen's first line, also logged

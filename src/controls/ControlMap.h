@@ -81,7 +81,20 @@ inline constexpr Binding BINDINGS[] = {
 Act resolve(Ctx ctx, Ev ev, const KeyRoles& roles = KEYS);
 
 // 4. Screens: items in focus order with their touch zones (portrait 480x800 logical pixels).
-enum class Item : uint8_t { Exit, Menu, PageView, SentenceBack, Play, SentenceForward };
+enum class Item : uint8_t {
+  Exit,
+  Menu,
+  PageView,
+  SentenceBack,
+  Play,
+  SentenceForward,
+  WpmDown,
+  WpmUp,
+  WordsDown,
+  WordsUp,
+  SaveDefault,
+  SaveBook,
+};
 
 struct Zone {
   Item item;
@@ -95,12 +108,15 @@ struct Screen {
   uint8_t defaultIndex;
 };
 
-// The RSVP pause screen (S4 section 2). R4b appends the WPM and words-per-update steppers and the
-// two save buttons after SentenceForward, in the rows S4 gives them (488-704).
+// The RSVP pause screen (S4 section 2): R4a's rows, then the WPM and words-per-update steppers and the
+// two save buttons (S4 rows 6-11). The four steppers repeat while held.
 inline constexpr Zone PAUSE_ZONES[] = {
-    {Item::Exit, 16, 52, 136, 64, false},      {Item::Menu, 172, 52, 136, 64, false},
-    {Item::PageView, 328, 52, 136, 64, false}, {Item::SentenceBack, 16, 204, 448, 64, true},
-    {Item::Play, 16, 280, 448, 120, false},    {Item::SentenceForward, 16, 412, 448, 64, true},
+    {Item::Exit, 16, 52, 136, 64, false},         {Item::Menu, 172, 52, 136, 64, false},
+    {Item::PageView, 328, 52, 136, 64, false},    {Item::SentenceBack, 16, 204, 448, 64, true},
+    {Item::Play, 16, 280, 448, 120, false},       {Item::SentenceForward, 16, 412, 448, 64, true},
+    {Item::WpmDown, 16, 488, 96, 64, true},       {Item::WpmUp, 368, 488, 96, 64, true},
+    {Item::WordsDown, 16, 564, 96, 64, true},     {Item::WordsUp, 368, 564, 96, 64, true},
+    {Item::SaveDefault, 16, 640, 216, 64, false}, {Item::SaveBook, 248, 640, 216, 64, false},
 };
 inline constexpr Screen PAUSE{PAUSE_ZONES, static_cast<uint8_t>(sizeof(PAUSE_ZONES) / sizeof(PAUSE_ZONES[0])), 4};
 

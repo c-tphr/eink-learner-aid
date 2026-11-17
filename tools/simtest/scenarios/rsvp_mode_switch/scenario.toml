@@ -1,0 +1,127 @@
+# Page view to RSVP and back at the same word (task R4b; PRD "move between RSVP and page view at the same
+# position"; the entry rule in src/activities/rsvp/README.md, "Where RSVP opens"). Side keys, plus the
+# left-edge Back swipe once (S4 row 12's touch path). Word positions from
+# fixtures/books/fixture.expected.json, chapter 1: sentences start at 0, 3, 13; page 2 starts at word
+# 108 (the figure caption "Figure 1. Gannet Rock light, ..."), whose sentences start at 108, 110 and
+# 118 ("There were one hundred ...").
+#
+# 0. The card holds a state file of a newer version (2): RSVP ignores it (240 WPM, not its 900) and the
+#    first save moves it aside to `.bad` and writes a fresh version 1 file.
+# 1. Page 1: RSVP opens at word 0; two sentence steps reach word 13; Page view shows page 1 (the page
+#    holding word 13) and the state file says word 13, page mode.
+# 2. RSVP again from page 1 opens at word 13, not at the page's first word (from=saved).
+# 3. The Back swipe returns to page view; Down turns to page 2; RSVP there opens at the page's first
+#    word, 108 (word 13 is not on this page); two sentence steps reach 118 and Page view shows page 2.
+# 4. RSVP again from page 2 opens at 118. Page view, Up turns back to page 1: RSVP there opens at the
+#    page's first word, 0 (word 118 is on a later page). Exit saves word 0 in RSVP mode.
+description = "Mode switch: RSVP -> page view -> RSVP lands on the same word; a word on another page is not used"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+  { json = { openEpubPath = "/books/fixture.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 2, \"overrides\": {\"wpm\": 900}}\n", dst = "books/fixture.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+
+  # 1.
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] state invalid book_wpm=0 book_words=0 default_wpm=240 default_words=1 wpm=240 words_per_update=1 position=none", note = "a version 2 file: defaults" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=0 word=0 .* from=page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceForward" },
+  { press = "DOWN", hold_ms = 900 },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=0 to=3" },
+  { press = "DOWN", hold_ms = 900 },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=3 to=13" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=Play" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceBack" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=PageView" },
+  { press = "UP", hold_ms = 900, note = "hold: Page view" },
+  { wait_log = "\\[RSVP\\] leave to=page-view ch=1 word=13 offset=\\d+" },
+  { wait_log = "\\[RSVP\\] state /books/fixture.epub.rsvp-state.json set aside as /books/fixture.epub.rsvp-state.json.bad" },
+  { wait_log = "\\[RSVP\\] position saved reason=page-view ch=1 word=13 mode=page ok=1" },
+  { wait_log = "Rendered page in" },
+  { screen_has = "The Lamp Room | 1/5", note = "page 1 holds word 13" },
+  { shot = "page_view_word13" },
+
+  # 2.
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read from the same page" },
+  { wait_log = "\\[RSVP\\] state read .* position=page ch=1 word=13" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=0 word=13 .* from=saved", note = "the saved word, not the page's first" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Page view | It had crossed the strait at " },
+  { shot = "pause_again_word13" },
+
+  # 3.
+  { swipe = [20, 400, 300, 400], note = "left-edge Back swipe: page view (S4 row 12)" },
+  { wait_log = "\\[RSVP\\] leave to=page-view ch=1 word=13 offset=\\d+" },
+  { wait_log = "Rendered page in" },
+  { press = "DOWN", note = "page 2" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { press = "DOWN", hold_ms = 900 },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=108 .* from=page", note = "word 13 is not on page 2" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceForward" },
+  { press = "DOWN", hold_ms = 900 },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=108 to=110", note = "\"Figure 1.\" ends a sentence" },
+  { press = "DOWN", hold_ms = 900 },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=110 to=118" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=Play" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceBack" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=PageView" },
+  { press = "UP", hold_ms = 900, note = "hold: Page view" },
+  { wait_log = "\\[RSVP\\] leave to=page-view ch=1 word=118 offset=\\d+" },
+  { wait_log = "\\[RSVP\\] position saved reason=page-view ch=1 word=118 mode=page ok=1" },
+  { wait_log = "Rendered page in" },
+  { screen_has = "The Lamp Room | 2/5", note = "page 2 holds word 118" },
+
+  # 4.
+  { press = "DOWN", hold_ms = 900 },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=118 .* from=saved" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Page view | There were one hundred and twelve " },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceBack" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=PageView" },
+  { press = "UP", hold_ms = 900 },
+  { wait_log = "\\[RSVP\\] leave to=page-view ch=1 word=118 offset=\\d+" },
+  { wait_log = "Rendered page in" },
+  { press = "UP", note = "back to page 1" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { press = "DOWN", hold_ms = 900 },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=0 word=0 .* from=page", note = "word 118 is on a later page: the reader paged back" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceBack" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=PageView" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=Menu" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=Exit" },
+  { press = "UP", hold_ms = 900, note = "hold: Exit" },
+  { wait_log = "\\[RSVP\\] position saved reason=exit ch=1 word=0 mode=rsvp ok=1" },
+  { wait_log = "Entering activity: Home" },
+  { quit = true },
+
+  { expect_json = "books/fixture.epub.rsvp-state.json", equals = { version = 1, overrides = {}, position = { chapter = 1, word = 0, mode = "rsvp" } } },
+  { expect_file = ".crosspoint/epub_*/progress.bin", hex_prefix = "0100 0000" },
+  { expect_file = "books/fixture.epub.rsvp-state.json.bad", contains = "\"version\": 2", note = "the newer file, kept aside" },
+  { compare = "page_view_word13" },
+  { compare = "pause_again_word13" },
+]

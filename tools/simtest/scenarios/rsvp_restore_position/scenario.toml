@@ -1,0 +1,106 @@
+# The RSVP position survives every way out that does not go through a pause-screen item (task R4b):
+# the Home gesture, a battery pull after a pause, and sleep. The card is seeded with a global default
+# of 300 WPM (settings file) and a per-book override of 60 WPM (state file): the book's override wins.
+# Word positions from fixtures/books/fixture.expected.json, chapter 1: word 101 starts "Then she
+# turned and began to climb.", an image follows word 107, word 108 starts the caption on page 2
+# ("Figure 1. Gannet Rock light, seen from the landing stage."), word 118 the next sentence.
+#
+# Run 1. RSVP from page 1, eight sentence steps to 101, Play at 60 WPM: playback stops by itself before
+# the image (position 108, saved). A bottom-edge swipe (Home gesture) goes Home; the reader's own
+# progress moves to page 2, where word 108 is. Reopening the book from Home opens RSVP by itself at
+# word 108 (the state file says RSVP mode). Play; after the frame of word 110 a touch pauses, so the
+# next word is 111 (60 WPM leaves about a second for the touch), and the pause saves it. SIGKILL.
+# Run 2. Restart: the firmware reopens the book at boot (the seeded /.crosspoint/state.json still says
+# the last sleep was from the reader), and RSVP opens at word 111. One sentence step to 118 (not saved by
+# itself), then sleep: the position and the reader's page are saved before sleeping, and after the
+# wake the book reopens in RSVP at word 118.
+description = "Saved RSVP position: Home gesture, kill after a pause, and sleep each reopen at the saved word; a book override beats the global default"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+  { json = { openEpubPath = "/books/fixture.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { json = { rsvpWpmTens = 30 }, dst = ".crosspoint/settings.json" },
+  { json = { version = 1, overrides = { wpm = 60 } }, dst = "books/fixture.epub.rsvp-state.json" },
+]
+
+steps = [
+  # Run 1.
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] state read book_wpm=60 book_words=0 default_wpm=300 default_words=1 wpm=60 words_per_update=1 position=none", note = "the book's override beats the global default" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=0 word=0 .* from=page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "| 60 WPM | 1 word per update |" },
+  { tap = [240, 444] },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=0 to=3" },
+  { tap = [240, 444] },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=3 to=13" },
+  { tap = [240, 444] },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=13 to=32" },
+  { tap = [240, 444] },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=32 to=52" },
+  { tap = [240, 444] },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=52 to=61" },
+  { tap = [240, 444] },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=61 to=73" },
+  { tap = [240, 444] },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=73 to=87" },
+  { tap = [240, 444] },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=87 to=101" },
+  { tap = [240, 340], note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=101 wpm=60 words_per_update=1" },
+  { wait_log = "\\[RSVP\\] pause reason=non-prose ch=1 word=108 target=60 ", timeout_ms = 30000 },
+  { wait_log = "\\[RSVP\\] position saved reason=non-prose ch=1 word=108 mode=rsvp ok=1" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { swipe = [240, 780, 240, 300], note = "bottom-edge swipe: the Home gesture" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1", note = "the reader's own progress: page 2, which holds word 108" },
+  { wait_log = "Entering activity: Home" },
+  { wait_log = "No known cover image for thumbnail", note = "Home has finished loading the card" },
+  { press = "ENTER", note = "reopen the book from its card" },
+  { wait_log = "Loaded cache: 1, 1", note = "the reader reopens on page 2" },
+  { wait_log = "\\[RSVP\\] book state read mode=rsvp ch=1 word=108" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=108 .* from=resumed", note = "RSVP opens by itself at the saved word" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Page view | Figure 1. Gannet Rock light, seen from |" },
+  { shot = "resumed_after_home" },
+  { tap = [240, 340], note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=108 wpm=60 " },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=110 last=110 words=1 .* text=\"Gannet\"" },
+  { tap = [240, 600], note = "pause during word 110" },
+  { wait_log = "\\[RSVP\\] pause reason=pause ch=1 word=111 " },
+  { wait_log = "\\[RSVP\\] position saved reason=pause ch=1 word=111 mode=rsvp ok=1" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { kill = true, note = "SIGKILL: no shutdown code runs" },
+  { expect_json = "books/fixture.epub.rsvp-state.json", equals = { version = 1, overrides = { wpm = 60 }, position = { chapter = 1, word = 111, mode = "rsvp" } } },
+
+  # Run 2.
+  { start = true, note = "the seeded state.json still says the last sleep was from the reader, so the firmware reopens the book at boot" },
+  { wait_log = "\\[RSVP\\] book state read mode=rsvp ch=1 word=111" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=111 .* from=resumed" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Page view | Rock light, seen from the landing stage. |" },
+  { shot = "resumed_after_kill" },
+  { tap = [240, 444], note = "Forward one sentence: not saved by itself" },
+  { wait_log = "\\[RSVP\\] sentence forward ch=1 from=111 to=118" },
+  { wait_log = "\\[RSVP\\] pause screen focus=SentenceForward refresh=update" },
+  { sleep = true },
+  { wait_log = "\\[RSVP\\] position saved reason=sleep ch=1 word=118 mode=rsvp ok=1" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { wait_log = "Entering deep sleep" },
+  { wake = "POWER" },
+  { wait_log = "Loaded cache: 1, 1", note = "the firmware reopens the book after a sleep from it" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=118 .* from=resumed" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Page view | There were one hundred and twelve " },
+  { shot = "resumed_after_sleep" },
+  { quit = true },
+  { expect_json = "books/fixture.epub.rsvp-state.json", equals = { version = 1, overrides = { wpm = 60 }, position = { chapter = 1, word = 118, mode = "rsvp" } } },
+  { expect_file = ".crosspoint/epub_*/progress.bin", hex_prefix = "0100 0100" },
+  { compare = "resumed_after_home" },
+  { compare = "resumed_after_kill" },
+  { compare = "resumed_after_sleep" },
+]

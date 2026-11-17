@@ -325,6 +325,7 @@ bool EpubReaderActivity::loadBook() {
   if (!CLIPPINGS.loadForBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), "epub")) {
     LOG_ERR("CLIP", "Failed to load clippings for %s", epub->getPath().c_str());
   }
+  resumeSpeedRead = rsvpentry::openedInRsvp(*epub);
   return true;
 }
 
@@ -753,6 +754,13 @@ void EpubReaderActivity::loop() {
   }
 
   rememberBookOnceRendered();
+
+  // RSVP builds: the book was left in speed reading; reopen it there once the first page is shown.
+  if (resumeSpeedRead && pageRendered.load(std::memory_order_acquire)) {
+    resumeSpeedRead = false;
+    openSpeedRead(true);
+    return;
+  }
 
   // The radio stopped for a chapter build: once the render task has let go of the lock, that page
   // is on screen; once the build tick below has finished the chapter, no parser is left alive and
@@ -1389,11 +1397,23 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
   }
 }
 
-void EpubReaderActivity::openSpeedRead() {
+void EpubReaderActivity::openSpeedRead(const bool resume) {
   if (!RSVP_FEATURE_ENABLED || !epub || !section || isAtEndOfBook()) return;
-  const uint32_t pageStart = currentPageVisibleOffset.value_or(0);
+  rsvpentry::Entry entry;
+  entry.spineIndex = currentSpineIndex;
+  entry.pageStartOffset = currentPageVisibleOffset.value_or(0);
+  if (section->currentPage + 1 < section->pageCount) {
+    entry.pageEndOffset = section->getVisibleTextOffsetForPage(static_cast<uint16_t>(section->currentPage + 1))
+                              .value_or(entry.pageEndOffset);
+  }
+  entry.resume = resume;
   auto handOff = std::make_shared<rsvpentry::HandOff>();
-  auto activity = rsvpentry::create(renderer, mappedInput, epub, currentSpineIndex, pageStart, handOff);
+  handOff->saveReaderProgress = [this](const int spine, const uint32_t offset) {
+    const auto page =
+        section && currentSpineIndex == spine ? section->getPageForVisibleTextOffset(offset) : std::nullopt;
+    EpubReaderUtils::saveProgress(*epub, spine, page.value_or(0), page ? section->estimatedTotalPages() : 0, offset);
+  };
+  auto activity = rsvpentry::create(renderer, mappedInput, epub, entry, handOff);
   if (!activity) return;
   pendingManualTurn = 0;
   automaticPageTurnActive = false;
@@ -1401,11 +1421,7 @@ void EpubReaderActivity::openSpeedRead() {
     using Then = rsvpentry::HandOff::Then;
     if (handOff->then == Then::None) return;
     if (handOff->then == Then::ExitBook) {
-      const auto page = section && currentSpineIndex == handOff->spineIndex
-                            ? section->getPageForVisibleTextOffset(handOff->visibleTextOffset)
-                            : std::nullopt;
-      EpubReaderUtils::saveProgress(*epub, handOff->spineIndex, page.value_or(0),
-                                    page ? section->estimatedTotalPages() : 0, handOff->visibleTextOffset);
+      handOff->saveReaderProgress(handOff->spineIndex, handOff->visibleTextOffset);
       onGoHome();
       return;
     }

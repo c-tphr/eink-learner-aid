@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "overrides": { "wpm": 100, "words_per_update": 2 },
+  "position": { "chapter": 1, "word": 5, "mode": "rsvp" }
+}

@@ -69,6 +69,34 @@ uint32_t entryWord(wordindex::WordIndexReader& reader, const uint32_t pageStartO
   return word;
 }
 
+EntryChoice chooseEntry(wordindex::WordIndexReader& reader, const int chapter, const uint32_t pageStartOffset,
+                        const uint32_t pageEndOffset, const SavedWord& saved, const bool resume) {
+  const uint32_t count = reader.wordCount();
+  const bool sameChapter = saved.valid && saved.chapter == chapter;
+  if (resume && sameChapter) return {saved.word < count ? saved.word : count, EntryFrom::Resumed};
+
+  const uint32_t pageWord = entryWord(reader, pageStartOffset);
+  if (sameChapter && saved.word >= pageWord && saved.word < count) {
+    uint32_t start = 0;
+    if (pageEndOffset == NO_PAGE_END || (reader.wordStart(saved.word, start) && start < pageEndOffset)) {
+      return {saved.word, EntryFrom::Saved};
+    }
+  }
+  return {pageWord, EntryFrom::Page};
+}
+
+const char* entryFromName(const EntryFrom from) {
+  switch (from) {
+    case EntryFrom::Page:
+      return "page";
+    case EntryFrom::Saved:
+      return "saved";
+    case EntryFrom::Resumed:
+      return "resumed";
+  }
+  return "?";
+}
+
 bool pageViewOffset(wordindex::WordIndexReader& reader, const uint32_t position, uint32_t& offset) {
   const uint32_t count = reader.wordCount();
   if (count == 0) return false;

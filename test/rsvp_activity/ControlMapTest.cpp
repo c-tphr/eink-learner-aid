@@ -43,9 +43,12 @@ TEST(ControlMap, ConfirmSelectsOnlyWhenTheTableSaysSo) {
 }
 
 TEST(ControlMap, PauseScreenOrderAndDefault) {
-  // S4 section 2 focus order (R4a's items): Exit, Menu, Page view, << sentence, PLAY, sentence >>.
-  const Item order[] = {Item::Exit, Item::Menu, Item::PageView, Item::SentenceBack, Item::Play, Item::SentenceForward};
-  ASSERT_EQ(PAUSE.count, 6);
+  // S4 section 2 focus order: Exit, Menu, Page view, << sentence, PLAY, sentence >>, WPM -, WPM +,
+  // words -, words +, Save default, Save book.
+  const Item order[] = {
+      Item::Exit,    Item::Menu,  Item::PageView,  Item::SentenceBack, Item::Play,        Item::SentenceForward,
+      Item::WpmDown, Item::WpmUp, Item::WordsDown, Item::WordsUp,      Item::SaveDefault, Item::SaveBook};
+  ASSERT_EQ(PAUSE.count, 12);
   for (int i = 0; i < PAUSE.count; ++i) EXPECT_EQ(PAUSE.zones[i].item, order[i]) << i;
   EXPECT_EQ(PAUSE.zones[PAUSE.defaultIndex].item, Item::Play);
   // Key paths from the default (S4 section 1): Up x1 back, Up x2 page view, Up x3 menu, Up x4 exit.
@@ -59,8 +62,14 @@ TEST(ControlMap, PauseScreenOrderAndDefault) {
   f = focusPrev(f);
   EXPECT_EQ(PAUSE.zones[f].item, Item::Exit);
   EXPECT_EQ(focusPrev(f), f) << "no wrap at the top";
-  f = focusNext(PAUSE, PAUSE.defaultIndex);
-  EXPECT_EQ(PAUSE.zones[f].item, Item::SentenceForward);
+  // Down x1 forward, x2 WPM -, x3 WPM +, x4 words -, x5 words +, x6 save default, x7 save book (S4 rows 5-11).
+  const Item down[] = {Item::SentenceForward, Item::WpmDown,     Item::WpmUp,   Item::WordsDown,
+                       Item::WordsUp,         Item::SaveDefault, Item::SaveBook};
+  f = PAUSE.defaultIndex;
+  for (const Item expected : down) {
+    f = focusNext(PAUSE, f);
+    EXPECT_EQ(PAUSE.zones[f].item, expected) << itemName(expected);
+  }
   EXPECT_EQ(focusNext(PAUSE, f), f) << "no wrap at the bottom";
 }
 
@@ -69,9 +78,12 @@ TEST(ControlMap, PauseZonesMatchS4AndRespectTargetSizes) {
     Item item;
     int x, y, w, h;
   };
-  const Expected s4[] = {{Item::Exit, 16, 52, 136, 64},      {Item::Menu, 172, 52, 136, 64},
-                         {Item::PageView, 328, 52, 136, 64}, {Item::SentenceBack, 16, 204, 448, 64},
-                         {Item::Play, 16, 280, 448, 120},    {Item::SentenceForward, 16, 412, 448, 64}};
+  const Expected s4[] = {{Item::Exit, 16, 52, 136, 64},         {Item::Menu, 172, 52, 136, 64},
+                         {Item::PageView, 328, 52, 136, 64},    {Item::SentenceBack, 16, 204, 448, 64},
+                         {Item::Play, 16, 280, 448, 120},       {Item::SentenceForward, 16, 412, 448, 64},
+                         {Item::WpmDown, 16, 488, 96, 64},      {Item::WpmUp, 368, 488, 96, 64},
+                         {Item::WordsDown, 16, 564, 96, 64},    {Item::WordsUp, 368, 564, 96, 64},
+                         {Item::SaveDefault, 16, 640, 216, 64}, {Item::SaveBook, 248, 640, 216, 64}};
   for (const auto& e : s4) {
     const int i = indexOf(PAUSE, e.item);
     ASSERT_GE(i, 0);
@@ -86,10 +98,12 @@ TEST(ControlMap, PauseZonesMatchS4AndRespectTargetSizes) {
     EXPECT_LE(z.y + z.h, 752) << "the bottom hint row stays free";
   }
   EXPECT_GE(PAUSE.zones[indexOf(PAUSE, Item::Play)].h, 120) << "the default primary action is 120 px high";
-  // Only the sentence steps repeat when held.
+  // The sentence steps and the four steppers repeat when held; nothing else does.
   for (int i = 0; i < PAUSE.count; ++i) {
-    const bool step = PAUSE.zones[i].item == Item::SentenceBack || PAUSE.zones[i].item == Item::SentenceForward;
-    EXPECT_EQ(PAUSE.zones[i].repeats, step) << itemName(PAUSE.zones[i].item);
+    const Item item = PAUSE.zones[i].item;
+    const bool repeats = item == Item::SentenceBack || item == Item::SentenceForward || item == Item::WpmDown ||
+                         item == Item::WpmUp || item == Item::WordsDown || item == Item::WordsUp;
+    EXPECT_EQ(PAUSE.zones[i].repeats, repeats) << itemName(item);
   }
 }
 
@@ -109,12 +123,20 @@ TEST(ControlMap, ZonesDoNotOverlapAndHitTestingFindsThem) {
   EXPECT_EQ(hit(PAUSE, 396, 84)->item, Item::PageView);
   EXPECT_EQ(hit(PAUSE, 240, 84)->item, Item::Menu);
   EXPECT_EQ(hit(PAUSE, 84, 84)->item, Item::Exit);
+  EXPECT_EQ(hit(PAUSE, 64, 520)->item, Item::WpmDown);
+  EXPECT_EQ(hit(PAUSE, 416, 520)->item, Item::WpmUp);
+  EXPECT_EQ(hit(PAUSE, 64, 596)->item, Item::WordsDown);
+  EXPECT_EQ(hit(PAUSE, 416, 596)->item, Item::WordsUp);
+  EXPECT_EQ(hit(PAUSE, 124, 672)->item, Item::SaveDefault);
+  EXPECT_EQ(hit(PAUSE, 356, 672)->item, Item::SaveBook);
   // Edges: x + w and y + h are outside.
   EXPECT_EQ(hit(PAUSE, 16, 280)->item, Item::Play);
   EXPECT_EQ(hit(PAUSE, 463, 399)->item, Item::Play);
   EXPECT_EQ(hit(PAUSE, 464, 340), nullptr);
   EXPECT_EQ(hit(PAUSE, 240, 400), nullptr) << "the gap between Play and the next row";
   EXPECT_EQ(hit(PAUSE, 240, 160), nullptr) << "the next-words row is not a target";
+  EXPECT_EQ(hit(PAUSE, 240, 520), nullptr) << "the WPM value between its steppers is not a target";
+  EXPECT_EQ(hit(PAUSE, 240, 672), nullptr) << "the gap between the save buttons";
   EXPECT_EQ(hit(PAUSE, 240, 776), nullptr);
 }
 

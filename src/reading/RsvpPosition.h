@@ -16,6 +16,31 @@ namespace reading {
 // offset. wordCount() when the page holds no word (or on a read error).
 uint32_t entryWord(wordindex::WordIndexReader& reader, uint32_t pageStartOffset);
 
+// Where RSVP opens (task R4b; src/activities/rsvp/README.md, "Where RSVP opens").
+enum class EntryFrom : uint8_t { Page, Saved, Resumed };
+struct EntryChoice {
+  uint32_t word;
+  EntryFrom from;
+};
+// The state file's reading position, if any.
+struct SavedWord {
+  bool valid = false;
+  int chapter = -1;
+  uint32_t word = 0;
+};
+// No page after this one in the chapter, or its start is unknown.
+inline constexpr uint32_t NO_PAGE_END = UINT32_MAX;
+
+// `resume` (the book opened with its state in RSVP mode, `chapter` being the saved one): the saved
+// word, at most the chapter's word count, whatever page the reader shows. Otherwise the saved word
+// when it lies on the page the reader shows: the same chapter, not before the page's entry word, and
+// starting before `pageEndOffset` (the next page's start offset, or NO_PAGE_END); else the page's
+// entry word (entryWord()).
+EntryChoice chooseEntry(wordindex::WordIndexReader& reader, int chapter, uint32_t pageStartOffset,
+                        uint32_t pageEndOffset, const SavedWord& saved, bool resume);
+
+const char* entryFromName(EntryFrom from);
+
 // The visible offset page view jumps to for `position` (the next word RSVP would show): that word's
 // start, or the last word's start when `position` is at the chapter end. False for an empty chapter.
 bool pageViewOffset(wordindex::WordIndexReader& reader, uint32_t position, uint32_t& offset);
