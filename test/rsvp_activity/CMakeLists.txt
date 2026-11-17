@@ -5,6 +5,7 @@
 # Task R4b adds the pace settings and the state-file rules (src/reading/RsvpValues, BookStateRules),
 # which use lib/CheckpointCore's state codec. Task R5 adds the non-prose item lookup and the pause on a
 # display timeout, driven through the real scheduler and lib/DisplayProfileCore's device timing logic.
+# Task C2 adds ReadingSession's pure decisions (src/reading/ReadingSessionRules) on the prepared fixture.
 
 set(RSVP_CORE_DIR ${REPO_ROOT}/lib/RsvpCore)
 set(WORD_INDEX_DIR ${REPO_ROOT}/lib/WordIndex)
@@ -18,6 +19,7 @@ set(RSVP_ACTIVITY_SOURCES
   ${REPO_ROOT}/src/reading/RsvpPosition.cpp
   ${REPO_ROOT}/src/reading/RsvpValues.cpp
   ${REPO_ROOT}/src/reading/BookStateRules.cpp
+  ${REPO_ROOT}/src/reading/ReadingSessionRules.cpp
 )
 
 add_executable(RsvpActivityTest
@@ -27,6 +29,7 @@ add_executable(RsvpActivityTest
   ReadingHelpersTest.cpp
   RsvpSettingsTest.cpp
   DisplayTimeoutTest.cpp
+  ReadingSessionTest.cpp
   ${RSVP_ACTIVITY_SOURCES}
   ${REPO_ROOT}/test/word_index/WordIndexTestSupport.cpp
   ${WORD_INDEX_DIR}/WordIndexFormat.cpp
@@ -66,6 +69,8 @@ add_executable(RsvpActivityTest
   ${CHECKPOINT_CORE_DIR}/CheckpointIndex.cpp
   ${CHECKPOINT_CORE_DIR}/CheckpointParser.cpp
   ${CHECKPOINT_CORE_DIR}/CheckpointSource.cpp
+  ${CHECKPOINT_CORE_DIR}/CheckpointTrigger.cpp
+  ${CHECKPOINT_CORE_DIR}/StateRestore.cpp
 )
 add_dependencies(RsvpActivityTest WordIndexTestData)
 

@@ -42,14 +42,12 @@
 #include "WifiCredentialStore.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
-#include "activities/checkpoint/CheckpointSimEntry.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
 #include "components/UITheme.h"
 #include "controls/ControlDefaults.h"
 #include "display/DisplaySelfTest.h"
 #include "fontIds.h"
 #include "platform/UsbSerialJtagHandoff.h"
-#include "reading/RsvpLinkCheck.h"
 #include "update/UpdateGate.h"
 #include "util/ButtonNavigator.h"
 #include "util/PluginEvents.h"
@@ -734,7 +732,6 @@ void setup() {
   Frontlight.begin(SETTINGS.frontlightBrightness, SETTINGS.frontlightWarmth, restoreLightOn);
 
   LOG_DBG("MAIN", "Starting CrossPoint version " CROSSPOINT_VERSION);
-  runRsvpLinkCheck();
 
   // Apply a switch moved during sleep before the first paint, so the wake
   // screen does not draw in the old night mode and then repaint.
@@ -1043,7 +1040,6 @@ void loop() {
   const unsigned long activityStartTime = millis();
   activityManager.loop();
   runDisplaySelfTestIfRequested(renderer);
-  runCheckpointSimEntryIfRequested(renderer, mappedInputManager);
   const unsigned long activityDuration = millis() - activityStartTime;
 
   const unsigned long loopDuration = millis() - loopStartTime;

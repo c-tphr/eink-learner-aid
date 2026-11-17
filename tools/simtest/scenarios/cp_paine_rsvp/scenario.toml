@@ -1,0 +1,66 @@
+# A real section end fires in RSVP (task C2) on the real book fixtures/books/paine-essays.prepared.epub
+# (55 sections, all with a checkpoint). Common Sense (spine 2, 19,335 words) holds 23 sections; the
+# first, s0001 (433 words), ends at word 432 and carries c0001 (two prompts). Keys only: page forward to
+# Common Sense page 6 (words 365 on), Speed read and Play by holds; playback stops after word 432 and
+# c0001's first prompt shows; Skip checkpoint; RSVP's pause screen at word 433, "Checkpoint done".
+description = "Paine book: RSVP stops at the end of Common Sense's first section, the checkpoint shows, RSVP resumes paused after the break"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+wait_timeout_ms = 30000
+
+sd = [
+  { src = "fixtures/books/paine-essays.prepared.epub", dst = "books/paine-essays.prepared.epub" },
+  { json = { openEpubPath = "/books/paine-essays.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}}\n", dst = "books/paine-essays.prepared.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "\\[CPT\\] session open checkpoints=1 sha=96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561 ", timeout_ms = 60000 },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] sections ch=2 words=19335 sections=23 checkpoints=23 failed=0" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=1" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=2" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] page advance ch=2 first=273 from=273 last=364 step=none" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=2 page_offset=\\d+ word=365 .* from=page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN", hold_ms = 900, note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=2 word=365 wpm=1000 words_per_update=1" },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=432 last=432 words=1 " },
+  { wait_log = "\\[RSVP\\] pause reason=checkpoint ch=2 word=433 .* words=68 .* audit=ok " },
+  { wait_log = "\\[CPT\\] fire source=rsvp-playback checkpoint=c0001 section=s0001 ch=2 last_word=432 resume_ch=2 resume_word=433 crossed=1" },
+  { wait_log = "\\[CPT\\] open checkpoint=c0001 prompts=2 section=s0001 mode=rsvp resume_ch=2 resume_word=433 state=read " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/2 prompt=c0001-p1 recorded=none focus=Reveal " },
+  { shot = "prompt" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipCheckpoint" },
+  { press = "DOWN", hold_ms = 900, note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=0 ch=2 word=433 mode=rsvp saved=1" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · \\d+ actual\"" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { shot = "rsvp_resume" },
+  { quit = true },
+
+  { expect_json = "books/paine-essays.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 2, word = 433, mode = "rsvp" } },
+  { expect_json = "books/paine-essays.prepared.epub.rsvp-state.json", pointer = "/book_sha256", equals = "96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561" },
+  { compare = "prompt" },
+  { compare = "rsvp_resume", mask = [[0, 0, 480, 24]] },
+]

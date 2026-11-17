@@ -23,6 +23,12 @@
 namespace rsvpentry {
 struct HandOff;
 }
+namespace reading {
+class ReadingSession;
+}
+namespace readingsession {
+struct CheckpointRun;
+}
 
 class EpubReaderActivity final : public ReaderActivity {
   std::shared_ptr<Epub> epub;
@@ -192,6 +198,12 @@ class EpubReaderActivity final : public ReaderActivity {
   std::shared_ptr<rsvpentry::HandOff> speedReadItem;
   unsigned long speedReadItemRenderMs = 0;
   void showSpeedReadItem();
+  // RSVP builds: the book's checkpoint data and triggers (src/reading/ReadingSession.h). A next-page
+  // action that ends a checkpoint's section shows CheckpointActivity before the next page.
+  std::shared_ptr<reading::ReadingSession> readingSession;
+  bool checkpointBeforeTurn(bool forward);
+  bool openPageCheckpoint();
+  void resumeAfterCheckpoint(const readingsession::CheckpointRun& run);
   // Toolbar reader menu (see Overlay above).
   bool usesToolbarMenu() const;
   void openOverlay(Overlay target);

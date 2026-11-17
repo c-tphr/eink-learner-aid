@@ -15,21 +15,37 @@
 #   E c0002             p1 hold, Down x2, hold; Up x1, hold (Reread in RSVP)         -> reread-rsvp
 #   F c0002,rsvp        p1 hold, Down x2, hold; default Reread in RSVP; Down x1, hold -> reread-page
 #
+# Each checkpoint is reached by reading with the same two keys (task C3; C3a used a temporary
+# simulator entry): A by paging forward off chapter 1's page 3 (the end of s0001); B by paging on off
+# chapter 2's last page (s0004 ends the chapter); C, D and E by Up (back to that page) and Down; F by
+# Up, then Speed read and Play by holds, so it fires in RSVP. Rereads are task C4: E and F resume
+# after the break, as for Finished (E in page view, F on RSVP's pause screen), and the file then
+# holds no checkpoint in progress.
+#
 # Shots show the highlight on each item it reaches; the grades in the file at the end are the same as
 # in cp_screens_touch (the same schema checks them).
 description = "Checkpoint screens by Up/Down only: every action once, highlight moves without wrap, holds activate, grades saved"
 
-env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0", CROSSPOINT_SIM_CHECKPOINT = "c0001;c0002;c0002;c0002;c0002;c0002,rsvp" } }
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
 
 sd = [
   { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
   { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}}\n", dst = "books/fixture.prepared.epub.rsvp-state.json" },
 ]
 
 steps = [
   { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
 
-  # A: c0001.
+  # A: c0001, reached by paging forward off chapter 1's page 3.
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { press = "DOWN", note = "leaving the page that shows s0001's last word" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0001 " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear" },
   { wait_log = "\\[CTL\\] Prompt armed" },
   { press = "DOWN", hold_ms = 900, note = "hold: Reveal" },
@@ -45,7 +61,27 @@ steps = [
   { wait_log = "\\[CPT\\] saved after=correct prompt=c0001-p1 grade=correct active=none prompt_index=0 position=1:\\d+:page ok=1" },
   { wait_log = "\\[CPT\\] end result=finished prompt=0 ch=1 word=\\d+ mode=page saved=1" },
 
-  # B: c0002.
+  # B: c0002, reached by paging on to the end of chapter 2 (page view shows page 3 again first).
+  { wait_log = "\\[CPT\\] page resume this-page ch=1 word=233 " },
+  { wait_log = "Rendered page in" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=3" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=4" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=1" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=2" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN", note = "leaving chapter 2's last page" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal " },
   { wait_log = "\\[CTL\\] Prompt armed" },
   { press = "DOWN", hold_ms = 900, note = "hold: Reveal" },
@@ -96,6 +132,13 @@ steps = [
   { wait_log = "\\[CPT\\] end result=skipped prompt=2 ch=3 word=0 mode=page saved=1" },
 
   # C: hold on the one-part answer box; Skip question and Skip checkpoint on the answer screen.
+  # Page view shows chapter 3's first page; Up, then Down fires c0002 again.
+  { wait_log = "\\[CPT\\] page resume chapter ch=3 word=0 " },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
   { wait_log = "\\[CTL\\] Prompt armed" },
   { press = "DOWN", hold_ms = 900, note = "hold: Reveal" },
@@ -133,6 +176,12 @@ steps = [
   { wait_log = "\\[CPT\\] end result=skipped prompt=1 ch=3 word=0 mode=page saved=1" },
 
   # D: Skip question and Skip checkpoint after Incorrect.
+  { wait_log = "\\[CPT\\] page resume chapter ch=3 word=0 " },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
   { wait_log = "\\[CTL\\] Prompt armed" },
   { press = "DOWN", hold_ms = 900, note = "hold: Reveal" },
@@ -179,6 +228,12 @@ steps = [
   { wait_log = "\\[CPT\\] end result=skipped prompt=1 ch=3 word=0 mode=page saved=1" },
 
   # E: Reread in RSVP (Up x1 from the page-view default).
+  { wait_log = "\\[CPT\\] page resume chapter ch=3 word=0 " },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
   { wait_log = "\\[CTL\\] Prompt armed" },
   { press = "DOWN", hold_ms = 900, note = "hold: Reveal" },
@@ -198,7 +253,20 @@ steps = [
   { wait_log = "\\[CPT\\] saved after=reread-rsvp prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1" },
   { wait_log = "\\[CPT\\] end result=reread-rsvp prompt=0 ch=2 word=311 mode=rsvp saved=1" },
 
+  # The reread is task C4: reading resumes after the break in page view, the mode in use.
+  { wait_log = "\\[CPT\\] reread in rsvp not implemented yet \\(task C4\\): reading resumes after the break" },
+  { wait_log = "\\[CPT\\] resume end=reread-rsvp mode=page ch=3 word=0" },
+  { wait_log = "\\[CPT\\] page resume chapter ch=3 word=0 " },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+
   # F: from RSVP, Reread in RSVP is the default; Down x1 reaches Reread in page view.
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=2 page_offset=\\d+ word=490 .* from=page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Play" },
+  { wait_log = "\\[CPT\\] fire source=rsvp-playback checkpoint=c0002 " },
   { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=rsvp " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
   { wait_log = "\\[CTL\\] Prompt armed" },
@@ -216,15 +284,17 @@ steps = [
   { wait_log = "\\[CTL\\] Incorrect focus=RereadPage" },
   { press = "DOWN", hold_ms = 900, note = "hold: Reread in page view" },
   { wait_log = "\\[CTL\\] Incorrect select=RereadPage" },
+  { wait_log = "\\[CPT\\] saved after=reread-page prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1", note = "the reread request is saved (task C4 will act on it)" },
   { wait_log = "\\[CPT\\] end result=reread-page prompt=0 ch=2 word=311 mode=page saved=1" },
+  { wait_log = "\\[CPT\\] reread in page not implemented yet \\(task C4\\): reading resumes after the break" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · \\d+ actual\"", note = "RSVP, the mode in use, at chapter 3 word 0" },
   { quit = true },
 
   { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_screens_touch/state.schema.json", note = "exactly three grades: c0002-p3 was only skipped" },
   { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0001-p1/first", equals = "correct" },
   { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "incorrect" },
   { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p2/first", equals = "incorrect" },
-  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "page" } },
-  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint", equals = { id = "c0002", prompt_index = 0, resume = { chapter = 3, word = 0, mode = "rsvp" }, reread = { mode = "page", chapter = 2, word = 311 } } },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "rsvp" }, note = "after the break, in RSVP; the schema checks that no checkpoint is in progress" },
   { compare = "a_answer_focus_correct" },
   { compare = "b_answer_focus_incorrect" },
   { compare = "b_incorrect_focus_continue" },

@@ -16,6 +16,7 @@
 #if CROSSPOINT_RSVP_ENABLED
 
 #include <BookState.h>
+#include <CheckpointIndex.h>
 
 #include <string>
 
@@ -23,16 +24,22 @@
 
 namespace reading {
 
-// The open book's book_sha256: the checkpoint file's book.source_sha256 for a prepared book, "" for
-// any other. Until task C2 reads the checkpoint file, every book is opened as one without checkpoint
-// data, so a hash already in a file is kept as it is and never compared.
+// The book_sha256 of a book without checkpoint data: none.
 inline constexpr const char* NO_BOOK_SHA256 = "";
+
+// The open book as its state file sees it (ReadingSession::identity()): the checkpoint file's
+// book.source_sha256 and index for a prepared book; NO_BOOK_SHA256 and null for any other. Every read
+// applies checkpoint::applyBookChangeRule() for it (BookStateRules.h).
+struct BookIdentity {
+  const char* sha256 = NO_BOOK_SHA256;
+  const checkpoint::CheckpointIndex* index = nullptr;
+};
 
 // `<bookPath>.rsvp-state.json`.
 std::string bookStatePath(const std::string& bookPath);
 
 // Reads the book's state into `out` (a fresh state unless the result is Read). Never changes the file.
-StateLoad loadBookState(const std::string& bookPath, const char* bookSha256, checkpoint::BookState& out);
+StateLoad loadBookState(const std::string& bookPath, const BookIdentity& book, checkpoint::BookState& out);
 
 // Changes the state passed to it; `context` is the caller's.
 using StateEdit = void (*)(checkpoint::BookState& state, const void* context);
@@ -41,7 +48,7 @@ using StateEdit = void (*)(checkpoint::BookState& state, const void* context);
 // A file that is invalid or unreadable is first moved aside to `<path>.bad` (replacing an older
 // one) and the edit applies to a fresh state. False, with the file untouched, when memory is short;
 // false when the write fails (the old file stays, unless the final rename was cut short).
-bool editBookState(const std::string& bookPath, const char* bookSha256, StateEdit edit, const void* context);
+bool editBookState(const std::string& bookPath, const BookIdentity& book, StateEdit edit, const void* context);
 
 }  // namespace reading
 

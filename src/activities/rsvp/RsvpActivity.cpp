@@ -18,6 +18,7 @@
 #include "controls/ControlMap.h"
 #include "fontIds.h"
 #include "reading/BookStateFile.h"
+#include "reading/ReadingSession.h"
 
 namespace {
 
@@ -134,13 +135,14 @@ std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& inpu
   return activity;
 }
 
-bool openedInRsvp(const Epub& epub) {
+bool openedInRsvp(const Epub& epub, const reading::ReadingSession* session) {
   // Most books have no state file: answer without the allocation below.
   if (!Storage.exists(reading::bookStatePath(epub.getPath()).c_str())) return false;
   // 78 KB while the file is read (BookStateFile.h), freed on return.
   auto state = makeUniqueNoThrow<checkpoint::BookState>();
   if (!state) return false;
-  const reading::StateLoad load = reading::loadBookState(epub.getPath(), reading::NO_BOOK_SHA256, *state);
+  const reading::StateLoad load =
+      reading::loadBookState(epub.getPath(), session ? session->identity() : reading::BookIdentity{}, *state);
   const bool rsvp = state->hasPosition && state->position.mode == checkpoint::ReadingMode::Rsvp;
   if (load.source != reading::StateSource::Missing) {
     LOG_DBG("RSVP", "book state %s mode=%s ch=%u word=%lu", reading::stateSourceName(load.source),
@@ -162,7 +164,9 @@ RsvpActivity::RsvpActivity(GfxRenderer& renderer, MappedInputManager& input, std
       backend(displayprofile::firmwareBackend(renderer)),
       sink(backend, painter),
       scheduler(source, clock, sink, &RsvpActivity::fits, this),
-      controlInput(input) {}
+      controlInput(input) {
+  this->handOff->session = entry.session;
+}
 
 // ---------------------------------------------------------------------------------------------
 // Lifecycle
@@ -185,6 +189,7 @@ void RsvpActivity::onEnter() {
   backend.setUnlockedTrials(profile.unlocked);
   backend.select(profile.chosen);
   scheduler.setClearingLimits(backend.info().clearing);
+  if (entry.session) entry.session->setMode(checkpoint::ReadingMode::Rsvp);
   lastLoopMs.store(static_cast<uint32_t>(millis()));
   controlInput.restartGuard();
   requestUpdate();
@@ -195,10 +200,13 @@ void RsvpActivity::onExit() {
   // The caller holds the RenderLock. Leaving by an item saved in leave(); the Home gesture (and sleep,
   // already saved in prepareForSleep(), which savePosition() then skips) does not return to the
   // reader, so the reader's progress is saved here too.
+  // While a checkpoint shows, the state file already holds the position before the break (written by
+  // CheckpointActivity when it started), which savePosition() would overwrite.
   if (phase.load() != Phase::Loading && handOff->then == rsvpentry::HandOff::Then::None) {
-    savePosition(checkpoint::ReadingMode::Rsvp, "home");
+    if (phase.load() != Phase::Checkpoint) savePosition(checkpoint::ReadingMode::Rsvp, "home");
     saveReaderProgress();
   }
+  if (entry.session) entry.session->setMode(checkpoint::ReadingMode::Page);
   playing.store(false);
   index.close();
   ReaderUtils::applyOrientation(renderer, SETTINGS.orientation);
@@ -209,7 +217,7 @@ void RsvpActivity::prepareForSleep() {
   // power-off from sleep), so the position and the reader's page are saved now.
   if (phase.load() == Phase::Loading) return;
   if (phase.load() == Phase::Playing) scheduler.requestPause();
-  savePosition(checkpoint::ReadingMode::Rsvp, "sleep");
+  if (phase.load() != Phase::Checkpoint) savePosition(checkpoint::ReadingMode::Rsvp, "sleep");
   saveReaderProgress();
 }
 
@@ -250,6 +258,7 @@ void RsvpActivity::render(RenderLock&&) {
       stepOnce();
       return;
     case Phase::Leaving:
+    case Phase::Checkpoint:
       return;
   }
 }
@@ -265,8 +274,20 @@ void RsvpActivity::showPreparing(void* context) {
 bool RsvpActivity::openChapter(const int spineIndex) {
   if (!index.open(*epub, spineIndex, &RsvpActivity::showPreparing, this)) return false;
   spine = spineIndex;
-  source.reset(index.reader());
+  resetSource();
   return true;
+}
+
+void RsvpActivity::resetSource() {
+  // A prepared book's section ends (task C2): playback stops after the last word of a checkpoint's
+  // section.
+  const bool sections = entry.session && entry.session->loadSections(spine, index.reader());
+  source.reset(index.reader(), sections ? &reading::ReadingSession::sectionEnds : nullptr,
+               sections ? entry.session.get() : nullptr);
+}
+
+reading::BookIdentity RsvpActivity::identity() const {
+  return entry.session ? entry.session->identity() : reading::BookIdentity{};
 }
 
 reading::SavedWord RsvpActivity::loadState() {
@@ -279,7 +300,7 @@ reading::SavedWord RsvpActivity::loadState() {
     LOG_ERR("RSVP", "OOM: book state (%u bytes)", static_cast<unsigned>(sizeof(checkpoint::BookState)));
     values = global;
   } else {
-    const reading::StateLoad load = reading::loadBookState(epub->getPath(), reading::NO_BOOK_SHA256, *state);
+    const reading::StateLoad load = reading::loadBookState(epub->getPath(), identity(), *state);
     values = reading::resolveValues(&state->overrides, global);
     if (state->hasPosition) {
       saved.valid = true;
@@ -399,7 +420,7 @@ void RsvpActivity::stepOnce() {
       return;
     case rsvp::StepEvent::STOPPED:
       if (r.stops & rsvp::STOP_CHECKPOINT) {
-        enterPause(Note::None, "checkpoint");  // checkpoints are task C2's
+        stopAtCheckpoint();
       } else if (r.stops & rsvp::STOP_NON_PROSE) {
         showItem(scheduler.lastFrame().lastWordIndex + 1, true);
       } else {
@@ -453,6 +474,7 @@ void RsvpActivity::showItem(const uint32_t from, const bool afterStop) {
   item.afterNonProseStop = afterStop;
   handOff->then = rsvpentry::HandOff::Then::ShowItem;
   handOff->spineIndex = spine;
+  if (entry.session) entry.session->setPageReading(static_cast<uint16_t>(spine), next);
   handOff->visibleTextOffset = marker.offsetStart;
   LOG_DBG("RSVP", "leave to=item kind=%s ch=%d word=%lu offset=%lu", reading::itemKindName(marker.kind), spine,
           static_cast<unsigned long>(next), static_cast<unsigned long>(marker.offsetStart));
@@ -465,13 +487,132 @@ void RsvpActivity::showItem(const uint32_t from, const bool afterStop) {
   leavePending.store(true);
 }
 
+void RsvpActivity::stopAtCheckpoint() {
+  // The section's last word is on screen and nothing beyond it was drawn (plan section 7).
+  const rsvp::Frame& frame = scheduler.lastFrame();
+  const checkpoint::Step step =
+      entry.session ? entry.session->rsvpStop(spine, frame.lastWordIndex, source.position()) : checkpoint::Step{};
+  if (step.kind != checkpoint::StepKind::Fire) {
+    enterPause(Note::None, "checkpoint");
+    return;
+  }
+  playing.store(false);
+  wakeValid.store(false);
+  pauseRequested.store(false);
+  timeoutPause = false;
+  // The meter and audit of the session so far; time in the checkpoint is outside playback.
+  logPause("checkpoint");
+  pendingCheckpoint = step;
+  checkpointBefore = frame.firstWordIndex;
+  LOG_DBG("RSVP", "leave to=checkpoint ch=%d first=%lu last=%lu", spine,
+          static_cast<unsigned long>(frame.firstWordIndex), static_cast<unsigned long>(frame.lastWordIndex));
+  phase.store(Phase::Checkpoint);
+  checkpointPending.store(true);
+}
+
+void RsvpActivity::openCheckpoint() {
+  std::unique_ptr<Activity> activity;
+  std::shared_ptr<readingsession::CheckpointRun> run;
+  {
+    RenderLock lock;
+    checkpoint::Place before;
+    before.position.chapter = static_cast<uint16_t>(spine);
+    before.position.word = checkpointBefore;
+    before.mode = checkpoint::ReadingMode::Rsvp;
+    activity = entry.session->startCheckpoint(renderer, mappedInput, pendingCheckpoint, checkpoint::ReadingMode::Rsvp,
+                                              before, run);
+    // CheckpointActivity writes the position before the break: what this session wrote last is stale.
+    positionSaved = false;
+  }
+  if (!activity) {
+    // No memory for the screens: reading goes on after the break.
+    readingsession::CheckpointRun failed;
+    failed.request.fire = pendingCheckpoint;
+    failed.request.mode = checkpoint::ReadingMode::Rsvp;
+    failed.outcome = std::make_shared<checkpointentry::Outcome>();
+    failed.outcome->end = checkpointui::End::Failed;
+    returnFromCheckpoint(failed);
+    return;
+  }
+  startActivityForResult(std::move(activity), [this, run](const ActivityResult&) { returnFromCheckpoint(*run); });
+}
+
+void RsvpActivity::returnFromCheckpoint(const readingsession::CheckpointRun& run) {
+  {
+    RenderLock lock;
+    // CheckpointActivity restored the reader's orientation when it closed.
+    renderer.setOrientation(GfxRenderer::Orientation::Portrait);
+    const checkpoint::Place place = entry.session->endCheckpoint(run);
+    moveAfterCheckpoint(place.position);
+    const checkpointui::End end = run.outcome->end;
+    const bool done = end == checkpointui::End::Finished || end == checkpointui::End::Skipped ||
+                      end == checkpointui::End::RereadRsvp || end == checkpointui::End::RereadPage;
+    // Plan section 7, point 6, and S4 row 33: the pause screen at the first word after the break, Play
+    // highlighted, "Checkpoint done"; nothing plays until Play.
+    status = done ? Status::CheckpointDone : Status::Paused;
+    focus = controls::PAUSE.defaultIndex;
+    needClear = true;
+    // The activity already saved this place when it finished; savePosition() skips a repeat.
+    if (done && run.outcome->saved && place.position.chapter == spine && place.position.word == source.position()) {
+      positionSaved = true;
+      savedPlace.position = place.position;
+      savedPlace.mode = checkpoint::ReadingMode::Rsvp;
+    }
+    savePosition(checkpoint::ReadingMode::Rsvp, "checkpoint");
+    phase.store(Phase::Paused);
+    guardRestartPending.store(true);
+  }
+  requestUpdate();
+}
+
+void RsvpActivity::moveAfterCheckpoint(const checkpoint::Position& resume) {
+  note = Note::None;
+  const uint32_t words = index.isOpen() ? index.reader().wordCount() : 0;
+  if (resume.chapter == spine && resume.word < words) {
+    // The section ended mid-chapter: the source already stands after the stop, normally at the resume
+    // word, so the audit's segment carries on.
+    if (source.position() == resume.word) {
+      scheduler.resolveStop();
+    } else {
+      source.seek(resume.word);
+      scheduler.reposition();
+    }
+    return;
+  }
+  if (resume.chapter == spine) {
+    // The section ended the book.
+    source.seek(words);
+    scheduler.reposition();
+    note = Note::EndOfBook;
+    return;
+  }
+  // The section ended its chapter: the next chapter with prose, as playback would have moved.
+  const int from = spine;
+  bool found = false;
+  for (int next = resume.chapter; next < epub->getSpineItemsCount() && !found; ++next) {
+    if (!openChapter(next)) {
+      LOG_ERR("RSVP", "chapter ch=%d skipped: no word index", next);
+      continue;
+    }
+    rsvp::Token first;
+    found = source.peek(first);
+  }
+  if (!found) {
+    if (openChapter(from)) source.seek(index.reader().wordCount());
+    note = Note::EndOfBook;
+  }
+  scheduler.reposition();
+  LOG_DBG("RSVP", "chapter ch=%d word=%lu chapter_words=%lu", spine, static_cast<unsigned long>(source.position()),
+          static_cast<unsigned long>(index.isOpen() ? index.reader().wordCount() : 0));
+}
+
 void RsvpActivity::advanceChapter() {
   const int from = spine;
   const uint32_t at = source.position();
   if (source.failed()) {
     // A damaged block: rebuild the index and carry on from the same word.
     if (index.rebuild(*epub, &RsvpActivity::showPreparing, this)) {
-      source.reset(index.reader());
+      resetSource();
       source.seek(at);
       scheduler.reposition();
       enterPause(Note::None, "index-rebuilt");
@@ -570,6 +711,9 @@ void RsvpActivity::paintPauseScreen() {
       break;
     case Status::SaveFailed:
       lead = tr(STR_RSVP_SAVE_FAILED);
+      break;
+    case Status::CheckpointDone:
+      lead = tr(STR_RSVP_CHECKPOINT_DONE);
       break;
     case Status::Paused:
       break;
@@ -730,6 +874,9 @@ void RsvpActivity::loop() {
       return;
     case Phase::Leaving:
       if (leavePending.exchange(false)) finish();
+      return;
+    case Phase::Checkpoint:
+      if (checkpointPending.exchange(false)) openCheckpoint();
       return;
     case Phase::Loading:
       return;
@@ -914,7 +1061,7 @@ void RsvpActivity::saveAsDefault() {
 void RsvpActivity::saveForBook() {
   const checkpoint::Overrides overrides = reading::overridesFor(values);
   const bool ok = reading::editBookState(
-      epub->getPath(), reading::NO_BOOK_SHA256,
+      epub->getPath(), identity(),
       [](checkpoint::BookState& state, const void* context) {
         state.overrides = *static_cast<const checkpoint::Overrides*>(context);
       },
@@ -935,7 +1082,7 @@ void RsvpActivity::savePosition(const checkpoint::ReadingMode mode, const char* 
   place.mode = mode;
   if (positionSaved && place == savedPlace) return;
   const bool ok = reading::editBookState(
-      epub->getPath(), reading::NO_BOOK_SHA256,
+      epub->getPath(), identity(),
       [](checkpoint::BookState& state, const void* context) {
         state.hasPosition = true;
         state.position = *static_cast<const checkpoint::Place*>(context);
@@ -952,7 +1099,8 @@ void RsvpActivity::savePosition(const checkpoint::ReadingMode mode, const char* 
 void RsvpActivity::saveReaderProgress() {
   if (readerProgressSaved || !handOff->saveReaderProgress || !index.isOpen()) return;
   uint32_t offset = 0;
-  if (!reading::pageViewOffset(index.reader(), source.position(), offset)) return;
+  const uint32_t word = phase.load() == Phase::Checkpoint ? checkpointBefore : source.position();
+  if (!reading::pageViewOffset(index.reader(), word, offset)) return;
   handOff->saveReaderProgress(spine, offset);
   readerProgressSaved = true;
 }
@@ -970,6 +1118,10 @@ void RsvpActivity::leave(const rsvpentry::HandOff::Then then) {
                                                                     : "exit";
     LOG_DBG("RSVP", "leave to=%s ch=%d word=%lu offset=%lu", to, spine, static_cast<unsigned long>(source.position()),
             static_cast<unsigned long>(offset));
+    // Page view counts its next next-page action from this word, not from the page's first (task C2).
+    if (entry.session && then != rsvpentry::HandOff::Then::ExitBook) {
+      entry.session->setPageReading(static_cast<uint16_t>(spine), source.position());
+    }
     // Exit keeps the book in RSVP for its next opening (S4 row 14); page view and the menu do not.
     savePosition(
         then == rsvpentry::HandOff::Then::ExitBook ? checkpoint::ReadingMode::Rsvp : checkpoint::ReadingMode::Page, to);

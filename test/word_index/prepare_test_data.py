@@ -6,7 +6,7 @@
   fixtures/books/fixture.expected.json;
 - fixture.prepared.epub and prepared/<zip path>: the fixture prepared with
   `python3 -m tools.prep build` from fixtures/books/fixture.draft.json, so the anchors are where the
-  preparation tool puts them;
+  preparation tool puts them; prepared/OEBPS/rsvp/checkpoints.json is its checkpoint file;
 - test_reader_menu_progress_chapter1.xhtml: OEBPS/chapter1.xhtml of
   test/epubs/test_reader_menu_progress.epub (3,051 words);
 - sources.txt: "<file> <size> <crc32>" from each zip entry's central directory record.
@@ -46,6 +46,8 @@ def main():
         member = document["zip_path"]
         extract(epub, member, os.path.join(out, "original", member), sources, "original/" + member)
         extract(prepared, member, os.path.join(out, "prepared", member), sources, "prepared/" + member)
+    checkpoints = "OEBPS/rsvp/checkpoints.json"
+    extract(prepared, checkpoints, os.path.join(out, "prepared", checkpoints), sources, "prepared/" + checkpoints)
     extract(os.path.join(repo, "test", "epubs", "test_reader_menu_progress.epub"), "OEBPS/chapter1.xhtml",
             os.path.join(out, "test_reader_menu_progress_chapter1.xhtml"), sources,
             "test_reader_menu_progress_chapter1.xhtml")

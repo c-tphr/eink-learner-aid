@@ -58,6 +58,7 @@
 #include "clippings/ClippingsManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "reading/ReadingSession.h"
 #include "util/BookmarkUtil.h"
 #include "util/ButtonNavigator.h"
 #include "util/ScreenshotUtil.h"
@@ -235,6 +236,7 @@ EpubReaderActivity::~EpubReaderActivity() {
 
   if (footnoteDepth > 0 && epub) saveLinkStack();
 
+  readingSession.reset();  // RSVP builds: closes the checkpoint copy in the cache folder moved below
   section.reset();
   CLIPPINGS.unload();
   if (pendingReadFolderMove && epub) {
@@ -325,7 +327,8 @@ bool EpubReaderActivity::loadBook() {
   if (!CLIPPINGS.loadForBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), "epub")) {
     LOG_ERR("CLIP", "Failed to load clippings for %s", epub->getPath().c_str());
   }
-  resumeSpeedRead = rsvpentry::openedInRsvp(*epub);
+  readingSession = readingsession::open(epub);
+  resumeSpeedRead = rsvpentry::openedInRsvp(*epub, readingSession.get());
   return true;
 }
 
@@ -1413,6 +1416,7 @@ void EpubReaderActivity::openSpeedRead(const bool resume, std::shared_ptr<rsvpen
   }
   entry.resume = resume;
   entry.after = std::move(after);
+  entry.session = readingSession;
   auto handOff = std::make_shared<rsvpentry::HandOff>();
   handOff->saveReaderProgress = [this](const int spine, const uint32_t offset) {
     const auto page =
@@ -1475,6 +1479,75 @@ void EpubReaderActivity::showSpeedReadItem() {
       pageTurn(handOff->pageTurn > 0);
     }
   });
+}
+
+bool EpubReaderActivity::checkpointBeforeTurn(const bool forward) {
+  if (!RSVP_FEATURE_ENABLED || !readingSession) return false;  // always without the RSVP flag
+  if (forward && openPageCheckpoint()) return true;
+  readingsession::notePageMove(*readingSession,
+                               forward ? readingsession::PageMove::NextPage : readingsession::PageMove::PreviousPage);
+  return false;
+}
+
+bool EpubReaderActivity::openPageCheckpoint() {
+  if (!RSVP_FEATURE_ENABLED || !readingSession) return false;
+  std::shared_ptr<readingsession::CheckpointRun> run;
+  std::unique_ptr<Activity> activity;
+  {
+    RenderLock lock;
+    if (!section) return false;
+    if (readingsession::wantsNextPageOffset(*readingSession, currentSpineIndex)) {
+      // The trigger needs the next page's start: lay it out now, as the turn would right after.
+      const uint32_t loans = renderer.frameBufferLoanCount();
+      while (section->isBuilding() && section->currentPage + 1 >= section->pageCount && section->buildSomeMore(1)) {
+      }
+      if (renderer.frameBufferLoanCount() != loans) pageBufferStale = true;
+    }
+    const auto start = section->getVisibleTextOffsetForPage(static_cast<uint16_t>(section->currentPage));
+    if (!start) return false;
+    readingsession::PageSpan page;
+    page.spine = currentSpineIndex;
+    page.startOffset = *start;
+    if (section->currentPage + 1 < section->pageCount) {
+      const auto next = section->getVisibleTextOffsetForPage(static_cast<uint16_t>(section->currentPage + 1));
+      if (!next) return false;
+      page.nextStartOffset = *next;
+    } else if (section->isBuilding()) {
+      return false;
+    }
+    activity = readingsession::nextPageCheckpoint(renderer, mappedInput, *readingSession, page, run);
+  }
+  if (!activity) return false;
+  // Nothing turns by itself after a checkpoint (plan section 7): automatic page turn stops here.
+  automaticPageTurnActive = false;
+  pendingManualTurn = 0;
+  startActivityForResult(std::move(activity), [this, run](const ActivityResult&) { resumeAfterCheckpoint(*run); });
+  return true;
+}
+
+void EpubReaderActivity::resumeAfterCheckpoint(const readingsession::CheckpointRun& run) {
+  readingsession::PageResume next;
+  {
+    RenderLock lock;
+    next = readingsession::afterPageCheckpoint(*readingSession, run);
+  }
+  using Go = readingsession::PageResume::Go;
+  if (next.go == Go::ThisPage) {
+    // Trigger rule 7: another section end on this page fires before reading continues.
+    if (!openPageCheckpoint()) requestUpdate();
+    return;
+  }
+  if (next.go == Go::EndOfBook) {
+    RenderLock lock;
+    currentSpineIndex = epub->getSpineItemsCount();
+    requestUpdate();
+    return;
+  }
+  ProgressChangeResult position;
+  position.spineIndex = next.spine;
+  position.hasVisibleTextOffset = true;
+  position.visibleTextOffset = next.offset;
+  applyProgressChange(position);
 }
 
 unsigned long EpubReaderActivity::confirmLongPressThreshold() const {
@@ -1608,6 +1681,8 @@ void EpubReaderActivity::toggleAutoPageTurn(const uint8_t selectedPageTurnOption
 
 bool EpubReaderActivity::pageTurn(bool isForwardTurn) {
   if (!section) return false;
+  // RSVP builds: a checkpoint whose section ends on this page shows before the next page.
+  if (checkpointBeforeTurn(isForwardTurn)) return true;
   // A "Bluetooth failed" note has been read: the page this turn paints shows the title again.
   bleturner::acknowledgeLinkNote();
   {
@@ -1652,6 +1727,7 @@ bool EpubReaderActivity::pageTurn(bool isForwardTurn) {
 bool EpubReaderActivity::skipPages(int amount) {
   if (!section) return false;
   bleturner::acknowledgeLinkNote();
+  if (readingSession) readingsession::notePageMove(*readingSession, readingsession::PageMove::ChapterSkip);
   if (amount > 0) {
     RenderLock lock;
     nextPageNumber = 0;

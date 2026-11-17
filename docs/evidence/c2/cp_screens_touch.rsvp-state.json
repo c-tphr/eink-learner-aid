@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "book_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "overrides": { "wpm": 1000 },
+  "position": { "chapter": 3, "word": 0, "mode": "rsvp" },
+  "grades": {
+    "c0001-p1": { "first": "correct", "at": "2026-11-18T12:02:32" },
+    "c0002-p1": { "first": "incorrect", "at": "2026-11-18T12:02:35" },
+    "c0002-p2": { "first": "incorrect", "at": "2026-11-18T12:02:42" }
+  }
+}
+

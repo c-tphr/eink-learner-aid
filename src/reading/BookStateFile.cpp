@@ -49,7 +49,7 @@ class FileStateSink final : public checkpoint::StateSink {
 
 std::string bookStatePath(const std::string& bookPath) { return bookPath + ".rsvp-state.json"; }
 
-StateLoad loadBookState(const std::string& bookPath, const char* bookSha256, checkpoint::BookState& out) {
+StateLoad loadBookState(const std::string& bookPath, const BookIdentity& book, checkpoint::BookState& out) {
   out.reset();
   StateLoad load;
   const std::string path = bookStatePath(bookPath);
@@ -88,7 +88,7 @@ StateLoad loadBookState(const std::string& bookPath, const char* bookSha256, che
             static_cast<unsigned>(size));
     return load;
   }
-  load = decodeForUse(bytes.get(), size, bookSha256, out);
+  load = decodeForUse(bytes.get(), size, book.sha256, book.index, out);
   if (load.source == StateSource::Invalid) {
     LOG_ERR("RSVP", "state %s: %s, using defaults", path.c_str(), checkpoint::decodeStatusName(load.status));
   } else if (load.shaMismatch) {
@@ -97,7 +97,7 @@ StateLoad loadBookState(const std::string& bookPath, const char* bookSha256, che
   return load;
 }
 
-bool editBookState(const std::string& bookPath, const char* bookSha256, const StateEdit edit, const void* context) {
+bool editBookState(const std::string& bookPath, const BookIdentity& book, const StateEdit edit, const void* context) {
   // 78 KB for the duration of the call (see the header).
   auto state = makeUniqueNoThrow<checkpoint::BookState>();
   if (!state) {
@@ -105,7 +105,7 @@ bool editBookState(const std::string& bookPath, const char* bookSha256, const St
     return false;
   }
   const std::string path = bookStatePath(bookPath);
-  const StateLoad load = loadBookState(bookPath, bookSha256, *state);
+  const StateLoad load = loadBookState(bookPath, book, *state);
   if (load.source == StateSource::NoMemory) return false;
   if (load.source == StateSource::Invalid || load.source == StateSource::Unreadable) {
     const std::string bad = path + ".bad";

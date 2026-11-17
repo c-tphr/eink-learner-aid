@@ -1,0 +1,116 @@
+   0.049 [simtest] run 1: CROSSPOINT_SIM_INPUT_SCRIPT=0:WAIT:Progress saved: spine=0 offset=0 page=0;0:TAP:240,400,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:95,752,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:120,532,80;200:WAIT:Progress saved: spine=2 offset=0 page=0;0:SWIPE:400,400,80,400,250;370:WAIT:Progress saved: spine=2 offset=\d+ page=1;0:SWIPE:400,400,80,400,250;370:WAIT:Progress saved: spine=2 offset=\d+ page=2;0:SWIPE:400,400,80,400,250;370:WAIT:Progress saved: spine=2 offset=\d+ page=3;0:SWIPE:400,400,80,400,250;370:WAIT:Progress saved: spine=2 offset=\d+ page=4;0:SWIPE:400,400,80,400,250;370:WAIT:Progress saved: spine=2 offset=\d+ page=5;0:SWIPE:400,400,80,400,250;370:WAIT:\[CPT\] fire source=next-page checkpoint=c0002 ;0:WAIT:\[CPT\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal ;0:WAIT:\[CTL\] Prompt armed;0:TAP:364,712,80;200:WAIT:\[CPT\] event=skip-prompt prompt=c0002-p1 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now;0:WAIT:\[CPT\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1;0:WAIT:\[CPT\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal ;0:WAIT:\[CTL\] Prompt armed;0:TAP:240,476,80;200:WAIT:\[CPT\] screen=Answer question=2/3 prompt=c0002-p2 ;0:WAIT:\[CTL\] Answer armed;0:TAP:364,712,80;200:WAIT:\[CPT\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1;0:WAIT:\[CPT\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal ;0:WAIT:\[CTL\] Prompt armed;0:TAP:240,476,80;200:WAIT:\[CPT\] screen=Answer question=3/3 prompt=c0002-p3 ;0:WAIT:\[CTL\] Answer armed;0:TAP:120,620,80;200:WAIT:\[CPT\] saved after=correct prompt=c0002-p3 grade=correct active=none prompt_index=0 position=3:0:page ok=1;0:WAIT:\[CPT\] end result=finished prompt=2 ch=3 word=0 mode=page saved=1;0:WAIT:\[CPT\] page resume chapter ch=3 word=0 ;0:WAIT:Progress saved: spine=3 offset=0 page=0;0:SHOT:/home/user/eink-learner-aid/.claude/worktrees/agent-a071102a75d60a628/build/simtest-report/cp_skip_prompt/shots/t_page_resume.bmp;120:UP:80;320:WAIT:Progress saved: spine=2 offset=\d+ page=5;0:DOWN:900;1020:WAIT:\[RSVP\] enter ch=2 page_offset=\d+ word=490 .* from=page;0:WAIT:\[CTL\] Pause armed;0:DOWN:900;1020:WAIT:\[CPT\] fire source=rsvp-playback checkpoint=c0002 ;0:WAIT:\[CPT\] open checkpoint=c0002 prompts=3 section=s0004 mode=rsvp resume_ch=3 resume_word=0 state=read grades=1 ;0:WAIT:\[CPT\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal ;0:WAIT:\[CTL\] Prompt armed;0:DOWN:900;1020:WAIT:\[CPT\] screen=Answer question=1/3 prompt=c0002-p1 recorded=none ;0:WAIT:\[CTL\] Answer armed;0:DOWN:80;200:WAIT:\[CTL\] Answer focus=Correct;0:DOWN:80;200:WAIT:\[CTL\] Answer focus=Incorrect;0:DOWN:900;1020:WAIT:\[CPT\] saved after=incorrect prompt=c0002-p1 grade=incorrect active=c0002 prompt_index=0 position=none ok=1;0:WAIT:\[CPT\] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=RereadRsvp ;0:WAIT:\[CTL\] Incorrect armed;0:DOWN:80;200:WAIT:\[CTL\] Incorrect focus=RereadPage;0:DOWN:80;200:WAIT:\[CTL\] Incorrect focus=Continue;0:DOWN:80;200:WAIT:\[CTL\] Incorrect focus=SkipPrompt;0:DOWN:900;1020:WAIT:\[CPT\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1;0:WAIT:\[CPT\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal ;0:WAIT:\[CTL\] Prompt armed;0:DOWN:80;200:WAIT:\[CTL\] Prompt focus=SkipPrompt;0:DOWN:900;1020:WAIT:\[CPT\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1;0:WAIT:\[CPT\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=correct focus=Reveal ;0:WAIT:\[CTL\] Prompt armed;0:DOWN:80;200:WAIT:\[CTL\] Prompt focus=SkipPrompt;0:DOWN:900;1020:WAIT:\[CPT\] saved after=skip-prompt prompt=- grade=none active=none prompt_index=0 position=3:0:rsvp ok=1;0:WAIT:\[CPT\] end result=finished prompt=2 ch=3 word=0 mode=rsvp saved=1;0:WAIT:\[RSVP\] pause screen focus=Play refresh=clear status="Checkpoint done · 1000 WPM target · \d+ actual";0:WAIT:\[CTL\] Pause armed;0:SHOT:/home/user/eink-learner-aid/.claude/worktrees/agent-a071102a75d60a628/build/simtest-report/cp_skip_prompt/shots/k_rsvp_resume.bmp
+   0.197 [141] [DBG] [ACT] Entering activity: Boot
+   0.273 [217] [DBG] [ACT] Entering activity: EpubReader
+   0.280 [224] [DBG] [CPT] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=made book_bytes=72544 ms=1
+   0.280 [224] [DBG] [CPT] session open checkpoints=1 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c session_bytes=56 layout_bytes=8120
+   0.292 [235] [DBG] [ERS] Progress saved: spine=0 offset=0 page=0
+   0.829 [773] [DBG] [ERS] Progress saved: spine=2 offset=0 page=0
+   1.163 [1107] [DBG] [CPT] sections ch=2 words=608 sections=2 checkpoints=1 failed=0
+   1.163 [1107] [DBG] [CPT] page advance ch=2 first=0 from=0 last=101 step=none
+   1.189 [1133] [DBG] [ERS] Progress saved: spine=2 offset=525 page=1
+   1.542 [1486] [DBG] [CPT] page advance ch=2 first=102 from=102 last=190 step=none
+   1.560 [1504] [DBG] [ERS] Progress saved: spine=2 offset=961 page=2
+   1.906 [1849] [DBG] [CPT] page advance ch=2 first=191 from=191 last=281 step=none
+   1.922 [1866] [DBG] [ERS] Progress saved: spine=2 offset=1440 page=3
+   2.288 [2232] [DBG] [CPT] page advance ch=2 first=282 from=282 last=380 step=none
+   2.303 [2247] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   2.659 [2602] [DBG] [CPT] page advance ch=2 first=381 from=381 last=489 step=none
+   2.675 [2618] [DBG] [ERS] Progress saved: spine=2 offset=2551 page=5
+   3.039 [2983] [DBG] [CPT] page advance ch=2 first=490 from=490 last=607 step=fire
+   3.039 [2983] [DBG] [CPT] fire source=next-page checkpoint=c0002 section=s0004 ch=2 last_word=607 resume_ch=3 resume_word=0 crossed=1
+   3.039 [2983] [DBG] [ACT] Entering activity: Checkpoint
+   3.039 [2983] [DBG] [CPT] open checkpoint=c0002 prompts=3 section=s0004 mode=page resume_ch=3 resume_word=0 state=read grades=0 activity_bytes=4032 session_bytes=78056 accepted=1
+   3.040 [2984] [DBG] [CPT] saved after=start prompt=- grade=none active=c0002 prompt_index=0 position=2:490:page ok=1
+   3.044 [2988] [DBG] [CPT] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   3.363 [3307] [DBG] [CTL] Prompt armed
+   3.465 [3409] [DBG] [CTL] Prompt select=SkipPrompt
+   3.465 [3409] [DBG] [CPT] event=skip-prompt prompt=c0002-p1 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now
+   3.467 [3410] [DBG] [CPT] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1
+   3.469 [3413] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   3.788 [3731] [DBG] [CTL] Prompt armed
+   3.890 [3833] [DBG] [CTL] Prompt select=Reveal
+   3.890 [3833] [DBG] [CPT] event=reveal prompt=c0002-p2 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+   3.893 [3837] [DBG] [CPT] screen=Answer question=2/3 prompt=c0002-p2 recorded=none focus=AnswerBox part=1/1 lines=8 refresh=clear
+   4.212 [4156] [DBG] [CTL] Answer armed
+   4.314 [4258] [DBG] [CTL] Answer select=SkipPrompt
+   4.314 [4258] [DBG] [CPT] event=skip-prompt prompt=c0002-p2 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now
+   4.315 [4259] [DBG] [CPT] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1
+   4.318 [4262] [DBG] [CPT] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   4.637 [4581] [DBG] [CTL] Prompt armed
+   4.738 [4682] [DBG] [CTL] Prompt select=Reveal
+   4.738 [4682] [DBG] [CPT] event=reveal prompt=c0002-p3 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+   4.741 [4685] [DBG] [CPT] screen=Answer question=3/3 prompt=c0002-p3 recorded=none focus=AnswerBox part=1/1 lines=4 refresh=clear
+   5.061 [5005] [DBG] [CTL] Answer armed
+   5.162 [5106] [DBG] [CTL] Answer select=Correct
+   5.162 [5106] [DBG] [CPT] event=correct prompt=c0002-p3 accepted=1 refusal=0 state=finished grade_recorded=1 save=now
+   5.164 [5108] [DBG] [CPT] saved after=correct prompt=c0002-p3 grade=correct active=none prompt_index=0 position=3:0:page ok=1
+   5.164 [5108] [DBG] [CPT] end result=finished prompt=2 ch=3 word=0 mode=page saved=1
+   5.164 [5108] [DBG] [CPT] resume end=finished mode=page ch=3 word=0
+   5.165 [5109] [DBG] [CPT] page resume chapter ch=3 word=0 offset=1
+   5.185 [5129] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+   5.487 [5431] [DBG] [CPT] move source=previous-page
+   5.503 [5447] [DBG] [ERS] Progress saved: spine=2 offset=2551 page=5
+   6.313 [6257] [DBG] [ACT] Entering activity: Rsvp
+   6.313 [6257] [DBG] [CPT] mode rsvp source=mode-switch
+   6.313 [6257] [DBG] [RSVP] enter ch=2 page_offset=2551 word=490 chapter_words=608 activity_bytes=5512 from=page
+   6.631 [6575] [DBG] [CTL] Pause armed
+   7.354 [7297] [DBG] [CTL] Pause select=Play
+   7.356 [7300] [DBG] [RSVP] play ch=2 word=490 wpm=1000 words_per_update=1
+  15.547 [15491] [DBG] [RSVP] frame ch=2 first=600 last=600 words=1 hold=54 ms=2 text="and"
+  15.610 [15554] [DBG] [RSVP] frame ch=2 first=601 last=601 words=1 hold=53 ms=2 text="twelve"
+  15.675 [15619] [DBG] [RSVP] frame ch=2 first=602 last=602 words=1 hold=54 ms=2 text="steps"
+  15.739 [15683] [DBG] [RSVP] frame ch=2 first=603 last=603 words=1 hold=54 ms=2 text="to"
+  15.812 [15756] [DBG] [RSVP] frame ch=2 first=604 last=604 words=1 hold=54 ms=3 text="put"
+  15.878 [15822] [DBG] [RSVP] frame ch=2 first=605 last=605 words=1 hold=53 ms=2 text="out"
+  15.942 [15886] [DBG] [RSVP] frame ch=2 first=606 last=606 words=1 hold=54 ms=2 text="the"
+  16.006 [15950] [DBG] [RSVP] frame ch=2 first=607 last=607 words=1 hold=134 ms=2 text="lamp."
+  16.152 [16096] [DBG] [CPT] rsvp stop ch=2 last=607 next=608 step=fire
+  16.152 [16096] [DBG] [RSVP] pause reason=checkpoint ch=2 word=608 target=1000 delivered=806.2 words=118 active_ms=8782 updates=118 clears=0 mean_update_ms=2 max_update_ms=6 audit=ok drawn=118 segments=1 violations=0 gaps=0 repeats=0 skipped=0 declared=0
+  16.152 [16096] [DBG] [RSVP] leave to=checkpoint ch=2 first=607 last=607
+  16.173 [16117] [DBG] [CPT] fire source=rsvp-playback checkpoint=c0002 section=s0004 ch=2 last_word=607 resume_ch=3 resume_word=0 crossed=1
+  16.173 [16117] [DBG] [ACT] Entering activity: Checkpoint
+  16.173 [16117] [DBG] [CPT] open checkpoint=c0002 prompts=3 section=s0004 mode=rsvp resume_ch=3 resume_word=0 state=read grades=1 activity_bytes=4032 session_bytes=78056 accepted=1
+  16.174 [16118] [DBG] [CPT] saved after=start prompt=- grade=none active=c0002 prompt_index=0 position=2:607:rsvp ok=1
+  16.178 [16122] [DBG] [CPT] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+  16.539 [16483] [DBG] [CTL] Prompt armed
+  17.271 [17215] [DBG] [CTL] Prompt select=Reveal
+  17.271 [17215] [DBG] [CPT] event=reveal prompt=c0002-p1 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+  17.274 [17218] [DBG] [CPT] screen=Answer question=1/3 prompt=c0002-p1 recorded=none focus=AnswerBox part=1/1 lines=7 refresh=clear
+  17.592 [17536] [DBG] [CTL] Answer armed
+  17.694 [17638] [DBG] [CTL] Answer focus=Correct
+  17.697 [17641] [DBG] [CPT] screen=Answer question=1/3 prompt=c0002-p1 recorded=none focus=Correct part=1/1 lines=7 refresh=update
+  17.903 [17847] [DBG] [CTL] Answer focus=Incorrect
+  17.906 [17850] [DBG] [CPT] screen=Answer question=1/3 prompt=c0002-p1 recorded=none focus=Incorrect part=1/1 lines=7 refresh=update
+  18.718 [18662] [DBG] [CTL] Answer select=Incorrect
+  18.718 [18662] [DBG] [CPT] event=incorrect prompt=c0002-p1 accepted=1 refusal=0 state=incorrect-choice grade_recorded=1 save=now
+  18.720 [18664] [DBG] [CPT] saved after=incorrect prompt=c0002-p1 grade=incorrect active=c0002 prompt_index=0 position=none ok=1
+  18.723 [18666] [DBG] [CPT] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=RereadRsvp part=1/1 lines=0 refresh=clear
+  19.039 [18983] [DBG] [CTL] Incorrect armed
+  19.130 [19074] [DBG] [CTL] Incorrect focus=RereadPage
+  19.133 [19077] [DBG] [CPT] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=RereadPage part=1/1 lines=0 refresh=update
+  19.348 [19292] [DBG] [CTL] Incorrect focus=Continue
+  19.351 [19294] [DBG] [CPT] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=Continue part=1/1 lines=0 refresh=update
+  19.557 [19500] [DBG] [CTL] Incorrect focus=SkipPrompt
+  19.561 [19504] [DBG] [CPT] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=SkipPrompt part=1/1 lines=0 refresh=update
+  20.381 [20324] [DBG] [CTL] Incorrect select=SkipPrompt
+  20.381 [20324] [DBG] [CPT] event=skip-prompt prompt=c0002-p1 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now
+  20.382 [20326] [DBG] [CPT] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1
+  20.385 [20329] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+  20.701 [20645] [DBG] [CTL] Prompt armed
+  20.803 [20746] [DBG] [CTL] Prompt focus=SkipPrompt
+  20.807 [20750] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=SkipPrompt part=1/1 lines=0 refresh=update
+  21.621 [21564] [DBG] [CTL] Prompt select=SkipPrompt
+  21.621 [21564] [DBG] [CPT] event=skip-prompt prompt=c0002-p2 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now
+  21.622 [21566] [DBG] [CPT] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1
+  21.626 [21569] [DBG] [CPT] screen=Prompt question=3/3 prompt=c0002-p3 recorded=correct focus=Reveal part=1/1 lines=0 refresh=clear
+  21.941 [21885] [DBG] [CTL] Prompt armed
+  22.043 [21987] [DBG] [CTL] Prompt focus=SkipPrompt
+  22.048 [21991] [DBG] [CPT] screen=Prompt question=3/3 prompt=c0002-p3 recorded=correct focus=SkipPrompt part=1/1 lines=0 refresh=update
+  22.865 [22809] [DBG] [CTL] Prompt select=SkipPrompt
+  22.865 [22809] [DBG] [CPT] event=skip-prompt prompt=c0002-p3 accepted=1 refusal=0 state=finished grade_recorded=0 save=now
+  22.866 [22810] [DBG] [CPT] saved after=skip-prompt prompt=- grade=none active=none prompt_index=0 position=3:0:rsvp ok=1
+  22.866 [22810] [DBG] [CPT] end result=finished prompt=2 ch=3 word=0 mode=rsvp saved=1
+  22.866 [22810] [DBG] [CPT] resume end=finished mode=rsvp ch=3 word=0
+  22.867 [22811] [DBG] [CPT] sections ch=3 words=321 sections=1 checkpoints=0 failed=0
+  22.867 [22811] [DBG] [RSVP] chapter ch=3 word=0 chapter_words=321
+  23.185 [23129] [DBG] [CTL] Pause armed

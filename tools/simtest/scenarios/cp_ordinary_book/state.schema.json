@@ -1,0 +1,11 @@
+{
+  "description": "An ordinary book's state file: version, overrides and position only (docs/PLAN.md section 7: no book_sha256 for books without checkpoint data).",
+  "type": "object",
+  "required": ["version", "overrides", "position"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "overrides": { "type": "object" },
+    "position": { "type": "object" }
+  }
+}

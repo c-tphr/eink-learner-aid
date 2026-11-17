@@ -1,0 +1,99 @@
+# A one-prompt checkpoint end to end (tasks C2 and C3; PRD criteria 1 and 3; docs/PLAN.md section 7,
+# "Per-prompt flow" point 6). The prepared fixture's c0001 (section s0001, chapter 1 words 0-232).
+#
+# Pass 1, touch, page view: page forward to chapter 1 page 3; the next swipe fires c0001; Reveal,
+# Correct. The checkpoint finishes and page view shows page 3 again, the page holding word 233, the
+# first word after the break, and waits; the state file has the grade and the position 1:233:page.
+# Pass 2, keys, RSVP: back to page 2, Speed read (hold), Play (hold); playback stops after "same." and
+# c0001 fires again in RSVP mode; the prompt shows "Recorded earlier: Correct". Reveal, Incorrect
+# (the first grade is kept: nothing is saved), Continue. RSVP's pause screen at word 233, Play
+# highlighted, "Checkpoint done"; nothing plays by itself.
+description = "One-prompt checkpoint by touch in page view and by keys in RSVP: grade, finish, resume after the break in the original mode; the first grade survives"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}}\n", dst = "books/fixture.prepared.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # Pass 1: touch, page view.
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0001 section=s0001 ch=1 last_word=232 resume_ch=1 resume_word=233 crossed=1" },
+  { wait_log = "\\[CPT\\] open checkpoint=c0001 prompts=1 section=s0001 mode=page resume_ch=1 resume_word=233 state=read grades=0 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=none focus=Reveal " },
+  { screen_has = "Checkpoint · question 1 of 1 | How could sailors tell the" },
+  { shot = "t_prompt" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/1 prompt=c0001-p1 recorded=none focus=AnswerBox " },
+  { shot = "t_answer" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [120, 620], note = "Correct" },
+  { wait_log = "\\[CPT\\] event=correct prompt=c0001-p1 accepted=1 refusal=0 state=finished grade_recorded=1 save=now" },
+  { wait_log = "\\[CPT\\] saved after=correct prompt=c0001-p1 grade=correct active=none prompt_index=0 position=1:233:page ok=1" },
+  { wait_log = "\\[CPT\\] end result=finished prompt=0 ch=1 word=233 mode=page saved=1" },
+  { wait_log = "\\[CPT\\] page resume this-page ch=1 word=233 " },
+  { wait_log = "Rendered page in" },
+  { screen_has = "Winding | the | Clockwork" },
+  { screen_has = "The Lamp Room | 3/5", note = "the page holding word 233, waiting" },
+  { shot = "t_page_resume" },
+
+  # Pass 2: keys, RSVP.
+  { press = "UP", note = "page 2, inside s0001" },
+  { wait_log = "\\[CPT\\] move source=previous-page" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=108 .* from=page", note = "the saved word 233 is on a later page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN", hold_ms = 900, note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=108 wpm=1000 words_per_update=1" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=232 last=232 words=1 .* text=\"same.\"" },
+  { wait_log = "\\[RSVP\\] pause reason=checkpoint ch=1 word=233 .* words=125 .* audit=ok " },
+  { wait_log = "\\[CPT\\] fire source=rsvp-playback checkpoint=c0001 " },
+  { wait_log = "\\[CPT\\] open checkpoint=c0001 prompts=1 section=s0001 mode=rsvp resume_ch=1 resume_word=233 state=read grades=1 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=correct focus=Reveal " },
+  { screen_has = "Recorded earlier: Correct" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN", hold_ms = 900, note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/1 prompt=c0001-p1 recorded=correct focus=AnswerBox " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=Correct" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=Incorrect" },
+  { press = "DOWN", hold_ms = 900, note = "Incorrect: the first grade stays Correct" },
+  { wait_log = "\\[CPT\\] event=incorrect prompt=c0001-p1 accepted=1 refusal=0 state=incorrect-choice grade_recorded=0 save=no" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=1/1 prompt=c0001-p1 recorded=correct focus=RereadRsvp ", note = "the reread in the mode in use" },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Incorrect focus=RereadPage" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Incorrect focus=Continue" },
+  { press = "DOWN", hold_ms = 900, note = "Continue" },
+  { wait_log = "\\[CPT\\] saved after=continue prompt=- grade=none active=none prompt_index=0 position=1:233:rsvp ok=1" },
+  { wait_log = "\\[CPT\\] end result=finished prompt=0 ch=1 word=233 mode=rsvp saved=1" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · \\d+ actual\"" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Page view | Winding the Clockwork" },
+  { shot = "k_rsvp_resume" },
+  { quit = true },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0001-p1/first", equals = "correct", note = "the first grade survives the later Incorrect" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 1, word = 233, mode = "rsvp" } },
+  { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_single_prompt/final.schema.json" },
+  { compare = "t_prompt" },
+  { compare = "t_answer" },
+  { compare = "t_page_resume" },
+  { compare = "k_rsvp_resume", mask = [[0, 0, 480, 24]] },
+]

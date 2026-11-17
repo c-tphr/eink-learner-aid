@@ -1,0 +1,26 @@
+{
+  "description": "cp_single_prompt at the end: the book's hash, c0001-p1's first grade, the position after the break, no checkpoint in progress.",
+  "type": "object",
+  "required": ["version", "book_sha256", "overrides", "position", "grades"],
+  "not": { "required": ["active_checkpoint"] },
+  "properties": {
+    "version": { "const": 1 },
+    "book_sha256": { "const": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+    "grades": {
+      "type": "object",
+      "required": ["c0001-p1"],
+      "additionalProperties": false,
+      "properties": {
+        "c0001-p1": {
+          "type": "object",
+          "required": ["first"],
+          "additionalProperties": false,
+          "properties": {
+            "first": { "const": "correct" },
+            "at": { "type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$" }
+          }
+        }
+      }
+    }
+  }
+}
