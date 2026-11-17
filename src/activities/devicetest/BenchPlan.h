@@ -273,14 +273,15 @@ inline constexpr uint32_t OWNER_SECONDS_PER_RATING = 15;
 // --- Results files ------------------------------------------------------------------------------
 
 inline constexpr const char RESULTS_DIR[] = "/rsvp-bench";
-enum class ResultKind : uint8_t { BENCHMARK, CONTROLS };
+enum class ResultKind : uint8_t { BENCHMARK, CONTROLS, ACCEPTANCE, CHOICE };
 inline constexpr uint16_t MAX_RUN_NUMBER = 9999;
 
 // The run number a results file name starts with ("0007-bench.json" -> 7), or 0 when the name is not
 // one of ours (four digits, a hyphen).
 uint16_t runNumberOf(std::string_view name);
-// "0007-bench.json" or "0007-controls.json". `out` needs at least 24 bytes. The number is shared by
-// both kinds and only grows (the largest number in the folder plus one), so names sort by the order
+// "0007-bench.json", "0007-controls.json", "0007-acceptance.json" (task D3b's guided acceptance) or
+// "0007-choice.json" (its profile choice). `out` needs at least 24 bytes. The number is shared by
+// every kind and only grows (the largest number in the folder plus one), so names sort by the order
 // the runs were made whether or not the device clock is set, and no run overwrites another.
 void resultFileName(uint16_t run, ResultKind kind, char* out, size_t size);
 

@@ -5,8 +5,9 @@
 (from tools/device, or with tools/device on PYTHONPATH). Each file is checked against
 schema/rsvp-bench.schema.json (needs the jsonschema package, as in requirements-test.txt) and then
 against the rules the schema cannot express: a step that finished holds exactly the counts the plan
-asks for, a skipped profile is skipped from one step on, every finished rated step has its rating.
-The format is described member by member in schema/rsvp-bench.md. Exit status: 0 every file is
+asks for, a skipped profile is skipped from one step on, every finished rated step has its rating;
+in a guided acceptance the verdicts agree with the runs and the answers, and a profile choice's
+stored byte agrees with what was chosen and kept. The format is described member by member in schema/rsvp-bench.md. Exit status: 0 every file is
 valid, 1 a file is not, 2 a usage problem (or jsonschema is missing).
 
 Nothing here talks to a device; it only reads the files given.
@@ -21,7 +22,7 @@ from typing import Any, Dict, List, Optional
 
 SCHEMA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "schema",
                            "rsvp-bench.schema.json")
-SUPPORTED_VERSIONS = (1,)
+SUPPORTED_VERSIONS = (1, 2)  # 2 added the acceptance and choice files; benchmark and controls are unchanged
 
 PROFILE_ORDER = ("stock", "trial-a", "trial-b", "trial-c", "trial-d")
 STEP_ORDER = ("word-band", "full-screen", "clearing", "playback-120-1", "playback-180-1", "playback-240-1",
@@ -191,6 +192,179 @@ def _controls_problems(doc: Dict[str, Any]) -> List[str]:
     return out
 
 
+# --- Guided acceptance and profile choice (version 2, task D3b) ------------------------------------
+
+TRIALS = ("trial-a", "trial-b", "trial-c", "trial-d")
+
+
+def _combine(results: List[str]) -> str:
+    """A criterion's result over its evidence: any fail, else any not done, else any skipped, else pass."""
+    for r in ("fail", "not-done", "skipped"):
+        if r in results:
+            return r
+    return "pass"
+
+
+def _run_measured_ok(run: Dict[str, Any]) -> bool:
+    p = run.get("playback") or {}
+    order = p.get("order") or {}
+    requested = run.get("requested")
+    delivered = p.get("delivered_wpm") or 0
+    return (order.get("in_order") is True and order.get("words_drawn") == requested and
+            p.get("words_shown") == requested and order.get("violations") == 0 and order.get("gaps") == 0 and
+            order.get("repeats") == 0 and 0 < delivered <= run.get("target_wpm", 0))
+
+
+def _acceptance_problems(doc: Dict[str, Any]) -> List[str]:
+    out: List[str] = []
+    part_a = doc["part_a"]
+    runs = part_a["runs"]
+    for i, run in enumerate(runs):
+        where = "/part_a/runs/%d (%s)" % (i, run["run"])
+        status = run["status"]
+        has_figures = run["playback"] is not None
+        if status == "done":
+            if not has_figures or run["attempts"] < 1:
+                out.append("%s: a done run without figures or attempts" % where)
+                continue
+            p = run["playback"]
+            if run["updates"]["count"] != p["frames"]:
+                out.append("%s: %s word updates but %s frames" % (where, run["updates"]["count"], p["frames"]))
+            if run["measured_ok"] != _run_measured_ok(run):
+                out.append("%s: measured_ok is %s, the figures say %s" % (where, run["measured_ok"],
+                                                                           _run_measured_ok(run)))
+        else:
+            if run["measured_ok"] is not None or run["readable"] is not None:
+                out.append("%s: a %s run has a verdict or an answer" % (where, status))
+            if status == "pending" and has_figures:
+                out.append("%s: a pending run has figures" % where)
+    if part_a["status"] == "done":
+        if any(r["status"] != "done" or r["readable"] is None for r in runs) or part_a["slower"] is None:
+            out.append("/part_a: done, but a run or an answer is missing")
+    elif part_a["status"] in ("pending", "skipped") and part_a["slower"] is not None:
+        out.append("/part_a: %s, but the slowdown was answered" % part_a["status"])
+
+    part_b = doc["part_b"]
+    steps = part_b["steps"]
+    ids = [s["id"] for s in steps]
+    if len(set(ids)) != len(ids):
+        out.append("/part_b/steps: an id appears twice")
+    for i, s in enumerate(steps):
+        where = "/part_b/steps/%d (%s)" % (i, s["id"])
+        if s["n"] != i + 1:
+            out.append("%s: numbered %s" % (where, s["n"]))
+        if (s["result"] == "fail") != (s["reason"] is not None):
+            out.append("%s: a %s step with reason %s" % (where, s["result"], s["reason"]))
+        if s["result"] != "not-done" and s["answers"] < 1:
+            out.append("%s: a %s step without an answer" % (where, s["result"]))
+    open_steps = [s for s in steps if s["result"] == "not-done"]
+    if part_b["answered"] != len(steps) - len(open_steps):
+        out.append("/part_b/answered: %s, but %d steps are answered" % (part_b["answered"],
+                                                                         len(steps) - len(open_steps)))
+    # Steps are answered in order: the step in progress is the first not answered, and none after it is.
+    expected_current = open_steps[0]["id"] if open_steps else None
+    if part_b["current"] != expected_current:
+        out.append("/part_b/current: %s, expected %s" % (part_b["current"], expected_current))
+    if expected_current is not None:
+        k = ids.index(expected_current)
+        if any(s["result"] != "not-done" for s in steps[k + 1:]):
+            out.append("/part_b/steps: a step after %s is answered" % expected_current)
+    elif part_b["away"]:
+        out.append("/part_b/away: true, but every step is answered")
+
+    complete = part_a["status"] in ("done", "skipped") and expected_current is None
+    if (doc["status"] == "complete") != complete:
+        out.append("/status: %s, but Part A is %s and %d steps are open" % (doc["status"], part_a["status"],
+                                                                             len(open_steps)))
+
+    # Criterion 5: the automatic verdict and the owner's, recomputed.
+    if part_a["status"] == "skipped":
+        measured = owner = "skipped"
+    else:
+        measured = owner = "not-done"
+        if all(r["status"] == "done" for r in runs):
+            measured = "pass" if all(_run_measured_ok(r) for r in runs) else "fail"
+        if part_a["status"] == "done":
+            owner = "pass" if all(r["readable"] == "yes" for r in runs) and part_a["slower"] == "yes" else "fail"
+    c5 = doc["criterion_5"]
+    for name, value in (("measured", measured), ("owner", owner)):
+        if c5[name] != value:
+            out.append("/criterion_5/%s: %s, the runs and answers say %s" % (name, c5[name], value))
+        verdict = {"pass": True, "fail": False}.get(value)
+        if c5[name + "_pass"] != verdict:
+            out.append("/criterion_5/%s_pass: %s, expected %s" % (name, c5[name + "_pass"], verdict))
+    by_id = {s["id"]: s for s in steps}
+    pause = [s["result"] for s in steps if 5 in s["criteria"]]
+    if c5["pause_screen"] != (pause[-1] if pause else "not-done"):
+        out.append("/criterion_5/pause_screen: %s, the steps say %s" % (c5["pause_screen"], pause))
+
+    criteria = doc["criteria"]
+    for k, c in enumerate(criteria, start=1):
+        where = "/criteria/%d" % (k - 1)
+        if c["criterion"] != k:
+            out.append("%s: criterion %s out of order" % (where, c["criterion"]))
+            continue
+        expected_evidence = (["part-a"] if k == 5 else []) + [s["id"] for s in steps if k in s["criteria"]]
+        if c["evidence"] != expected_evidence:
+            out.append("%s: evidence %s, the steps say %s" % (where, c["evidence"], expected_evidence))
+        results = [by_id[e]["result"] for e in c["evidence"] if e in by_id]
+        if k == 5:
+            results += [measured, owner]
+        if c["result"] != _combine(results):
+            out.append("%s: criterion %d is %s, its evidence says %s" % (where, k, c["result"], _combine(results)))
+    return out
+
+
+def _decode_setting(value: int) -> Dict[str, Any]:
+    """lib/DisplayProfileCore/TrialUnlock.h, decodeTrialSetting()."""
+    chosen = (value >> 4) & 0x07
+    if value & 0x80 or chosen >= 5:
+        return {"unlocked": [], "chosen": "stock"}
+    unlocked = [t for i, t in enumerate(TRIALS) if value & (1 << i)]
+    key = ("stock",) + TRIALS
+    return {"unlocked": unlocked, "chosen": key[chosen] if chosen == 0 or key[chosen] in unlocked else "stock"}
+
+
+def _choice_problems(doc: Dict[str, Any]) -> List[str]:
+    out: List[str] = []
+    ts = doc["trial_setting"]
+    for side in ("before", "after"):
+        decoded = _decode_setting(ts[side])
+        if decoded["unlocked"] != ts["unlocked_" + side] or decoded["chosen"] != ts["chosen_" + side]:
+            out.append("/trial_setting: %s=%s decodes to %s" % (side, ts[side], decoded))
+    if ts["chosen_after"] != doc["chosen"]:
+        out.append("/chosen: %s, but the stored byte chooses %s" % (doc["chosen"], ts["chosen_after"]))
+    if ts["unlocked_after"] != doc["kept_after"]:
+        out.append("/kept_after: %s, but %s stay unlocked" % (doc["kept_after"], ts["unlocked_after"]))
+    if doc["chosen"] != "stock" and doc["chosen"] not in doc["kept_after"]:
+        out.append("/kept_after: the chosen %s is not kept" % doc["chosen"])
+    locked = [t for t in ts["unlocked_before"] if t not in ts["unlocked_after"]]
+    if doc["locked"] != locked:
+        out.append("/locked: %s, expected %s" % (doc["locked"], locked))
+    if doc["chosen"] == "stock" and not doc["kept_after"] and ts["after"] != 0:
+        out.append("/trial_setting/after: Stock with nothing kept must store 0, not %s" % ts["after"])
+    candidates = doc["candidates"]
+    keys = [c["key"] for c in candidates]
+    order = ("stock",) + TRIALS
+    if not keys or keys[0] != "stock" or keys != sorted(keys, key=order.index) or len(set(keys)) != len(keys):
+        out.append("/candidates: %s is not Stock then trials in table order" % keys)
+    chosen = [c["key"] for c in candidates if c["chosen"]]
+    if chosen != [doc["chosen"]]:
+        out.append("/candidates: chosen %s, expected only %s" % (chosen, doc["chosen"]))
+    for i, c in enumerate(candidates):
+        kept = c["key"] == "stock" or c["key"] in doc["kept_after"]
+        if c["kept"] != kept:
+            out.append("/candidates/%d (%s): kept is %s, expected %s" % (i, c["key"], c["kept"], kept))
+        if doc["benchmark_file"] is None and (c["ratings"] is not None or c["delivered_wpm_240"] is not None):
+            out.append("/candidates/%d (%s): ratings without a benchmark file" % (i, c["key"]))
+        if c["key"] != "stock" and c["key"] not in ts["unlocked_before"]:
+            out.append("/candidates/%d (%s): offered but not unlocked before" % (i, c["key"]))
+    for t in doc["kept_after"]:
+        if t not in keys:
+            out.append("/kept_after: %s was not offered" % t)
+    return out
+
+
 def consistency_problems(doc: Any) -> List[str]:
     """The rules beyond the schema (standard library only). Assumes the schema passed."""
     if not isinstance(doc, dict):
@@ -206,11 +380,26 @@ def consistency_problems(doc: Any) -> List[str]:
         out += _benchmark_problems(doc)
     elif doc.get("kind") == "controls":
         out += _controls_problems(doc)
+    elif doc.get("kind") == "acceptance":
+        out += _acceptance_problems(doc)
+    elif doc.get("kind") == "choice":
+        out += _choice_problems(doc)
     return out
 
 
 def describe(doc: Dict[str, Any]) -> str:
     """One line about a valid file."""
+    if doc.get("kind") == "acceptance":
+        criteria = ", ".join("%d %s" % (c["criterion"], c["result"]) for c in doc["criteria"])
+        c5 = doc["criterion_5"]
+        return "guided acceptance run %d, %s, profile %s, part A %s, %d of %d steps answered; criteria: %s; " \
+               "criterion 5 measured %s, owner %s" % (
+                   doc["run"], doc["status"], doc["profile"]["key"], doc["part_a"]["status"],
+                   doc["part_b"]["answered"], len(doc["part_b"]["steps"]), criteria, c5["measured"], c5["owner"])
+    if doc.get("kind") == "choice":
+        return "profile choice run %d, %s chosen, kept %s, byte %d -> %d%s" % (
+            doc["run"], doc["chosen"], ", ".join(doc["kept_after"]) or "none", doc["trial_setting"]["before"],
+            doc["trial_setting"]["after"], "" if doc["saved"] else " (NOT saved)")
     if doc.get("kind") == "controls":
         s = doc.get("summary", {})
         tried = [k for k in ("up_pressed", "up_held", "down_pressed", "down_held", "confirm_pressed", "power_clicked",

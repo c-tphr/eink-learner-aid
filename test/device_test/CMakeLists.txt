@@ -1,19 +1,24 @@
-# Host tests for the portable parts of the device test screens (task D3a, src/activities/devicetest/):
-# the sweep plan, its counts and the decisions the owner's answers lead to, the series runner driven
-# through every step of every profile with the fake display backend, the passage and its word count,
-# the ChoiceList highlight rules, the Controls check's key tracker, the stored unlock value after a
-# benchmark, the results file names and their JSON encoding. test_results_schema.py checks the encoded
-# files (written by DeviceTestSamples) against tools/device/schema/rsvp-bench.schema.json.
+# Host tests for the portable parts of the device test screens (tasks D3a and D3b,
+# src/activities/devicetest/): the sweep plan, its counts and the decisions the owner's answers lead
+# to, the series runner driven through every step of every profile with the fake display backend, the
+# passage and its word count, the ChoiceList highlight rules, the Controls check's key tracker, the
+# stored unlock value after a benchmark, the results file names and their JSON encoding; the guided
+# acceptance's step table, walk-through and verdicts, its progress file, and the profile choice and
+# Settings row rules (D3b). test_results_schema.py checks the encoded files (written by
+# DeviceTestSamples) against tools/device/schema/rsvp-bench.schema.json.
 
 set(RSVP_CORE_DIR ${REPO_ROOT}/lib/RsvpCore)
 set(DISPLAY_PROFILE_DIR ${REPO_ROOT}/lib/DisplayProfileCore)
 set(DEVICE_TEST_DIR ${REPO_ROOT}/src/activities/devicetest)
 set(DEVICE_TEST_SOURCES
+  ${DEVICE_TEST_DIR}/Acceptance.cpp
+  ${DEVICE_TEST_DIR}/AcceptanceProgress.cpp
   ${DEVICE_TEST_DIR}/BenchPlan.cpp
   ${DEVICE_TEST_DIR}/BenchJson.cpp
   ${DEVICE_TEST_DIR}/ChoiceList.cpp
   ${DEVICE_TEST_DIR}/ControlsCheck.cpp
   ${DEVICE_TEST_DIR}/Passage.cpp
+  ${DEVICE_TEST_DIR}/ProfileChoice.cpp
   ${DEVICE_TEST_DIR}/SeriesRunner.cpp
   ${REPO_ROOT}/src/controls/ControlMap.cpp
 )
@@ -58,12 +63,16 @@ add_executable(DeviceTestTest
   SeriesRunnerTest.cpp
   ControlsCheckTest.cpp
   BenchJsonTest.cpp
+  AcceptanceTest.cpp
+  AcceptanceProgressTest.cpp
+  ProfileChoiceTest.cpp
 )
 target_link_libraries(DeviceTestTest PRIVATE device_test_code GTest::gtest_main)
 gtest_discover_tests(DeviceTestTest)
 
-# Writes one results file of each kind (a benchmark with a profile skipped part-way and the run
-# ended by the owner, a complete benchmark on SE0400NQW47, and a Controls check) for the schema test.
+# Writes sample results files (a benchmark with a profile skipped part-way and the run ended by the
+# owner, a complete benchmark on SE0400NQW47, a Controls check, a guided acceptance part-way and one
+# complete, and a profile choice) for the schema test.
 add_executable(DeviceTestSamples DeviceTestSamples.cpp)
 target_link_libraries(DeviceTestSamples PRIVATE device_test_code)
 

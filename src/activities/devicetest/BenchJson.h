@@ -1,7 +1,8 @@
 #pragma once
 
 // The results files under /rsvp-bench/ (docs/PLAN.md sections 4 and 10): what they record and their
-// JSON encoding. Format "rsvp-bench", version 1; the JSON Schema is
+// JSON encoding. Format "rsvp-bench", version 2 (task D3b added the acceptance and choice files; the
+// benchmark and controls layouts are those of version 1); the JSON Schema is
 // tools/device/schema/rsvp-bench.schema.json and every member is described in
 // tools/device/schema/rsvp-bench.md. Portable: the encoder writes through a JsonSink (a file on the
 // device, a string in the host tests) and allocates nothing. Host-tested in test/device_test, where
@@ -10,13 +11,15 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Acceptance.h"
 #include "BenchPlan.h"
 #include "ControlsCheck.h"
+#include "ProfileChoice.h"
 
 namespace devicetest {
 
 inline constexpr const char RESULTS_FORMAT[] = "rsvp-bench";
-inline constexpr uint32_t RESULTS_VERSION = 1;
+inline constexpr uint32_t RESULTS_VERSION = 2;
 
 struct FirmwareRecord {
   char version[64] = {};    // CROSSPOINT_VERSION, as the About screen shows it
@@ -73,6 +76,27 @@ struct ControlsRecord {
   uint32_t dropped = 0;  // events after the first MAX_CONTROL_EVENTS (all are in the serial log)
 };
 
+// The guided acceptance (Acceptance.h): the walk-through's answers live in the Walkthrough.
+struct AcceptanceRecord {
+  RecordHeader header;
+  ProfileId profile = ProfileId::STOCK;  // the profile Part A plays with: the chosen one, as RSVP resolves it
+  uint8_t trialSetting = 0;              // the stored byte when the walk-through started
+};
+
+// One "Choose a profile" (ProfileChoice.h).
+struct ChoiceRecord {
+  RecordHeader header;
+  ProfileId chosen = ProfileId::STOCK;
+  ProfileList candidates;  // what the screen offered
+  uint8_t settingBefore = 0;
+  uint8_t settingAfter = 0;
+  TrialMask keptBefore = 0;
+  TrialMask keptAfter = 0;
+  TrialMask locked = 0;
+  bool saved = false;  // the settings file was written
+  BenchRatings bench;  // the ratings the choice was based on
+};
+
 class JsonSink {
  public:
   virtual ~JsonSink() = default;
@@ -81,6 +105,8 @@ class JsonSink {
 
 void writeBenchmark(const BenchmarkRecord& record, const Sweep& sweep, JsonSink& sink);
 void writeControls(const ControlsRecord& record, JsonSink& sink);
+void writeAcceptance(const AcceptanceRecord& record, const Walkthrough& walk, JsonSink& sink);
+void writeChoice(const ChoiceRecord& record, JsonSink& sink);
 
 // Names used in the files.
 const char* sideLayoutName(uint8_t layout);  // "prev-next", "next-prev", "disabled", "next-next", "prev-prev"

@@ -1,11 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/c-tphr/eink-learner-aid/tools/device/schema/rsvp-bench.schema.json",
-  "title": "Device test results file (/rsvp-bench/NNNN-bench.json, NNNN-controls.json)",
-  "description": "Written by the firmware's Device test screens (src/activities/devicetest/, task D3a). Every member is described in rsvp-bench.md beside this file. Version 1.",
+  "title": "Device test results file (/rsvp-bench/NNNN-bench.json, NNNN-controls.json, NNNN-acceptance.json, NNNN-choice.json)",
+  "description": "Written by the firmware's Device test screens (src/activities/devicetest/, tasks D3a and D3b). Every member is described in rsvp-bench.md beside this file. Version 2: version 1 had the benchmark and controls files only, with the same layout, so files of both versions are valid.",
   "oneOf": [
     { "$ref": "#/$defs/benchmark" },
-    { "$ref": "#/$defs/controls" }
+    { "$ref": "#/$defs/controls" },
+    { "$ref": "#/$defs/acceptance" },
+    { "$ref": "#/$defs/choice" }
   ],
   "$defs": {
     "count": { "type": "integer", "minimum": 0 },
@@ -186,7 +188,7 @@
                    "simulator", "plan", "trial_setting", "profiles"],
       "properties": {
         "format": { "const": "rsvp-bench" },
-        "version": { "const": 1 },
+        "version": { "enum": [1, 2] },
         "kind": { "const": "benchmark" },
         "run": { "type": "integer", "minimum": 1, "maximum": 9999 },
         "file": { "type": "string", "pattern": "^[0-9]{4}-bench\\.json$" },
@@ -277,7 +279,7 @@
                    "simulator", "settings", "summary", "events", "events_dropped"],
       "properties": {
         "format": { "const": "rsvp-bench" },
-        "version": { "const": 1 },
+        "version": { "enum": [1, 2] },
         "kind": { "const": "controls" },
         "run": { "type": "integer", "minimum": 1, "maximum": 9999 },
         "file": { "type": "string", "pattern": "^[0-9]{4}-controls\\.json$" },
@@ -324,6 +326,209 @@
         },
         "events": { "type": "array", "items": { "$ref": "#/$defs/event" }, "maxItems": 64 },
         "events_dropped": { "$ref": "#/$defs/count" }
+      }
+    },
+    "answer": { "enum": [null, "yes", "no"] },
+    "stepResult": { "enum": ["not-done", "pass", "fail", "skipped"] },
+    "nullableVerdict": { "type": ["boolean", "null"] },
+    "acceptanceRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run", "target_wpm", "words_per_update", "requested", "status", "attempts", "updates", "clears",
+                   "promotions", "duration_ms", "playback", "measured_ok", "readable"],
+      "properties": {
+        "run": { "enum": ["acceptance-240-1", "acceptance-600-1"] },
+        "target_wpm": { "type": "integer", "minimum": 1 },
+        "words_per_update": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "requested": { "type": "integer", "minimum": 1 },
+        "status": { "enum": ["pending", "done", "stopped"] },
+        "attempts": { "$ref": "#/$defs/count" },
+        "updates": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/series" }] },
+        "clears": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/series" }] },
+        "promotions": { "$ref": "#/$defs/nullableCount" },
+        "duration_ms": { "$ref": "#/$defs/nullableCount" },
+        "playback": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/playback" }] },
+        "measured_ok": { "$ref": "#/$defs/nullableVerdict" },
+        "readable": { "$ref": "#/$defs/answer" }
+      }
+    },
+    "walkStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n", "id", "criteria", "trace", "depends_on", "result", "reason", "answers"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 1 },
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "criteria": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "uniqueItems": true
+        },
+        "trace": { "type": "string", "minLength": 1 },
+        "depends_on": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z][0-9a-z]+$" }, "uniqueItems": true },
+        "result": { "$ref": "#/$defs/stepResult" },
+        "reason": { "enum": [null, "did-not-appear", "wrong-place", "wrong-mode", "grade-wrong", "other"] },
+        "answers": { "$ref": "#/$defs/count" }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "version", "kind", "run", "file", "status", "firmware", "device", "conditions",
+                   "simulator", "profile", "part_a", "part_b", "criteria", "criterion_5"],
+      "properties": {
+        "format": { "const": "rsvp-bench" },
+        "version": { "const": 2 },
+        "kind": { "const": "acceptance" },
+        "run": { "type": "integer", "minimum": 1, "maximum": 9999 },
+        "file": { "type": "string", "pattern": "^[0-9]{4}-acceptance\\.json$" },
+        "status": { "enum": ["running", "complete"] },
+        "firmware": { "$ref": "#/$defs/firmware" },
+        "device": { "$ref": "#/$defs/device" },
+        "conditions": { "$ref": "#/$defs/controlsConditions" },
+        "simulator": { "$ref": "#/$defs/simulator" },
+        "profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key", "name", "waveform", "trial_setting"],
+          "properties": {
+            "key": { "$ref": "#/$defs/profileKey" },
+            "name": { "enum": ["Stock", "Trial A", "Trial B", "Trial C", "Trial D"] },
+            "waveform": { "type": "string", "minLength": 1 },
+            "trial_setting": { "type": "integer", "minimum": 0, "maximum": 255 }
+          }
+        },
+        "part_a": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "passage_words", "min_dwell_ms", "runs", "slower"],
+          "properties": {
+            "status": { "enum": ["pending", "running", "done", "skipped"] },
+            "passage_words": { "const": 150 },
+            "min_dwell_ms": { "$ref": "#/$defs/ms" },
+            "runs": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "prefixItems": [
+                { "allOf": [{ "$ref": "#/$defs/acceptanceRun" }, { "properties": { "run": { "const": "acceptance-240-1" }, "target_wpm": { "const": 240 } } }] },
+                { "allOf": [{ "$ref": "#/$defs/acceptanceRun" }, { "properties": { "run": { "const": "acceptance-600-1" }, "target_wpm": { "const": 600 } } }] }
+              ]
+            },
+            "slower": { "$ref": "#/$defs/answer" }
+          }
+        },
+        "part_b": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["book", "current", "away", "answered", "steps"],
+          "properties": {
+            "book": { "type": "string", "minLength": 1 },
+            "current": { "type": ["string", "null"] },
+            "away": { "type": "boolean" },
+            "answered": { "$ref": "#/$defs/count" },
+            "steps": { "type": "array", "items": { "$ref": "#/$defs/walkStep" }, "minItems": 1, "maxItems": 20 }
+          }
+        },
+        "criteria": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["criterion", "result", "evidence"],
+            "properties": {
+              "criterion": { "type": "integer", "minimum": 1, "maximum": 5 },
+              "result": { "$ref": "#/$defs/stepResult" },
+              "evidence": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true }
+            }
+          }
+        },
+        "criterion_5": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["measured_pass", "owner_pass", "measured", "owner", "pause_screen"],
+          "properties": {
+            "measured_pass": { "$ref": "#/$defs/nullableVerdict" },
+            "owner_pass": { "$ref": "#/$defs/nullableVerdict" },
+            "measured": { "$ref": "#/$defs/stepResult" },
+            "owner": { "$ref": "#/$defs/stepResult" },
+            "pause_screen": { "$ref": "#/$defs/stepResult" }
+          }
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "chosen", "kept", "ratings", "residue", "delivered_wpm_240"],
+      "properties": {
+        "key": { "$ref": "#/$defs/profileKey" },
+        "name": { "enum": ["Stock", "Trial A", "Trial B", "Trial C", "Trial D"] },
+        "chosen": { "type": "boolean" },
+        "kept": { "type": "boolean" },
+        "ratings": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["playback-120-1", "playback-180-1", "playback-240-1", "playback-300-1", "playback-240-2",
+                           "playback-240-3", "endurance"],
+              "properties": {
+                "playback-120-1": { "enum": [null, "clean", "tolerable", "unreadable"] },
+                "playback-180-1": { "enum": [null, "clean", "tolerable", "unreadable"] },
+                "playback-240-1": { "enum": [null, "clean", "tolerable", "unreadable"] },
+                "playback-300-1": { "enum": [null, "clean", "tolerable", "unreadable"] },
+                "playback-240-2": { "enum": [null, "clean", "tolerable", "unreadable"] },
+                "playback-240-3": { "enum": [null, "clean", "tolerable", "unreadable"] },
+                "endurance": { "enum": [null, "clean", "tolerable", "unreadable"] }
+              }
+            }
+          ]
+        },
+        "residue": { "enum": [null, "no", "yes"] },
+        "delivered_wpm_240": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "choice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "version", "kind", "run", "file", "status", "firmware", "device", "conditions",
+                   "simulator", "chosen", "saved", "trial_setting", "kept_before", "kept_after", "locked",
+                   "benchmark_file", "candidates"],
+      "properties": {
+        "format": { "const": "rsvp-bench" },
+        "version": { "const": 2 },
+        "kind": { "const": "choice" },
+        "run": { "type": "integer", "minimum": 1, "maximum": 9999 },
+        "file": { "type": "string", "pattern": "^[0-9]{4}-choice\\.json$" },
+        "status": { "const": "complete" },
+        "firmware": { "$ref": "#/$defs/firmware" },
+        "device": { "$ref": "#/$defs/device" },
+        "conditions": { "$ref": "#/$defs/controlsConditions" },
+        "simulator": { "$ref": "#/$defs/simulator" },
+        "chosen": { "$ref": "#/$defs/profileKey" },
+        "saved": { "type": "boolean" },
+        "trial_setting": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["before", "after", "unlocked_before", "unlocked_after", "chosen_before", "chosen_after"],
+          "properties": {
+            "before": { "type": "integer", "minimum": 0, "maximum": 255 },
+            "after": { "type": "integer", "minimum": 0, "maximum": 127 },
+            "unlocked_before": { "$ref": "#/$defs/trialList" },
+            "unlocked_after": { "$ref": "#/$defs/trialList" },
+            "chosen_before": { "$ref": "#/$defs/profileKey" },
+            "chosen_after": { "$ref": "#/$defs/profileKey" }
+          }
+        },
+        "kept_before": { "$ref": "#/$defs/trialList" },
+        "kept_after": { "$ref": "#/$defs/trialList" },
+        "locked": { "$ref": "#/$defs/trialList" },
+        "benchmark_file": { "type": ["string", "null"], "pattern": "^[0-9]{4}-bench\\.json$" },
+        "candidates": { "type": "array", "items": { "$ref": "#/$defs/candidate" }, "minItems": 1, "maxItems": 5 }
       }
     }
   }

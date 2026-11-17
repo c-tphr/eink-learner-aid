@@ -20,7 +20,8 @@ import jsonchecks  # noqa: E402
 from piccoflash import results  # noqa: E402
 
 SCHEMA = os.path.join(REPO, "tools", "device", "schema", "rsvp-bench.schema.json")
-EXPECTED = ("0001-bench.json", "0002-controls.json", "0012-bench.json")
+EXPECTED = ("0001-bench.json", "0002-controls.json", "0012-bench.json", "0005-acceptance.json",
+            "0014-acceptance.json", "0015-choice.json")
 
 
 def main(sample_dir: str) -> int:
