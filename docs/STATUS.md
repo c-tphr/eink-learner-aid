@@ -6,12 +6,11 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before this update carry dates that ran up to two days ahead of the calendar; their order is right._
 
-- **Milestones:** M0 to M4 complete. M5: C1a, C1b, C3a, C2 and C3 merged; **C4 in rework (round 1)**; C5 open. M6 complete except the release itself: D1 to D7, A0 and both device sheets merged. M7: P5, P8 and H1 merged (the real book is READY); A1 open.
-- **Merged since the last update:** #36 D6 (PR #104), #105 D7 (PR #106), a CI change (scenarios two at a time, 75-minute limit, in #102).
-- **Assigned, in progress:**
-  - #28 C4: reread in either mode (pull request #103, branch `task/28-reread`). Sent back once: the page-view "Back to the question" bar covered the top two lines of every page. Decision: it moves to the bottom, over the reader's status bar row, placed from the reader's own text-area metrics (replaces S4 row 31's position).
-- **Next when dependencies merge:** after C4: #29 C5 (restore after restart; its brief also corrects the walk-through's steps 5, 6, 9 and 10 in `src/activities/devicetest/Acceptance.cpp` and Appendix A of `docs/DEVICE_SESSION.md` to the real behaviour: a test keeps the two equal). After C5: #39 A1 (acceptance run, `docs/ACCEPTANCE.md`, a `final` kit as a draft release, the "Device session results" issue). Then #40 A2 after the owner's session.
-- **Carried into A1:** hand the kit over as a draft release (sessions cannot publish or delete releases); release notes should say that upstream's user guide is wrong for this build about updates on the Picco (they exist on the two-slot layout); device-only unknowns are listed in `docs/DEVICE_SESSION.md` Appendix C.
+- **Milestones:** M0 to M6 complete. M7: every task merged except A1's release step. **A1 in progress**: `docs/ACCEPTANCE.md` is written; next the release workflow builds the `final` kit as a draft release and the "Device session results" issue is opened. M8 (A2) waits for the owner's device session.
+- **Merged since the last update:** #28 C4 (PR #103, after one rework round), #29 C5 (PR #108).
+- **Assigned, in progress:** #39 A1 (orchestrator).
+- **Next:** after the release: tell the owner the kit is ready. After the owner attaches results to the "Device session results" issue: #40 A2 (record real display timings in `docs/device/picco-timings.json`, set defaults, ship fixes as an SD-card update, final report).
+- **Carried into A2:** the device-only unknowns in `docs/ACCEPTANCE.md` ("Not proven") and `docs/DEVICE_SESSION.md` Appendix C; the results files are described in `tools/device/schema/rsvp-bench.md` and checked with `python -m piccoflash.results validate`.
 - **Blockers:** none.
 - **Waiting on the owner:**
   1. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md`. Return only the summary file.
@@ -72,6 +71,9 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 - 2026-11-19: D6: `docs/DEVICE_SESSION.md` is the printed checklist (twelve steps, a gate before `REPLACE ONYX`, Recovery, appendices with the walk-through's steps, a results sheet and the mapping to plan section 10) and `.github/ISSUE_TEMPLATE/device-session-results.md` the results issue. Tests keep both device sheets true: every marked command is a real `session.ps1` command, every marked quote is real tool output, links resolve, the printed walk-through equals the firmware's step table. The kit carries the pictures the sheets link to.
 - 2026-11-19: D7: every command the flashing tool prints is the full `powershell -ExecutionPolicy Bypass -File .\session.ps1 ...` line (the short form fails on a PC that blocks scripts); the summary is `session-summary-<time>.txt` and covers flash and restore; the checklist's hand-typed PowerShell lines run in CI on Windows under both shells. The guard, the plan and the device calls are unchanged.
 - 2026-11-19: CI's `scenarios` job runs scenarios two at a time with a 75-minute limit (38 scenarios took 27.6 minutes one at a time and reached the old 30-minute limit).
+- 2026-11-20: C4: a reread starts at the section's first word in the chosen mode, with the flow kept in `ReadingSession`; no checkpoint fires during it; the section's end or "Back to the question" returns to the same prompt with the answer hidden. Orchestrator's decision in review: the page-view reread bar sits at the bottom over the reader's status row, placed from the reader's own text-area metrics, so no text is hidden with default settings (replaces S4 row 31's top bar); its button is 26 px high there.
+- 2026-11-20: C5: on opening a book, `planRestore()` decides the view (active reread, else active prompt with the answer hidden, else the saved position); a restored prompt shows before any page. `BookStateFile` now recovers a complete `.tmp` when the main file is missing (a power cut between remove and rename used to lose all grades). C5 also corrected the walk-through's steps 5, 6, 9 and 10 and the checklist's Appendix A to the real behaviour.
+- 2026-11-20: All six PRD criteria are mapped to passing evidence in `docs/ACCEPTANCE.md`; criterion 5 stays open until the device session.
 
 ## Issue map
 
@@ -106,8 +108,8 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 | C2 | #26 | M5 | merged (with C3, PR #100) |
 | C3a | #93 | M5 | merged (loader and screens, split from C3) |
 | C3 | #27 | M5 | merged (with C2, PR #100) |
-| C4 | #28 | M5 | in rework, round 1 (PR #103) |
-| C5 | #29 | M5 | open |
+| C4 | #28 | M5 | merged (one rework round) |
+| C5 | #29 | M5 | merged |
 | D1 | #30 | M6 | merged |
 | D2 | #31 | M6 | merged |
 | D3a | #32 | M6 | merged |
@@ -119,7 +121,7 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 | D7 | #105 | M7 | merged (flashing tool wording and summary) |
 | A0 | #37 | M6 | merged |
 | P5 | #38 | M7 | merged |
-| A1 | #39 | M7 | open |
+| A1 | #39 | M7 | in progress (orchestrator) |
 | A2 | #40 | M8 | open |
 | H1 | #72 | M7 | merged (housekeeping) |
 | P7 | #75 | M7 | merged |
@@ -133,7 +135,7 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 - Host tests upstream are CMake and GoogleTest under `test/`: 924 pass at the pinned commit (about 5 minutes to build on 4 cores).
 - Cloud builds: run `./scripts/cloud-setup.sh` first in every session (about 3 minutes from empty caches, seconds afterwards). A plain `pio run` on empty caches fails with `CERTIFICATE_VERIFY_FAILED` because pioarduino replaces the CA settings; worse, its `idf_tools.py` falls back to unverified downloads, which the setup script treats as a failure. Building a `custom_sdkconfig` environment (upstream `default`) in the same core directory triggers a reinstall that hits the TLS problem again; re-run the setup script. `picco` builds in about 5.5 minutes: flash 5,449,518 B of the 7,431,782 B two-slot budget, RAM 34.4%.
 - Upload hazard confirmed by `pio run -e picco -t envdump`: `UPLOADERFLAGS` holds 0x0, 0x8000 and 0xe000 images although `FLASH_EXTRA_IMAGES` is empty.
-- Host suite on `main`: 1,545 tests. Python: `tools/prep` 708 tests, `tools/device` and `scripts/tests` 353 together, `tools/simtest` 115 plus 39 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
+- Host suite on `main`: 1,567 tests. Python: `tools/prep` 708 tests, `tools/device` and `scripts/tests` 353 together, `tools/simtest` 125 plus 49 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
 - The session disk is small: finished implementers' working copies keep build output under `.claude/worktrees/agent-*/.pio` and `build`; delete those folders (not the working copies of running tasks) when `df` shows little free space.
 - Simulator: `pio run -e simulator_picco` applies `scripts/simulator_patches/` automatically; headless run: `xvfb-run -a .pio/build/simulator_picco/program` with `CROSSPOINT_SIM_INPUT_SCRIPT="0:WAIT:Entering activity: Home;1500:SHOT:home;2500:QUIT"` (SHOT writes a BMP at the given path).
 - Upstream renderer quirks found by the parity test (not ours, not fixed): the last word of a table caption is never drawn; rows of a grid table split across pages are drawn line by line. Neither affects RSVP positions or anchors.
