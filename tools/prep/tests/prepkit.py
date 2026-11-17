@@ -27,6 +27,7 @@ CHECK = BOOKS / "fixture.check.json"
 ORIGINAL_BYTES = ORIGINAL.read_bytes()
 PREPARED_BYTES = PREPARED.read_bytes()
 MANIFEST = json.loads((NEGATIVE / "manifest.json").read_text(encoding="utf-8"))
+DRAFT_MANIFEST = json.loads((NEGATIVE / "draft-manifest.json").read_text(encoding="utf-8"))
 CP = "OEBPS/rsvp/checkpoints.json"
 OPF = "OEBPS/content.opf"
 CH1, CH2, CH3 = "OEBPS/text/chapter-1.xhtml", "OEBPS/text/chapter-2.xhtml", "OEBPS/text/chapter-3.xhtml"

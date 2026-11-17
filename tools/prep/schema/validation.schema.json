@@ -38,12 +38,16 @@
     },
     "passed": { "type": "boolean" },
     "checks": {
+      "description": "13 checks; a result written by tools.prep 1.0.0 (before the exclusions check) has 12, and stays a valid record.",
       "type": "array",
       "minItems": 12,
-      "maxItems": 12,
+      "maxItems": 13,
       "items": { "$ref": "#/$defs/check" }
     }
   },
+  "if": { "properties": { "tool": { "properties": { "version": { "const": "1.0.0" } } } } },
+  "then": { "properties": { "checks": { "maxItems": 12 } } },
+  "else": { "properties": { "checks": { "minItems": 13 } } },
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$(?!\\n)" },
     "file": {
@@ -61,7 +65,7 @@
       "additionalProperties": false,
       "properties": {
         "name": {
-          "enum": ["open", "source-hash", "checkpoint-item", "checkpoint-file", "firmware-limits", "anchors", "word-boundaries", "coverage", "word-counts", "text-unchanged", "archive-unchanged", "epubcheck"]
+          "enum": ["open", "source-hash", "checkpoint-item", "checkpoint-file", "firmware-limits", "anchors", "word-boundaries", "coverage", "exclusions", "word-counts", "text-unchanged", "archive-unchanged", "epubcheck"]
         },
         "title": { "type": "string", "minLength": 1 },
         "status": {

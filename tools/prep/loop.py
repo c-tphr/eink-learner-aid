@@ -21,10 +21,12 @@ surface stays small and every rule a script can hold is held by a script:
   reference answers. It runs only after the round's validator result passed,
   for exactly this prepared file. The draft's citations and notes, earlier
   check results and the round history are not in it.
-- ``save-check`` turns the checker's final message, saved verbatim as
-  ``rounds/NN/checker-reply.txt``, into ``rounds/NN/check.json``. It extracts
-  the JSON object but never repairs it: an unusable reply is written as it is,
-  so ``verify-check`` rejects it and the round fails.
+- ``save-check`` turns the checker's result file ``rounds/NN/checker-reply.txt``
+  (which the checker writes itself, through its guard, ``checker_guard.py``)
+  into ``rounds/NN/check.json``. It refuses a missing file, or one that is not
+  exactly what the guard recorded the checker writing. It extracts the JSON
+  object but never repairs it: an unusable reply is written as it is, so
+  ``verify-check`` rejects it and the round fails.
 - ``issues`` writes ``rounds/NN/issues.md``, everything the drafter may see
   about a failed round: validator failures, and the checker's open issues and
   failed prompts and sections. Passed prompts and their evidence are left out.
@@ -40,6 +42,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from . import checker_guard as guard
 from .build import BuildError, build_bytes
 from .epub import Block, EpubError, SpineDoc, load_book_bytes
 from .extract import _block_header, display_text, text_file_name
@@ -48,10 +51,11 @@ from .verify_check import CRITERIA, CRITERION_TEXT, _prepared_sections
 
 MAX_ROUNDS = 3
 INSTRUCTIONS_PATH = Path(__file__).resolve().parent / "INSTRUCTIONS.md"
-CHECKER_DIR = "checker"
-CHECKER_INPUT_FORMAT = "rsvp-checker-input"
-CHECKER_INPUT_VERSION = 1
-REPLY = "checker-reply.txt"
+CHECKER_DIR = guard.CHECKER_DIR
+CHECKER_INPUT_FORMAT = guard.FORMAT
+CHECKER_INPUT_VERSION = 2
+REPLY = guard.REPLY
+REFUSED = "save-check refused the checker's result:"
 _VERSION_LINE = re.compile(r"^instructions_version: (\S+)[ \t]*$", re.MULTILINE)
 
 
@@ -390,8 +394,10 @@ def checker_input(work: Path, prepared: Path, date: str | None = None,
         "format": CHECKER_INPUT_FORMAT,
         "version": CHECKER_INPUT_VERSION,
         "note": "Written by 'python3 -m tools.prep checker-input'. Copy round, date, prepared_sha256, "
-                "original_sha256 and instructions_version into check.json unchanged.",
+                "original_sha256 and instructions_version into check.json unchanged, and write it, with one Write "
+                "call, to result_file.",
         "round": number,
+        "result_file": str((folder / REPLY).resolve()),
         "date": date or _today(),
         "prepared_file": prepared.name,
         "prepared_sha256": prepared_sha,
@@ -445,15 +451,42 @@ def extract_check(reply: str) -> str | None:
     return None
 
 
-def save_check(work: Path) -> tuple[Path, bool]:
-    """Write the latest round's ``check.json`` from ``checker-reply.txt``; ``(path, extracted)``."""
-    number, folder = latest_round(work)
+def reply_problem(folder: Path, number: int, raw: bytes | None) -> str | None:
+    """Why ``checker-reply.txt`` is not the file the checker wrote through its guard, else ``None``."""
     reply_path = folder / REPLY
-    try:
-        raw = reply_path.read_bytes()
-    except OSError:
-        raise LoopError([f"{reply_path} does not exist; save the checker's final message there first, verbatim"])
+    if raw is None:
+        return (f"the checker wrote no result file ({reply_path} does not exist); the checker must write its "
+                "result there with one Write call")
+    record = _load(folder / guard.RECORD)
+    if not (isinstance(record, dict) and record.get("format") == guard.RECORD_FORMAT):
+        return (f"{folder / guard.RECORD} is missing, so the checker's guard did not approve the writing of "
+                f"{reply_path}. Only the checker may write that file, through the hook in "
+                ".claude/agents/prep-checker.md (Claude Code runs it only in a trusted workspace)")
+    if record.get("round") != number or record.get("file") != REPLY:
+        return f"{folder / guard.RECORD} is for round {record.get('round')!r}, not round {number}"
+    if record.get("sha256") != guard.reply_digest(raw):
+        return (f"{reply_path} is not the file the checker wrote (its SHA-256 differs from the one its guard "
+                "recorded); nobody else may write or change it")
+    return None
+
+
+def save_check(work: Path) -> tuple[Path, bool]:
+    """Write the latest round's ``check.json`` from ``checker-reply.txt``; ``(path, extracted)``.
+
+    A missing reply, or one the checker's guard did not record exactly as it is, is refused: ``check.json``
+    then holds only the reason (not JSON), so ``verify-check`` fails the round, and ``LoopError`` is raised.
+    """
+    number, folder = latest_round(work)
     target = folder / "check.json"
+    try:
+        raw: bytes | None = (folder / REPLY).read_bytes()
+    except OSError:
+        raw = None
+    problem = reply_problem(folder, number, raw)
+    if problem is not None:
+        target.write_text(f"{REFUSED} {problem}\n", encoding="utf-8", newline="\n")
+        raise LoopError([problem, f"wrote {target} with this reason only, so verify-check fails the round"])
+    assert raw is not None
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
@@ -499,6 +532,12 @@ def issue_list(work: Path) -> tuple[str, dict[str, Any]]:
         unusable = [f for f in failures if f.get("code") != "checker-verdict-fail"]
         out["checker_status"] = ("passed" if verification.get("passed") else
                                  "unusable" if unusable else "failed")
+        try:
+            saved = (folder / "check.json").read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            saved = ""
+        if saved.startswith(REFUSED):
+            unusable = unusable + [{"code": "save-check", "location": REPLY, "message": saved[len(REFUSED):].strip()}]
         out["checker_unusable"] = unusable
         readable = not any(f.get("code") in ("check-unreadable", "check-schema") for f in failures)
         if readable and isinstance(check, dict):

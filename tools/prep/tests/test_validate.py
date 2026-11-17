@@ -9,10 +9,13 @@ import os
 import pytest
 
 from tools.prep import validate as V
-from tools.prep.tests.prepkit import (CH1, CH2, CH3, CP, DRAFT, MANIFEST, NEGATIVE, OPF, ORIGINAL, ORIGINAL_BYTES,
-                                      PREPARED, PREPARED_BYTES, TS, edit, edit_checkpoints, error_epubcheck, failing,
-                                      ok_epubcheck, real_epubcheck, replace_once, run_prep, span, status,
-                                      unavailable_epubcheck, without_member)
+from tools.prep.build import build_bytes
+from tools.prep.epub import load_book_bytes
+from tools.prep.tests.bookmaker import make_epub, xhtml
+from tools.prep.tests.prepkit import (CH1, CH2, CH3, CP, DRAFT, DRAFT_MANIFEST, MANIFEST, NEGATIVE, OPF, ORIGINAL,
+                                      ORIGINAL_BYTES, PREPARED, PREPARED_BYTES, TS, edit, edit_checkpoints,
+                                      error_epubcheck, failing, ok_epubcheck, real_epubcheck, replace_once, run_prep,
+                                      span, status, unavailable_epubcheck, without_member)
 
 DRAFT_BYTES = DRAFT.read_bytes()
 
@@ -236,7 +239,7 @@ def test_coverage_uncovered_words_implicit_and_draft():
 def test_coverage_draft_problems():
     draft = json.loads(DRAFT_BYTES)
     draft["excluded"].append({"chapter_href": "text/chapter-1.xhtml", "first_paragraph": "d02-p001",
-                              "last_paragraph": "d02-p001", "reason": "Epigraph."})
+                              "last_paragraph": "d02-p001", "reason": "Front matter: epigraph."})
     assert failing(run(draft=json.dumps(draft).encode()).result) == {"coverage": {"excluded-in-section"}}
     draft = json.loads(DRAFT_BYTES)
     draft["sections"][0]["label"] = "Another label"
@@ -248,6 +251,130 @@ def test_coverage_draft_problems():
                                                                                    "uncovered-words"}}
     out = run(draft=b"{}")
     assert failing(out.result) == {"coverage": {"draft-unreadable"}}
+
+
+# --------------------------------------------------------------------------
+# exclusions
+
+
+def exclusions(out: V.Outcome) -> dict:
+    return next(c for c in out.result["checks"] if c["name"] == "exclusions")
+
+
+@pytest.mark.parametrize("reason, category", [
+    ("Front matter: title page.", "Front matter"),
+    ("front matter of this essay: its title heading", "Front matter"),
+    ("Back matter: the publisher's colophon.", "Back matter"),
+    ("Editorial matter: the editor's introduction.", "Editorial matter"),
+    ("Editorial matter", "Editorial matter"),
+    ("Title page.", None),
+    ("Frontmatter: title page.", None),
+    ("Not prepared: only Common Sense is prepared in this edition.", None),
+    ("Back mattering", None),
+])
+def test_exclusion_category(reason, category):
+    assert V.exclusion_category(reason) == category
+
+
+def test_exclusions_pass_on_the_fixture_with_and_without_its_draft():
+    for draft in (None, DRAFT_BYTES):
+        c = exclusions(run(draft=draft))
+        assert c["status"] == "pass", c
+        assert "text/title.xhtml: 20 words excluded; the EPUB marks it as front-back (landmarks type titlepage)" in \
+            c["details"]
+
+
+def test_exclusion_category_is_required_in_draft_mode():
+    draft = json.loads(DRAFT_BYTES)
+    draft["excluded"][0]["reason"] = "Title page."
+    out = run(draft=json.dumps(draft).encode())
+    assert failing(out.result) == {"exclusions": {"exclusion-category"}}
+    assert exclusions(out)["failures"][0]["location"] == "draft.json#/excluded/0/reason"
+
+
+def test_excluded_body_chapter_fails_with_and_without_the_draft():
+    entry = DRAFT_MANIFEST["drafts"][0]
+    prepared = (NEGATIVE / entry["file"]).read_bytes()
+    out = run(prepared, draft=(NEGATIVE / entry["draft"]).read_bytes())
+    assert failing(out.result) == {"exclusions": {"exclusion-category", "excluded-body-document",
+                                                  "excluded-body-text"}}
+    out = run(prepared)  # implicit mode: chapter 2 has no section, so it counts as excluded
+    assert failing(out.result) == {"exclusions": {"excluded-body-document", "excluded-body-text"}}
+    text = next(f for f in exclusions(out)["failures"] if f["code"] == "excluded-body-text")
+    assert "608 excluded words (44.2% of the book's 1376 words)" in text["message"]
+
+
+def built(draft: dict, original: bytes = ORIGINAL_BYTES) -> tuple[bytes, bytes]:
+    raw = json.dumps(draft).encode()
+    return build_bytes(load_book_bytes(original, "book.epub"), raw).data, raw
+
+
+@pytest.mark.parametrize("last, words, codes", [
+    ("d02-p002", 61, set()),  # 4.4% of the book's 1376 words
+    ("d02-p005", 184, {"excluded-body-text"}),  # 13.4%
+])
+def test_editorial_matter_inside_a_body_document_is_allowed_up_to_the_limit(last, words, codes):
+    """The opening of chapter 1 (as if an editor had written it) excluded as editorial matter."""
+    draft = json.loads(DRAFT_BYTES)
+    nxt = f"d02-p{int(last[-3:]) + 1:03d}"
+    draft["sections"][0]["first_paragraph"] = nxt
+    draft["checkpoints"][0]["prompts"][0]["supporting_paragraphs"] = ["d02-p006"]
+    draft["excluded"].append({"chapter_href": "text/chapter-1.xhtml", "first_paragraph": "d02-p001",
+                              "last_paragraph": last, "reason": "Editorial matter: the editor's headnote."})
+    prepared, raw = built(draft)
+    out = run(prepared, draft=raw)
+    assert failing(out.result) == ({"exclusions": codes} if codes else {})
+    assert f"text/chapter-1.xhtml: {words} words excluded; the EPUB marks it as body (landmarks type bodymatter)" \
+        in exclusions(out)["details"]
+
+
+def test_unmarked_book_counts_only_text_between_sections(tmp_path):
+    """Without any structural markup, a document after the last section may be excluded; one between may not."""
+    para = " ".join(f"word{n}" for n in range(50))
+    chapters = [(f"ch{n}.xhtml", xhtml(f"<p>{para}</p>")) for n in range(1, 5)]
+    original = make_epub(tmp_path / "book.epub", chapters).read_bytes()
+
+    def draft(excluded: int) -> dict:
+        sections = [n for n in range(1, 5) if n != excluded]
+        return {"format": "rsvp-draft", "version": 1,
+                "book": {"title": "Test Book", "language": "en", "source_sha256": V.sha256(original),
+                         "instructions_version": "1.1"},
+                "excluded": [{"chapter_href": f"ch{excluded}.xhtml", "first_paragraph": f"d0{excluded}-p001",
+                              "last_paragraph": f"d0{excluded}-p001", "reason": "Back matter: something."}],
+                "sections": [{"id": f"s000{n}", "chapter_href": f"ch{n}.xhtml", "first_paragraph": f"d0{n}-p001",
+                              "last_paragraph": f"d0{n}-p001", "label": f"Chapter {n}"} for n in sections],
+                "checkpoints": []}
+
+    prepared, raw = built(draft(4), original)
+    out = V.validate_bytes(original, "book.epub", prepared, "p.epub", raw, "draft.json", ok_epubcheck, TS)
+    assert exclusions(out)["status"] == "pass", exclusions(out)
+    assert "ch4.xhtml: 50 words excluded; the EPUB marks it as unmarked (no structural markup)" in \
+        exclusions(out)["details"]
+    prepared, raw = built(draft(2), original)
+    out = V.validate_bytes(original, "book.epub", prepared, "p.epub", raw, "draft.json", ok_epubcheck, TS)
+    assert failing(out.result) == {"exclusions": {"excluded-body-document", "excluded-body-text"}}
+
+
+def test_whole_body_document_fails_even_under_the_limit(monkeypatch):
+    entry = DRAFT_MANIFEST["drafts"][0]
+    prepared = (NEGATIVE / entry["file"]).read_bytes()
+    draft = json.loads((NEGATIVE / entry["draft"]).read_bytes())
+    draft["excluded"][1]["reason"] = "Back matter: misfiled."
+    raw = json.dumps(draft).encode()
+    monkeypatch.setattr(V, "MAX_EXCLUDED_BODY_PERCENT", 50)
+    out = run(prepared, draft=raw)
+    assert failing(out.result) == {"exclusions": {"excluded-body-document"}}  # 44.2% is under 50%
+
+
+def test_draft_negative_fixtures_fail_exactly_their_checks():
+    assert DRAFT_MANIFEST["format"] == "rsvp-negative-drafts" and DRAFT_MANIFEST["drafts"]
+    for entry in DRAFT_MANIFEST["drafts"]:
+        out = V.validate_files(ORIGINAL, NEGATIVE / entry["file"], NEGATIVE / entry["draft"],
+                               epubcheck=real_epubcheck, created=TS)
+        got = failing(out.result)
+        assert set(got) == set(entry["failing_checks"]), got
+        assert set().union(*got.values()) == set(entry["codes"]), got
+        assert not out.passed
 
 
 def test_word_counts():
@@ -298,7 +425,8 @@ def test_epubcheck_errors_fail_and_unavailable_is_not_a_pass():
 
 def test_negative_manifest_lists_every_file():
     listed = ({e["file"] for e in MANIFEST["prepared"]} | {e["file"] for e in MANIFEST["checks"]} | {"manifest.json"}
-              | {e[k] for e in MANIFEST["checker"] for k in ("file", "draft")})
+              | {e[k] for e in MANIFEST["checker"] for k in ("file", "draft")}
+              | {"draft-manifest.json"} | {e[k] for e in DRAFT_MANIFEST["drafts"] for k in ("file", "draft")})
     assert listed == {p.name for p in NEGATIVE.iterdir()}
     assert "broken-link.prepared.epub" in listed
     for entry in MANIFEST["prepared"]:
@@ -332,7 +460,7 @@ def test_checker_fixture_passes_the_validator(entry):
 def test_cli_passes_on_the_fixture_and_writes_json(tmp_path):
     result = run_prep("validate", ORIGINAL, PREPARED, "--json", tmp_path / "v.json", "--timestamp", TS)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "PASSED: all 12 checks passed." in result.stdout
+    assert "PASSED: all 13 checks passed." in result.stdout
     for name, _ in V.CHECKS:
         assert name in result.stdout
     data = json.loads((tmp_path / "v.json").read_text(encoding="utf-8"))

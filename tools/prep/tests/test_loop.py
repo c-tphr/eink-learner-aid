@@ -68,7 +68,7 @@ def verify_round(work: Path, prep: Path, number: int = 1) -> dict:
 
 
 def test_instructions_version_is_declared_and_parsed(tmp_path):
-    assert VERSION == "1.0"
+    assert VERSION == "1.1"
     bad = tmp_path / "I.md"
     bad.write_text("# Instructions\n\nno version here\n", encoding="utf-8")
     with pytest.raises(L.LoopError):
@@ -222,6 +222,7 @@ def test_checker_input_writes_only_the_checker_view(work):
     assert book["prepared_sha256"] == V.sha256(prep.read_bytes())
     assert book["original_sha256"] == V.sha256(ORIGINAL.read_bytes()) and book["instructions_version"] == VERSION
     assert book["prompt_ids"] == ["c0001-p1", "c0002-p1", "c0002-p2", "c0002-p3"]
+    assert book["result_file"] == str((work / "rounds" / "01" / L.REPLY).resolve())
     s1 = book["sections"][0]
     assert (s1["first_paragraph"], s1["last_paragraph"], s1["word_count"], s1["ends_document"]) == \
         ("d02-p001", "d02-p006", 233, False)
@@ -266,23 +267,33 @@ def test_extract_check(reply, expected):
     assert L.extract_check(reply) == expected
 
 
-def round_with_reply(work: Path, reply: str) -> tuple[Path, dict]:
+def checker_writes(work: Path, content: str) -> Path:
+    """What Claude Code does for the checker's Write call: run the guard, then write the file it allowed."""
+    book = json.loads((work / "checker" / "book.json").read_text(encoding="utf-8"))
+    e = event("Write", file_path=book["result_file"], content=content)
+    assert G.decide_write(e) is None
+    target = Path(book["result_file"])
+    target.write_text(content, encoding="utf-8")
+    return target
+
+
+def open_checker_round(work: Path) -> tuple[Path, dict]:
     prep = build(work)
     L.start_round(work, ORIGINAL, prep)
     validate_round(work, prep)
-    book = L.checker_input(work, prep)
-    (work / "rounds" / "01" / L.REPLY).write_text(reply, encoding="utf-8")
+    return prep, L.checker_input(work, prep)
+
+
+def round_with_reply(work: Path, reply: str) -> tuple[Path, dict]:
+    prep, book = open_checker_round(work)
+    checker_writes(work, reply)
     return prep, book
 
 
 def test_save_check_extracts_without_repairing(work):
-    prep = build(work)
-    L.start_round(work, ORIGINAL, prep)
-    validate_round(work, prep)
-    book = L.checker_input(work, prep)
-    check = passing_check(prep, book)
-    body = json.dumps(check, indent=2)
-    (work / "rounds" / "01" / L.REPLY).write_text(f"```json\n{body}\n```\n", encoding="utf-8")
+    prep, book = open_checker_round(work)
+    body = json.dumps(passing_check(prep, book), indent=2)
+    checker_writes(work, f"```json\n{body}\n```\n")
     path, ok = L.save_check(work)
     assert ok and path.read_text(encoding="utf-8") == body + "\n"
     assert verify_round(work, prep)["passed"] is True
@@ -296,11 +307,72 @@ def test_save_check_keeps_an_unusable_reply_so_verify_check_fails(work):
     assert v["passed"] is False and {f["code"] for f in v["failures"]} == {"check-unreadable"}
 
 
-def test_save_check_needs_a_reply(work):
-    prep = build(work)
-    L.start_round(work, ORIGINAL, prep)
-    with pytest.raises(L.LoopError):
+def refused(work: Path, prep: Path, words: str) -> dict:
+    """save-check refuses; check.json holds only the reason, so verify-check and the issue list fail the round."""
+    with pytest.raises(L.LoopError) as exc:
         L.save_check(work)
+    assert words in exc.value.problems[0]
+    saved = (work / "rounds" / "01" / "check.json").read_text(encoding="utf-8")
+    assert saved.startswith(L.REFUSED) and words in saved
+    v = verify_round(work, prep)
+    assert v["passed"] is False and {f["code"] for f in v["failures"]} == {"check-unreadable"}
+    text, data = L.issue_list(work)
+    assert data["checker_status"] == "unusable" and "Do not change the draft" in text and words in text
+    return data
+
+
+def test_save_check_fails_the_round_without_a_result_file(work):
+    prep, _ = open_checker_round(work)
+    refused(work, prep, "the checker wrote no result file")
+
+
+def test_save_check_refuses_a_file_the_guard_did_not_record(work):
+    prep, book = open_checker_round(work)
+    Path(book["result_file"]).write_text(json.dumps(passing_check(prep, book)), encoding="utf-8")  # not the checker
+    refused(work, prep, "the checker's guard did not approve")
+
+
+def test_save_check_refuses_a_result_changed_after_the_checker_wrote_it(work):
+    prep, book = open_checker_round(work)
+    check = passing_check(prep, book)
+    check["verdict"] = "fail"
+    target = checker_writes(work, json.dumps(check))
+    check["verdict"] = "pass"
+    target.write_text(json.dumps(check), encoding="utf-8")  # an edit by someone else
+    refused(work, prep, "is not the file the checker wrote")
+
+
+def test_save_check_ignores_line_endings_and_trailing_space(work):
+    prep, book = open_checker_round(work)
+    body = json.dumps(passing_check(prep, book), indent=2)
+    target = checker_writes(work, body + "\n")
+    target.write_bytes(body.replace("\n", "\r\n").encode("utf-8"))
+    path, ok = L.save_check(work)
+    assert ok and verify_round(work, prep)["passed"] is True
+
+
+def test_save_check_adopts_a_truncated_result_that_verify_check_then_rejects(work):
+    prep, book = open_checker_round(work)
+    body = json.dumps(passing_check(prep, book), indent=2)
+    checker_writes(work, body[: len(body) // 2])  # cut off mid-way
+    path, ok = L.save_check(work)
+    assert not ok
+    assert {f["code"] for f in verify_round(work, prep)["failures"]} == {"check-unreadable"}
+
+
+def test_save_check_result_for_another_prepared_file_fails_verify_check(work):
+    prep, book = open_checker_round(work)
+    check = passing_check(prep, book)
+    check["prepared_sha256"] = "0" * 64
+    checker_writes(work, json.dumps(check))
+    path, ok = L.save_check(work)
+    assert ok
+    assert "stale-check" in {f["code"] for f in verify_round(work, prep)["failures"]}
+
+
+def test_save_check_needs_a_round(tmp_path):
+    with pytest.raises(L.LoopError):
+        L.save_check(tmp_path)
 
 
 # --------------------------------------------------------------------------
@@ -380,14 +452,19 @@ def test_cli_runs_a_whole_round(work):
     r = run_prep("checker-input", work, prep, "--date", "2026-11-19")
     assert r.returncode == 0 and "5 sections, 4 prompts" in r.stdout, r.stderr
     book = json.loads((work / "checker" / "book.json").read_text(encoding="utf-8"))
-    (work / "rounds" / "01" / L.REPLY).write_text(json.dumps(passing_check(prep, book)), encoding="utf-8")
+    r = run_prep("save-check", work)
+    assert r.returncode == 1 and "the checker wrote no result file" in r.stderr
+    (work / "rounds" / "01" / "check.json").unlink()
+    reply = checker_writes(work, "nothing")
+    r = run_prep("save-check", work)
+    assert r.returncode == 1 and "saved as it is" in r.stderr
+    reply.unlink()
+    (work / "rounds" / "01" / "check.json").unlink()
+    checker_writes(work, json.dumps(passing_check(prep, book)))
     r = run_prep("save-check", work)
     assert r.returncode == 0, r.stderr
     r = run_prep("verify-check", ORIGINAL, prep, work / "rounds" / "01" / "check.json")
     assert r.returncode == 0, r.stderr
-    (work / "rounds" / "01" / L.REPLY).write_text("nothing", encoding="utf-8")
-    r = run_prep("save-check", work)
-    assert r.returncode == 1 and "saved as it is" in r.stderr
     r = run_prep("issues", work)
     assert r.returncode == 0 and "issues.md" in r.stdout
 
@@ -425,6 +502,61 @@ def test_guard_allows_reads_inside_the_checker_folder(view):
     assert G.decide(event("Glob", pattern="sections/*.txt", path=str(view))) is None
     assert G.decide(event("Grep", pattern="flash", path=str(view / "sections"), glob="*.txt")) is None
     assert G.decide(event("SomethingElse", file_path="/etc/passwd")) is None  # not a guarded tool
+    for tool in ("Edit", "MultiEdit", "NotebookEdit", "Bash"):
+        assert G.decide(event(tool, file_path=str(view / "book.json"), command="ls")) is not None, tool
+
+
+@pytest.fixture
+def reply_view(view: Path) -> Path:
+    """The checker folder of round 2, whose book.json names the result file."""
+    work = view.parent
+    (work / "rounds" / "02").mkdir(parents=True)
+    write_json(view / "book.json", {"format": L.CHECKER_INPUT_FORMAT, "round": 2, "prepared_sha256": "ab" * 32,
+                                    "result_file": str(work / "rounds" / "02" / L.REPLY)})
+    return view
+
+
+def test_guard_allows_exactly_one_write_of_the_result_file(reply_view):
+    work = reply_view.parent
+    reply = work / "rounds" / "02" / L.REPLY
+    write = event("Write", file_path=str(reply), content='{"verdict": "pass"}\n')
+    assert G.decide_write(write) is None
+    record = json.loads((work / "rounds" / "02" / G.RECORD).read_text(encoding="utf-8"))
+    assert record == {"format": G.RECORD_FORMAT, "version": 1, "file": L.REPLY, "round": 2,
+                      "prepared_sha256": "ab" * 32, "sha256": G.reply_digest(b'{"verdict": "pass"}'), "bytes": 20}
+    reply.write_text('{"verdict": "pass"}\n', encoding="utf-8")  # Claude Code performs the write
+    again = G.decide_write(write)
+    assert again is not None and "already exists" in again  # a second write of the same file
+    assert "only its result file" in G.decide_write(event("Write", file_path=str(work / "rounds" / "02" / "x.txt"),
+                                                         content="{}"))
+
+
+def test_guard_refuses_every_other_write(reply_view, tmp_path):
+    work = reply_view.parent
+    others = [
+        work / "draft.json",
+        work / "rounds" / "02" / "check.json",
+        work / "rounds" / "02" / G.RECORD,
+        work / "rounds" / "01" / L.REPLY,  # another round
+        reply_view / L.REPLY,  # inside the checker folder
+        reply_view / "book.json",
+        tmp_path / L.REPLY,
+        REPO / "tools" / "prep" / "INSTRUCTIONS.md",
+    ]
+    (work / "rounds" / "01").mkdir()
+    for path in others:
+        reason = G.decide_write(event("Write", file_path=str(path), content="{}"))
+        assert reason is not None and "only its result file" in reason, path
+    assert not (work / "rounds" / "02" / G.RECORD).exists()
+    assert G.decide_write(event("Write", content="{}")) is not None
+    assert G.decide_write(event("Write", file_path=str(work / "rounds" / "02" / L.REPLY))) is not None  # no content
+    link = work / "rounds" / "03"
+    link.symlink_to(work / "rounds" / "02")
+    assert G.decide_write(event("Write", file_path=str(link / L.REPLY), content="{}")) is None  # same file
+    (work / "rounds" / "02" / L.REPLY).unlink(missing_ok=True)
+    (work / "rounds" / "02" / "check.json").write_text("{}", encoding="utf-8")
+    reason = G.decide_write(event("Write", file_path=str(work / "rounds" / "02" / L.REPLY), content="{}"))
+    assert reason is not None and "already saved" in reason
 
 
 def test_guard_blocks_everything_else(view, tmp_path):
@@ -466,12 +598,34 @@ def test_guard_script_exit_codes(view):
     assert run("not json").returncode == 2
 
 
+def test_guard_script_allows_the_result_write_with_a_decision(reply_view):
+    script = REPO / "tools" / "prep" / "checker_guard.py"
+
+    def run(e: dict) -> subprocess.CompletedProcess:
+        return subprocess.run([sys.executable, str(script)], input=json.dumps(e), capture_output=True, text=True)
+
+    reply = reply_view.parent / "rounds" / "02" / L.REPLY
+    ok = run(event("Write", file_path=str(reply), content="{}"))
+    assert ok.returncode == 0 and ok.stderr == "", ok.stderr
+    assert json.loads(ok.stdout)["hookSpecificOutput"]["permissionDecision"] == "allow"
+    reply.write_text("{}", encoding="utf-8")
+    second = run(event("Write", file_path=str(reply), content="{}"))
+    assert second.returncode == 2 and second.stdout == "" and "already exists" in second.stderr
+    other = run(event("Write", file_path=str(reply_view.parent / "draft.json"), content="{}"))
+    assert other.returncode == 2 and "only its result file" in other.stderr
+    edit = run(event("Edit", file_path=str(reply), old_string="{}", new_string="[]"))
+    assert edit.returncode == 2 and "may not use Edit" in edit.stderr
+
+
 def test_agent_and_command_files_are_wired_to_these_tools():
     agent = (REPO / ".claude" / "agents" / "prep-checker.md").read_text(encoding="utf-8")
     command = (REPO / ".claude" / "commands" / "prep-book.md").read_text(encoding="utf-8")
     front = agent.split("---")[1]
     assert agent.startswith("---\n") and "name: prep-checker" in front
-    assert "tools: Read, Glob, Grep" in front and "Write" not in front and "Bash" not in front
+    assert "tools: Read, Glob, Grep, Write\n" in front
+    for tool in ("Edit", "Bash"):
+        assert f"tools: {tool}" not in front and f", {tool}" not in front.split("tools:")[1].split("\n")[0]
+    assert 'matcher: "Read|Glob|Grep|Write|Edit|MultiEdit|NotebookEdit|Bash"' in front
     assert "tools/prep/checker_guard.py" in front and "onFailure: block" in front
     assert command.startswith("---\n") and "disable-model-invocation: true" in command
     for step in ("extract", "build", "start-round", "validate", "checker-input", "save-check", "verify-check",
@@ -482,10 +636,16 @@ def test_agent_and_command_files_are_wired_to_these_tools():
 
 @pytest.mark.parametrize("entry", MANIFEST["checker"], ids=lambda e: e["file"])
 def test_checker_fixtures_go_through_the_loop_to_the_checker(entry, work):
-    """The planted fixtures reach the checker: built from their draft, validated, and given a checker folder."""
+    """The planted fixtures reach the checker: built from their draft, validated, and given a checker folder.
+
+    The committed fixtures were made under instructions version 1.0; a run uses the current version, so the
+    draft is given that version first (nothing else changes)."""
     (work / "draft.json").write_bytes((NEGATIVE / entry["draft"]).read_bytes())
+    assert build(work).read_bytes() == (NEGATIVE / entry["file"]).read_bytes()
+    draft = json.loads((NEGATIVE / entry["draft"]).read_text(encoding="utf-8"))
+    draft["book"]["instructions_version"] = VERSION
+    write_json(work / "draft.json", draft)
     prep = build(work)
-    assert prep.read_bytes() == (NEGATIVE / entry["file"]).read_bytes()
     L.start_round(work, ORIGINAL, prep)
     assert validate_round(work, prep)["passed"]
     book = L.checker_input(work, prep)

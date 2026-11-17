@@ -1,8 +1,12 @@
 # Book preparation instructions
 
-instructions_version: 1.0
+instructions_version: 1.1
 
 These instructions are for the **drafter**: the AI session that turns an extracted book into `draft.json` (sections, checkpoints, prompts and reference answers). The **checker**, a separate session, judges the result against these same instructions. Follow them literally. When the version above changes, copy the new value into the draft.
+
+**What a new version means.** A book is drafted and checked under one version, and the prepared book records it. A book that was prepared under an earlier version stays a valid prepared book: its report, the validator and the check of its checker result do not depend on the current version. A run of `/prep-book` always uses the current version, so a book is never revised under the version it was prepared with; it is prepared again (re-prepared) under the current one. A re-preparation must keep the earlier preparation's prompt ids (section 5), because saved grades on the device are keyed by them.
+
+Changes in 1.1: an exclusion reason starts with its kind; editorial matter inside a body document, and end notes shown as ordinary paragraphs, are named as excludable (section 3); the procedure for a long book (section 2). Nothing that 1.0 allowed is forbidden, apart from an exclusion reason that does not start with its kind.
 
 ## 1. What this is for
 
@@ -21,6 +25,17 @@ The work folder that `python3 -m tools.prep extract` wrote. Read only these file
 - `structure.json`: the same blocks, machine-readable (useful for word counts).
 
 Do not use anything you know about the book or its author from elsewhere. Everything you write must come from the extracted text.
+
+### A book too long to read at once
+
+`source.json` gives each spine document's word count (`words`). If they add up to more than 60,000, do not read the whole book before you start. Draft it in parts instead, in reading order:
+
+1. Read `source.json`, then one part: one spine document, or for a very long document a run of its paragraphs of about 30,000 words that ends at a heading or a clear break.
+2. Divide that part into sections, and write its sections, checkpoints, prompts and any exclusions into `draft.json`, appended after what is already there. Ids continue in order from the last one used: if the previous part ended with `s0041` and `c0037`, this part starts at `s0042` and `c0038`.
+3. Never go back to change or renumber a section, checkpoint or prompt of an earlier part. If you notice a mistake in an earlier part, finish the draft and let the round's checks find it.
+4. Go on with the next part until every document is covered. A part may be reread when the next one starts, to place the break between them.
+
+Every rule below applies to each part exactly as to a whole book; a section never crosses from one part into the next. A book of 60,000 words or fewer is read whole first. Scripts check what they can: `prep build` refuses a draft with a repeated id, sections out of reading order, overlapping ranges or a paragraph in no range (a part that was left out), and `prep start-round` refuses an id that moved to another section or was renumbered since an earlier round.
 
 ## 3. Sections
 
@@ -42,12 +57,15 @@ A section is an inclusive range of paragraphs, `first_paragraph` to `last_paragr
 
 ### What is excluded
 
-Put these in `excluded`, each range inside one document, with a short `reason`:
+Only these three kinds of text may be excluded. Put them in `excluded`, each range inside one document, with a short `reason` that **starts with the kind's name**, then a colon (`"Front matter: title page."`):
 
-- Front matter: title page, copyright page, dedication, epigraph, table of contents, lists of illustrations, publisher's or transcriber's notes.
-- Back matter: licences (for example a Project Gutenberg licence), index, bibliography, "about the author", advertisements, colophon.
+- **Front matter**: title page, copyright page or imprint, dedication, epigraph, table of contents, lists of illustrations, publisher's or transcriber's notes.
+- **Back matter**: licences (for example a Project Gutenberg licence), index, bibliography, "about the author", advertisements, colophon, and notes collected at the end of the book or a chapter that the text files show as ordinary paragraphs.
+- **Editorial matter**: text inside a body document that is not by the author but by an editor or translator of the edition: an editor's introduction or headnote to one essay or chapter, a translator's note, the edition's publication history. Exclude exactly that text. When it comes directly after the document's title heading, the heading may be excluded with it, so that the first section starts where the author's own text starts, at its own heading. Example: `"Editorial matter: the essay's title heading and the editor's introduction (publication history, not by the author)."`
 
-A preface, introduction, afterword or appendix that carries the author's own argument or content is **not** excluded: it gets sections like any chapter. Footnote and endnote bodies are never listed (they need neither a section nor an exclusion).
+A preface, introduction, afterword or appendix that carries the author's own argument or content is **not** excluded: it gets sections like any chapter. A chapter, essay or story of the book is never excluded, not even when a brief or a request says only part of the book is wanted: prepare the whole book. Footnote and endnote bodies are never listed (they need neither a section nor an exclusion).
+
+`prep validate` checks this (check `exclusions`), using only the EPUB's own markup of front, body and back matter, never its words: a reason that does not start with one of the three names fails; a whole document excluded between two documents that have sections fails, unless the EPUB marks it as front or back matter; and excluded words in documents the EPUB marks as body matter (or, in unmarked documents, between the first and the last section) may be at most 10% of the book's words.
 
 ### Which sections get a checkpoint
 
@@ -109,7 +127,7 @@ Write exactly one file, `draft.json`, in the work folder. Its schema is `tools/p
     "title": "<title from source.json>",
     "language": "<language from source.json>",
     "source_sha256": "<source_sha256 from source.json>",
-    "instructions_version": "1.0"
+    "instructions_version": "1.1"
   },
   "excluded": [
     { "chapter_href": "text/title.xhtml", "first_paragraph": "d01-p001", "last_paragraph": "d01-p003", "reason": "Front matter: title page." }
