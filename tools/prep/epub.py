@@ -523,7 +523,7 @@ def _rel_to_opf(opf_dir: str, zip_path: str, fragment: str) -> str:
     return rel + (f"#{fragment}" if fragment else "")
 
 
-def _nav_entries(book_dir: str, nav_path: str, doc: Document) -> list[tuple[str, str, int]]:
+def _nav_entries(nav_path: str, doc: Document) -> list[tuple[str, str, int]]:
     """(label, target zip path#fragment, depth) of the nav document's toc."""
     nav_dir = posixpath.dirname(nav_path)
     toc = next((n for n in doc.root.find_all(XHTML_NS, "nav") if "toc" in _tokens(n.get(EPUB_TYPE))), None)
@@ -643,7 +643,7 @@ def load_book_bytes(data: bytes, source_name: str) -> Book:
     source = ""
     nav = next((m for m in manifest if "nav" in m.properties), None)
     if nav is not None:
-        toc_raw = _nav_entries(opf_dir, nav.zip_path, _parse_member(archive, nav.zip_path))
+        toc_raw = _nav_entries(nav.zip_path, _parse_member(archive, nav.zip_path))
         source = "nav"
     if not toc_raw:
         ncx_id = spine_el.get("toc")
