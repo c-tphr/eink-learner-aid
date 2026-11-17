@@ -6,15 +6,14 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before this update carry dates that ran up to two days ahead of the calendar; their order is right._
 
-- **Milestones:** M0 to M6 complete. M7: every task merged except A1's release step. **A1 in progress**: `docs/ACCEPTANCE.md` is written; next the release workflow builds the `final` kit as a draft release and the "Device session results" issue is opened. M8 (A2) waits for the owner's device session.
-- **Merged since the last update:** #28 C4 (PR #103, after one rework round), #29 C5 (PR #108).
-- **Assigned, in progress:** #39 A1 (orchestrator).
-- **Next:** after the release: tell the owner the kit is ready. After the owner attaches results to the "Device session results" issue: #40 A2 (record real display timings in `docs/device/picco-timings.json`, set defaults, ship fixes as an SD-card update, final report).
-- **Carried into A2:** the device-only unknowns in `docs/ACCEPTANCE.md` ("Not proven") and `docs/DEVICE_SESSION.md` Appendix C; the results files are described in `tools/device/schema/rsvp-bench.md` and checked with `python -m piccoflash.results validate`.
+- **Milestones:** M0 to M7 complete. The device kit is the draft release **v2.0.1** (`docs/ACCEPTANCE.md`, "The release"). **M8 waits for the owner's device session.**
+- **Merged since the last update:** A1's acceptance report (PR #109); the release workflow ran twice on `main` at `2e1aadbc` (check run, then the draft release).
+- **Assigned, in progress:** nothing. No implementer is running.
+- **Next:** when the owner attaches results to issue #110 ("Device session results"): #40 A2. Validate the results files (`python -m piccoflash.results validate`, from `tools/device`), record real display timings in `docs/device/picco-timings.json`, set defaults (display profile, clearing limits), fix what the session found and ship it as an SD-card update (a new release with a higher version: 2.0.2 or above), and publish the final report.
 - **Blockers:** none.
 - **Waiting on the owner:**
-  1. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md`. Return only the summary file.
-  2. Optional: try the simulator in a Codespace (`docs/SIMULATOR.md`); it has never run in a real Codespace.
+  1. The device session: download the kit from the draft release v2.0.1 (sign in to see drafts), follow `docs/DEVICE_SESSION.md`, and return the results in issue #110. Steps 1 to 3 are read-only and can be done first on their own day.
+  2. Optional: publish the draft release (only needed for Wi-Fi updates later), try the simulator in a Codespace (`docs/SIMULATOR.md`), and run `/prep-book` once in a local Claude Code session to see the checker's guard pass (`docs/PREPARING_BOOKS.md`).
 
 ## Last decisions
 
@@ -74,6 +73,7 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 - 2026-11-20: C4: a reread starts at the section's first word in the chosen mode, with the flow kept in `ReadingSession`; no checkpoint fires during it; the section's end or "Back to the question" returns to the same prompt with the answer hidden. Orchestrator's decision in review: the page-view reread bar sits at the bottom over the reader's status row, placed from the reader's own text-area metrics, so no text is hidden with default settings (replaces S4 row 31's top bar); its button is 26 px high there.
 - 2026-11-20: C5: on opening a book, `planRestore()` decides the view (active reread, else active prompt with the answer hidden, else the saved position); a restored prompt shows before any page. `BookStateFile` now recovers a complete `.tmp` when the main file is missing (a power cut between remove and rename used to lose all grades). C5 also corrected the walk-through's steps 5, 6, 9 and 10 and the checklist's Appendix A to the real behaviour.
 - 2026-11-20: All six PRD criteria are mapped to passing evidence in `docs/ACCEPTANCE.md`; criterion 5 stays open until the device session.
+- 2026-11-20: A1: all six PRD criteria mapped to passing evidence (`docs/ACCEPTANCE.md`); criterion 5 is open until the device session. The kit is a draft release because cloud sessions cannot create, edit or delete releases except through the workflow; publishing is the owner's step. The results issue is #110.
 
 ## Issue map
 
@@ -121,7 +121,7 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 | D7 | #105 | M7 | merged (flashing tool wording and summary) |
 | A0 | #37 | M6 | merged |
 | P5 | #38 | M7 | merged |
-| A1 | #39 | M7 | in progress (orchestrator) |
+| A1 | #39 | M7 | done (acceptance report, draft release v2.0.1, results issue #110) |
 | A2 | #40 | M8 | open |
 | H1 | #72 | M7 | merged (housekeeping) |
 | P7 | #75 | M7 | merged |

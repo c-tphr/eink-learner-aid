@@ -24,8 +24,8 @@ import os
 from typing import List, Optional, Tuple
 
 from . import backup, esptool_calls, guard, identify, layout, plan as planmod, workdir
-from .common import (FLASH_FAILED, FLASH_PHRASE, NOT_REACHED, OK, STOP, Context, PortProblem, not_reached_help,
-                     restore_instructions)
+from .common import (FLASH_FAILED, FLASH_PHRASE, NOT_REACHED, OK, STOP, Context, PortProblem, kit_missing_help,
+                     not_reached_help, restore_instructions)
 from .device import DeviceError, DeviceNotReached
 from .ui import UI
 
@@ -87,6 +87,7 @@ def run(ctx: Context) -> int:
         ui.say("REFUSED: the flash plan does not pass the guard. Nothing was written.")
         for r in exc.reasons:
             ui.say("  - %s" % r)
+        kit_missing_help(ui, exc.reasons, ctx.work)
         return STOP
     for line in planmod.format_plan_header(plan) + [""] + planmod.format_table(plan):
         ui.say(line)
