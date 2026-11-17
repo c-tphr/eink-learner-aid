@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <Epub.h>
 #include <GfxRenderer.h>
+#include <HalStorage.h>
 #include <I18n.h>
 #include <Logging.h>
 #include <Memory.h>
@@ -111,6 +112,8 @@ std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& inpu
 }
 
 bool openedInRsvp(const Epub& epub) {
+  // Most books have no state file: answer without the allocation below.
+  if (!Storage.exists(reading::bookStatePath(epub.getPath()).c_str())) return false;
   // 78 KB while the file is read (BookStateFile.h), freed on return.
   auto state = makeUniqueNoThrow<checkpoint::BookState>();
   if (!state) return false;
