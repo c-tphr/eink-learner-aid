@@ -158,6 +158,9 @@ void RsvpActivity::onEnter() {
     band.lineHeight[i] = static_cast<int16_t>(renderer.getLineHeight(BAND_FONTS[i]));
   }
 
+  const displayprofile::TrialSetting profile = displayprofile::decodeTrialSetting(SETTINGS.rsvpDisplayProfile);
+  backend.setUnlockedTrials(profile.unlocked);
+  backend.select(profile.chosen);
   scheduler.setClearingLimits(backend.info().clearing);
   lastLoopMs.store(static_cast<uint32_t>(millis()));
   controlInput.restartGuard();

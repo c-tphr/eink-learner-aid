@@ -347,3 +347,28 @@ TEST(BenchPlan, NamesInTheFileAreStable) {
   EXPECT_STREQ(notRunReasonName(NotRunReason::PANEL_NO_TABLES), "panel-no-tables");
   EXPECT_STREQ(runStatusName(RunStatus::ENDED_BY_OWNER), "ended-by-owner");
 }
+
+TEST(BenchPlan, ARefusedProfileIsRecordedAndTheSweepMovesOn) {
+  Sweep s;
+  s.plan(PanelId::SIMULATED, false);
+  s.start();
+  runSteps(s, STEP_COUNT);
+  ASSERT_EQ(s.summary(SummaryChoice::NEXT), Next::RUN_STEP);
+  ASSERT_EQ(s.profile().id, ProfileId::TRIAL_A);
+  EXPECT_EQ(s.refuse(), Next::RUN_STEP);
+  EXPECT_EQ(s.profiles[1].status, ProfileStatus::NOT_ALLOWED);
+  EXPECT_EQ(s.profiles[1].reason, NotRunReason::REFUSED);
+  EXPECT_EQ(s.profiles[1].steps[0].status, StepStatus::SKIPPED);
+  EXPECT_EQ(s.profile().id, ProfileId::TRIAL_B);
+}
+
+TEST(BenchPlan, EstimateOfAProfilesDuration) {
+  // Stock at the Xteink X4 timings the simulator models (540 and 1,960 ms; README.md shows the sum):
+  // 10 opening clears 19.6 s, word band 60 s + 1 clear, full screen 5.4 s, clearing 9.8 s, four
+  // single-word passages 90 s + 2 clears each, two words 45 s + 1 clear, three words 37.5 s,
+  // endurance 180 s + 5 clears, and 7 ratings of 15 s.
+  EXPECT_EQ(estimateProfileSeconds(540, 1960, 60, OWNER_SECONDS_PER_RATING), 852u);
+  // A trial of about 200 ms per update: the pacing, not the panel, sets most of the time.
+  EXPECT_LT(estimateProfileSeconds(198, 1960, 30, OWNER_SECONDS_PER_RATING), 852u);
+  EXPECT_EQ(estimateProfileSeconds(0, 0, 60, 0), 348u) << "pacing and dwell alone";
+}

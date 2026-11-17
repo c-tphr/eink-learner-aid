@@ -231,6 +231,10 @@ class Sweep {
   Next residue(ResidueChoice choice);
   Next stopped(StopChoice choice);
   Next summary(SummaryChoice choice);
+  // The backend refused to select the current profile at run time (it should not: the benchmark
+  // unlocks only what the allow rule accepts). It is recorded as not allowed (REFUSED) and the sweep
+  // moves on to the next profile, or ends.
+  Next refuse();
   // The run ends now (the activity closes, or the device sleeps): the current step and everything
   // after it are recorded as not run. Used for the file written on the way out.
   void abandon(RunStatus why);
@@ -254,6 +258,17 @@ class Sweep {
   StepFigures stoppedFigures;
   RunStatus runStatus = RunStatus::RUNNING;
 };
+
+// --- How long a profile takes ----------------------------------------------------------------
+
+// Seconds one profile's sweep is expected to take on the panel, for the owner's planning (shown on
+// the benchmark's first screen; the arithmetic is in README.md). `updateMs` and `clearMs` are one word
+// update and one clearing refresh, transfer included; `ownerSeconds` is the owner's time per rated
+// step (looking, then the rating prompt). Every step starts with a clearing refresh; series updates
+// follow each other after the 60 ms dwell; playback holds each frame for its paced slot or the update
+// plus the dwell, whichever is longer; a clearing refresh is counted every `softLimit` updates.
+uint32_t estimateProfileSeconds(uint32_t updateMs, uint32_t clearMs, uint16_t softLimit, uint32_t ownerSeconds);
+inline constexpr uint32_t OWNER_SECONDS_PER_RATING = 15;
 
 // --- Results files ------------------------------------------------------------------------------
 

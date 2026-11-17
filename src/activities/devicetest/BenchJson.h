@@ -39,7 +39,7 @@ struct ConditionsRecord {
   int8_t temperatureC = 0;
   uint8_t batteryPercent = 0;
   bool usbConnected = false;
-  char clock[24] = {};  // local time "YYYY-MM-DDTHH:MM:SS" when the device has a clock, "" otherwise
+  char clock[32] = {};  // local time "YYYY-MM-DDTHH:MM:SS" when the device has a clock, "" otherwise
   uint32_t uptimeMs = 0;
 };
 

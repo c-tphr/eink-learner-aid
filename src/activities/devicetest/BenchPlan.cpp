@@ -304,6 +304,14 @@ Next Sweep::summary(const SummaryChoice choice) {
   return Next::RUN_SUMMARY;
 }
 
+Next Sweep::refuse() {
+  ProfileRecord& p = profiles[current];
+  p.status = ProfileStatus::NOT_ALLOWED;
+  p.reason = NotRunReason::REFUSED;
+  for (StepRecord& r : p.steps) r = StepRecord{StepStatus::SKIPPED};
+  return nextOrSummary();
+}
+
 void Sweep::abandon(const RunStatus why) {
   if (!running) return;
   ProfileRecord& p = profiles[current];
@@ -381,6 +389,36 @@ void Sweep::endRun(const RunStatus why) {
 }
 
 // ---------------------------------------------------------------------------------------------
+
+uint32_t estimateProfileSeconds(const uint32_t updateMs, const uint32_t clearMs, const uint16_t softLimit,
+                                const uint32_t ownerSeconds) {
+  constexpr uint64_t DWELL_MS = 60;  // rsvp::DEFAULT_MIN_DWELL_MS
+  const uint64_t limit = softLimit == 0 ? 1 : softLimit;
+  uint64_t ms = 0;
+  for (const StepSpec& s : STEPS) {
+    ms += clearMs;  // the clearing refresh each step starts from
+    switch (s.kind) {
+      case StepKind::FULL_SCREEN:
+        ms += static_cast<uint64_t>(s.count) * updateMs;
+        break;
+      case StepKind::CLEARING:
+        ms += static_cast<uint64_t>(s.count) * clearMs;
+        break;
+      case StepKind::WORD_BAND:
+      case StepKind::PLAYBACK:
+      case StepKind::ENDURANCE: {
+        const uint64_t words = s.wordsPerUpdate == 0 ? 1 : s.wordsPerUpdate;
+        const uint64_t frames = (s.count + words - 1) / words;
+        const uint64_t paced = s.kind == StepKind::WORD_BAND ? 0 : 60000u * words / s.wpm;
+        const uint64_t refresh = updateMs + DWELL_MS;
+        ms += frames * (paced > refresh ? paced : refresh) + (frames / limit) * clearMs;
+        break;
+      }
+    }
+    if (s.rated) ms += static_cast<uint64_t>(ownerSeconds) * 1000u;
+  }
+  return static_cast<uint32_t>((ms + 500) / 1000);
+}
 
 uint16_t runNumberOf(const std::string_view name) {
   if (name.size() < 5 || name[4] != '-') return 0;
