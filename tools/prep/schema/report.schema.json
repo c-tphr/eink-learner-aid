@@ -38,7 +38,9 @@
           "role": { "enum": ["drafter", "checker"] },
           "model": { "type": "string", "minLength": 1 },
           "date": { "type": ["string", "null"] },
-          "round": { "type": ["integer", "null"] }
+          "round": { "type": ["integer", "null"], "description": "The first round the model was used in; null when it is not in the round history." },
+          "rounds": { "type": "array", "items": { "type": "integer" }, "description": "Every round the model was used in. Absent in reports made by tools.prep 1.0.0." },
+          "deciding": { "type": "boolean", "description": "True for the checker of the result the report was decided on. Absent in reports made by tools.prep 1.0.0." }
         }
       }
     },

@@ -242,17 +242,24 @@ def _history_issues(rounds: list[Round]) -> list[Issue]:
 
 
 def _models(rounds: list[Round], check: dict[str, Any] | None, draft: dict[str, Any] | None) -> list[dict[str, Any]]:
-    seen = []
+    """One entry per (role, model, date): ``round`` where it first appears, ``rounds`` every round it was used in,
+    and ``deciding`` for the checker of the result the report was decided on (``check``)."""
+    seen: dict[tuple[str, str, str | None], dict[str, Any]] = {}
     for r in rounds:
         for role, doc in (("drafter", r.draft), ("checker", r.check)):
             m = _model_of(role, doc)
-            if m and (role, m["model"], m["date"]) not in [(x["role"], x["model"], x["date"]) for x in seen]:
-                seen.append({**m, "round": r.number})
+            if m:
+                entry = seen.setdefault((role, m["model"], m["date"]), {**m, "round": r.number, "rounds": []})
+                entry["rounds"].append(r.number)
     for role, doc in (("drafter", draft), ("checker", check)):
         m = _model_of(role, doc)
-        if m and (role, m["model"], m["date"]) not in [(x["role"], x["model"], x["date"]) for x in seen]:
-            seen.append({**m, "round": None})
-    return seen
+        if m:
+            seen.setdefault((role, m["model"], m["date"]), {**m, "round": None, "rounds": []})
+    deciding = _model_of("checker", check)
+    for (role, model, date), entry in seen.items():
+        entry["deciding"] = bool(deciding) and role == "checker" and (model, date) == (deciding["model"],
+                                                                                    deciding["date"])
+    return list(seen.values())
 
 
 def _model_of(role: str, doc: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -402,6 +409,14 @@ def evaluate(original: Path, prepared: Path, validation: Path | None = None, che
 # Markdown
 
 
+def _rounds_text(numbers: list[int]) -> str:
+    """'round 2', 'rounds 1 and 2', 'rounds 1, 2 and 3'."""
+    words = [str(n) for n in numbers]
+    if len(words) == 1:
+        return f"round {words[0]}"
+    return f"rounds {', '.join(words[:-1])} and {words[-1]}"
+
+
 def _cell(text: Any) -> str:
     return " ".join(str(text if text is not None else "").split()).replace("|", "\\|") or "-"
 
@@ -432,11 +447,27 @@ def render_markdown(report: dict[str, Any]) -> str:
     checkers = [m for m in models if m["role"] == "checker"]
     drafters = [m for m in models if m["role"] == "drafter"]
 
+    def name(m: dict[str, Any]) -> str:
+        return m["model"] + (f" ({m['date']})" if m["date"] else "")
+
+    def used(m: dict[str, Any]) -> list[int]:
+        return m.get("rounds") or ([m["round"]] if m.get("round") else [])
+
     def model_text(ms: list[dict[str, Any]]) -> str:
         if not ms:
             return "not recorded"
-        return ", ".join(f"{m['model']}" + (f" ({m['date']})" if m["date"] else "") +
-                         (f" in round {m['round']}" if m["round"] else "") for m in ms)
+        return "; ".join(name(m) + (f" in {_rounds_text(used(m))}" if used(m) else "") for m in ms)
+
+    def checker_text(ms: list[dict[str, Any]]) -> str:
+        deciding = next((m for m in ms if m.get("deciding")), None)
+        if deciding is None:
+            return model_text(ms)
+        last = max(used(deciding)) if used(deciding) else None
+        text = name(deciding) + (f", in round {last}, the round that decided the result" if last else "")
+        rest = [n for n in used(deciding) if n != last]
+        earlier = [f"the same model in {_rounds_text(rest)}"] if rest else []
+        earlier += [name(m) + (f" in {_rounds_text(used(m))}" if used(m) else "") for m in ms if m is not deciding]
+        return text + (f"; earlier rounds: {'; '.join(earlier)}" if earlier else "")
 
     tools = report["tools"]
     lines += [
@@ -449,7 +480,8 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Text in no section: {_excluded_text(report)}",
         f"- Rounds of drafting and checking: {report['rounds']}"
         + ("." if report["history"] else " (no round history was given; the files named here are the only round)."),
-        f"- Drafter model: {model_text(drafters)}. Checker model: {model_text(checkers)}.",
+        f"- Drafter model: {model_text(drafters)}.",
+        f"- Checker model: {checker_text(checkers)}.",
         f"- Tools: {tools['name']} {tools['version']}, word rules version {tools['word_rules_version']}, "
         f"EPUBCheck {tools['epubcheck_version'] or 'not run'}.",
         f"- Report made: {report['created']}.",
@@ -463,16 +495,31 @@ def render_markdown(report: dict[str, Any]) -> str:
     ]
     for c in report["checks"]:
         lines.append(f"| {_cell(c['name'])} | {_cell(c['title'])} | {STATUS_WORDS.get(c['status'], c['status'])} |")
+    # On a READY book every open issue is a minor one on a prompt that passed (a blocking one fails the checker).
+    minor = [i for i in report["issues"] if ready and i["open"] and i["raised_by"] == "checker"]
+    issues = [i for i in report["issues"] if i not in minor]
     lines += ["", "## Issues", ""]
     if not report["issues"]:
         lines.append("No issues were raised.")
+    elif not issues:
+        lines.append("No issues were raised apart from the minor ones below.")
     else:
         lines += ["| Round | Raised by | Issue | Where | Description | How it was resolved |",
                   "| --- | --- | --- | --- | --- | --- |"]
-        for i in report["issues"]:
+        for i in issues:
             severity = "" if i["severity"] in ("blocking", "") else f" ({i['severity']})"
             lines.append(f"| {_cell(i['round'])} | {_cell(i['raised_by'])} | {_cell(i['code'] + severity)} | "
                          f"{_cell(i['where'])} | {_cell(i['description'])} | {_cell(i['resolution'])} |")
+    if minor:
+        lines += ["", "## Minor issues: these do not block delivery", "",
+                  "The checker passed every prompt and section of this book, but noted these points of style or "
+                  "wording. The book is READY with them. They can be addressed in a later re-preparation of the book "
+                  "(see \"READY with minor issues\" in docs/PREPARING_BOOKS.md).", "",
+                  "| Round | Issue | Where | Description |", "| --- | --- | --- | --- |"]
+        for i in minor:
+            severity = f" ({i['severity']})" if i["severity"] else ""
+            lines.append(f"| {_cell(i['round'])} | {_cell(i['code'] + severity)} | "
+                         f"{_cell(i['where'])} | {_cell(i['description'])} |")
     lines += ["", f"Every detail, including each check's findings, is in `{report_name_from(report)}"
                   ".validation-report.json`.", ""]
     return "\n".join(lines)

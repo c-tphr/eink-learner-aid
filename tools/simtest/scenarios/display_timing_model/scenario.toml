@@ -1,0 +1,40 @@
+# The simulator's display timing model (task E3; src/display/, lib/DisplayProfileCore/README.md).
+# The temporary self-test hook (src/display/DisplaySelfTest.h) draws a counter band 5 times through
+# DisplayProfile's update() and runs one clear(), with the model set to 200 ms per update and
+# 400 ms per clear by environment. Its sibling display_timing_model_zero sets both to 0.
+#
+# The timing checks read the durations the firmware logs for its own calls ("ms=", measured with
+# millis() around the real draw plus the remainder sleep), never the harness's wall clock:
+#   - lower bound: each update logs ms >= 200 and each clear ms >= 400. This is exact, not a
+#     tolerance: the backend sleeps model - real after the real draw, a thread sleep never returns
+#     early, and with whole-millisecond readings the measured total can only round up to the model.
+#   - upper bound, generous: updates below 2,000 ms and the clear below 2,400 ms, i.e. 1,800 and
+#     2,000 ms of slack for a slow draw or a late wake-up on a loaded CI runner. The real draw is a
+#     480x800 pixel conversion (logged as real=, about 1 ms here); exceeding the bound would take
+#     a stall of seconds, not load.
+#   - model=200 / model=400 shows the environment override was applied (it beats the defaults of
+#     540 and 1,960 ms), and the "Simulator model" line names its source (env).
+# Each update's line carries its count (n=1..5), so every wait matches a different line in order.
+description = "Display timing model: 5 self-test updates at a modelled 200 ms and one clear at 400 ms, with durations from the firmware's own log"
+
+env = { vars = { CROSSPOINT_SIM_DISPLAY_SELFTEST = "5", CROSSPOINT_SIM_UPDATE_MS = "200", CROSSPOINT_SIM_CLEAR_MS = "400" } }
+
+steps = [
+  { wait_screen = "Browse Files", note = "an empty card boots to Home" },
+  { wait_log = "\\[DSP\\] Simulator model stock: update 200 ms \\(env\\), clear 400 ms \\(env\\)", note = "the environment beats the built-in 540/1960 ms" },
+  { wait_log = "\\[DSP\\] Self-test: 5 updates and 1 clear, profile stock" },
+  { wait_log = "\\[DSP\\] update n=1 profile=stock ms=(2\\d\\d|[3-9]\\d\\d|1\\d\\d\\d) model=200 real=\\d+ slept=\\d+", note = "200 <= ms <= 1999" },
+  { wait_log = "\\[DSP\\] update n=2 profile=stock ms=(2\\d\\d|[3-9]\\d\\d|1\\d\\d\\d) model=200 real=\\d+ slept=\\d+" },
+  { wait_log = "\\[DSP\\] update n=3 profile=stock ms=(2\\d\\d|[3-9]\\d\\d|1\\d\\d\\d) model=200 real=\\d+ slept=\\d+" },
+  { wait_log = "\\[DSP\\] update n=4 profile=stock ms=(2\\d\\d|[3-9]\\d\\d|1\\d\\d\\d) model=200 real=\\d+ slept=\\d+" },
+  { wait_log = "\\[DSP\\] update n=5 profile=stock ms=(2\\d\\d|[3-9]\\d\\d|1\\d\\d\\d) model=200 real=\\d+ slept=\\d+" },
+  { wait_log = "\\[DSP\\] clear n=1 profile=stock ms=(4\\d\\d|[5-9]\\d\\d|1\\d\\d\\d|2[0-3]\\d\\d) model=400 real=\\d+ slept=\\d+", note = "400 <= ms <= 2399" },
+  { wait_log = "\\[DSP\\] stats profile=stock panel=simulator updates=5 min=(2\\d\\d|[3-9]\\d\\d|1\\d\\d\\d) max=(2\\d\\d|[3-9]\\d\\d|1\\d\\d\\d) mean=\\d+ last=\\d+ clears=1 " },
+  { wait_log = "\\[DSP\\] Self-test done" },
+  { shot = "band", note = "Home with the self-test band after update 5 of 5 and the clear" },
+  { press = "DOWN", note = "the firmware carries on: Home moves its highlight and redraws over the band" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { shot = "home_after" },
+  { compare = "band" },
+  { compare = "home_after" },
+]

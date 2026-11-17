@@ -18,6 +18,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "display/DisplayProfile.h"
+
 namespace {
 
 constexpr rsvp::Token TOKENS[] = {
@@ -124,6 +126,9 @@ void runRsvpLinkCheck() {
           checkpoint::flowStateName(refused.state), static_cast<unsigned>(refused.refusal),
           checkpoint::readingModeName(plan.place.mode), encoded ? static_cast<unsigned>(sink.length()) : 0u,
           checkpoint::decodeStatusName(decoded.status), millis() - startMs);
+
+  // DisplayProfile (task E3): profiles, adapter, statistics and this build's backend.
+  displayprofile::runDisplayProfileLinkCheck();
 }
 
 #endif

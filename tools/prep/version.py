@@ -8,5 +8,5 @@ plus NOTE regions) that ``words.py`` implements; it equals the
 """
 
 TOOL_NAME = "tools.prep"
-TOOL_VERSION = "1.0.0"
+TOOL_VERSION = "1.1.0"
 WORD_RULES_VERSION = 1

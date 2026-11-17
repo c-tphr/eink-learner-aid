@@ -9,16 +9,17 @@ The project's firmware code sits beside upstream CrossPoint, not inside it (`doc
 | `lib/RsvpCore/` | RsvpCore | Word classes, focus letter, pacing, frames, scheduler, delivered-WPM meter. Portable, host-tested (`test/rsvp_core`) | R1, R2 (done) |
 | `lib/CheckpointCore/` | CheckpointCore | Checkpoint file parser, trigger rules, checkpoint and reread state machine, grade rules, state file encoding. Portable, host-tested (`test/checkpoint_core`) | C1a, C1b (done) |
 | `lib/WordIndex/` | WordIndex | Per-chapter word stream with anchors and non-prose markers; page-to-word mapping. Portable, host-tested (`test/word_index`) | R3 (done) |
+| `lib/DisplayProfileCore/` | DisplayProfile (portable part) | Profile table and clearing limits, backend interface, statistics, the `rsvp::DisplaySink` adapter, the simulator timing model, a fake backend. Portable, host-tested (`test/display_profile`) | E3 (done) |
 | `src/reading/` | ReadingSession | Position, mode, navigation source, checkpoint firing, saved state | C2 (#26), C4, C5 |
 | `src/activities/rsvp/` | RsvpActivity | Word band, pause screen, RSVP settings, touch and keys | R4a (#21), R4b, R5 |
 | `src/activities/checkpoint/` | CheckpointActivity | Prompt, reveal, grade, reread choice, skip | C3 (#27), C4 |
-| `src/display/` | DisplayProfile | Refresh strategies, per-update timing, clearing policy | E3 (#8), D1, D2 |
+| `src/display/` | DisplayProfile | Millisecond clock, simulator backend (modelled timing), placeholder device backend, a temporary simulator self-test | E3 (done), D1, D2 |
 | `src/activities/devicetest/` | DeviceTestActivity | Benchmark sweep, ratings, guided acceptance, results files | D3a (#32), D3b |
 | `lib/UpdatePolicy/` | (two-slot build) | Self-update slot policy and the Wi-Fi updater's release source, asset name and version rule. Portable, host-tested (`test/update_policy`) | D4 (done) |
 | `src/update/` | (two-slot build) | Reads the running partition table through ESP-IDF and gates the update menus, the boot recovery picker and every update write; points the Wi-Fi updater at this repository | D4 (done) |
 | `src/RsvpFeature.h` | (all) | The feature flag test, below | F4 |
 
-Each `src/` directory has a README naming its component and task. Until that task lands it holds a one-symbol placeholder `.cpp`. `src/reading/RsvpLinkCheck.cpp` is a temporary start-up check that links every source file of RsvpCore and CheckpointCore into the firmware; ReadingSession replaces it.
+Each `src/` directory has a README naming its component and task. Until that task lands it holds a one-symbol placeholder `.cpp`. `src/reading/RsvpLinkCheck.cpp` is a temporary start-up check that links every source file of RsvpCore and CheckpointCore, and DisplayProfile's profiles, adapter, statistics and device backend, into the firmware; ReadingSession replaces it.
 
 The libraries in `lib/` stay free of Arduino, ESP-IDF, HAL and SDK code, so the host tests keep covering them. They contain no flag test: only `src/` code under the flag includes their headers, so only flagged builds use them.
 
@@ -52,6 +53,8 @@ Registration points so far:
 | --- | --- | --- |
 | `platformio.ini` | `-DCROSSPOINT_RSVP=1` in `[env:picco]`, `[env:picco-gh_release]`, `[env:picco-gh_release_rc]` | F4 |
 | `src/main.cpp` | `#include "reading/RsvpLinkCheck.h"` and the call `runRsvpLinkCheck();` in `setup()` | F4 (temporary; replaced by C2) |
+| `src/main.cpp` | `#include "display/DisplaySelfTest.h"` and the call `runDisplaySelfTestIfRequested(renderer);` in `loop()`, after `activityManager.loop()`: simulator only, and only with `CROSSPOINT_SIM_DISPLAY_SELFTEST` set | E3 (temporary; removed when the RSVP activity covers the timing model) |
+| `test/CMakeLists.txt` | `add_subdirectory(display_profile)` | E3 |
 | `src/main.cpp` | Boot recovery picker condition: `update_gate::updateMenusVisible(!BoardConfig::isPicco())` | D4 |
 | `src/activities/settings/SettingsActivity.cpp` | "Check for updates" and "SD Card Firmware Update" shown when `update_gate::updateMenusVisible(!BoardConfig::isPicco())` | D4 |
 | `src/network/FirmwareFlasher.cpp` | `update_gate::mayWriteUpdateSlot` before the SD update erases the next slot | D4 |
@@ -61,6 +64,10 @@ Registration points so far:
 ## Simulator
 
 `simulator_picco` builds the firmware against the simulator library's HAL shims. A HAL method that this project adds, or calls and the pinned simulator lacks, needs a stub there. Stubs are patch files in `scripts/simulator_patches/`, applied by `scripts/patch_simulator.py` before every simulator build. `docs/BASE.md`, "Adding a simulator patch", gives the steps.
+
+### Display timing model
+
+The simulator redraws instantly, so DisplayProfile's simulator backend (`src/display/SimulatorDisplayBackend.h`) draws each word update and clearing refresh through the renderer and then sleeps for the rest of a modelled time, so playback in the simulator slows down as it will on the panel. The modelled times come from built-in defaults (540 and 1,960 ms for stock, plan section 9), then `docs/device/picco-timings.json` once the device session has written it (compiled in by the `simulator_picco` pre-script `scripts/gen_display_timings.py`; a malformed file stops the build), then `CROSSPOINT_SIM_UPDATE_MS` / `CROSSPOINT_SIM_CLEAR_MS` (`0`: no added delay). Only calls made through DisplayProfile are slowed; the rest of the simulator is unchanged. Details: `lib/DisplayProfileCore/README.md`, "Timing model".
 
 ## The two Picco builds and self-update
 

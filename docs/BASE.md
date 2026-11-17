@@ -50,9 +50,11 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `scripts/net-smoke.sh`, `scripts/net_smoke.py` | Added | Network smoke test (task F2) |
 | `scripts/patch_simulator.py`, `scripts/simulator_patches/` | Added | Patches applied to the fetched simulator library (see "Simulator" below) (task F2) |
 | `docs/net-smoke-report.md`, `docs/evidence/f2/` | Added | Smoke test report and evidence (task F2) |
-| `test/CMakeLists.txt` | **Modified, four lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a), `add_subdirectory(word_index)` (task R3) and `add_subdirectory(update_policy)` (task D4), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
+| `test/CMakeLists.txt` | **Modified, five lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a), `add_subdirectory(word_index)` (task R3), `add_subdirectory(display_profile)` (task E3) and `add_subdirectory(update_policy)` (task D4), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
 | `platformio.ini` | **Modified, three lines added**: `-DCROSSPOINT_RSVP=1` at the end of `build_flags` in `[env:picco]`, `[env:picco-gh_release]` and `[env:picco-gh_release_rc]` | The RSVP feature flag, on for the Picco targets only (task F4). `simulator_picco` sets it in `platformio.project.ini`. See `docs/ARCHITECTURE-RSVP.md` |
 | `src/main.cpp` | **Modified, two lines added**: `#include "reading/RsvpLinkCheck.h"` and `runRsvpLinkCheck();` in `setup()`, after the "Starting CrossPoint version" log line | Temporary start-up check that links RsvpCore and CheckpointCore; an empty inline function without the flag (task F4). Task C2 replaces it with ReadingSession |
+| `src/main.cpp` | **Modified, two more lines added**: `#include "display/DisplaySelfTest.h"` (after `components/UITheme.h`) and `runDisplaySelfTestIfRequested(renderer);` in `loop()`, right after `activityManager.loop();` | Temporary simulator-only display self-test (task E3, `src/display/DisplaySelfTest.h`): runs only when `CROSSPOINT_SIM_DISPLAY_SELFTEST` is set; an empty inline function on the device and on every build without the RSVP flag. Removed when the RSVP activity exercises DisplayProfile |
+| `scripts/display_timings.py`, `scripts/gen_display_timings.py` | Added | The display timings file's validator and header generator, and the `simulator_picco` pre-script that runs it (task E3; `lib/DisplayProfileCore/README.md`, "Timing model") |
 | `src/main.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; in the `recoveryFirmwareMode` condition `!BoardConfig::isPicco()` became `update_gate::updateMenusVisible(!BoardConfig::isPicco())` in the same place; one comment line | Boot recovery SD picker on a two-slot Picco only. Without the flag the function returns its argument, so other devices are unchanged (the `x4pro` image is identical apart from the embedded ELF hash and the image checksum and hash, task D4's pull request) |
 | `src/activities/settings/SettingsActivity.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; `if (!BoardConfig::isPicco())` before "Check for updates" and "SD Card Firmware Update" became `if (update_gate::updateMenusVisible(!BoardConfig::isPicco()))`; the comment above it extended by one sentence | Feature builds show the two update entries only when the running partition table allows self-update (`lib/UpdatePolicy`); upstream behaviour without the flag |
 | `src/network/FirmwareFlasher.cpp` | **Modified** (task D4): `#include "update/UpdateGate.h"`; in `flashFromSdPath`, after the next-update partition is found, `if (!update_gate::mayWriteUpdateSlot(dest->address, sdPath)) return Result::NO_PARTITION;` (3 lines) | Running-slot guard for the SD path at the point of writing (spike S3: it had none). Always true without the flag |
@@ -129,10 +131,10 @@ git merge-base --is-ancestor 490813ff4541e74e654f54f66ece9efc908361a0 HEAD && ec
 git submodule status
 
 # 3. Outside docs/ and README.md, the only upstream files modified are platformio.ini (four lines),
-#    test/CMakeLists.txt (four lines), src/main.cpp, src/activities/settings/SettingsActivity.cpp,
-#    src/network/FirmwareFlasher.cpp, src/network/OtaUpdater.cpp (registration points, task D4),
-#    .gitignore (two lines), AGENTS.md (a preamble under the title) and five .github/workflows files
-#    (job conditions), all in the table above;
+#    test/CMakeLists.txt (five lines), src/main.cpp (four lines from tasks F4 and E3, plus the D4 edit),
+#    src/activities/settings/SettingsActivity.cpp, src/network/FirmwareFlasher.cpp,
+#    src/network/OtaUpdater.cpp (registration points, task D4), .gitignore (two lines), AGENTS.md (a
+#    preamble under the title) and five .github/workflows files (job conditions), all in the table above;
 #    everything else listed is an added file from the table above
 git diff --stat --diff-filter=MD 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 git diff --stat 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'

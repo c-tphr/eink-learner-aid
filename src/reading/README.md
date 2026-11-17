@@ -6,4 +6,4 @@ Filled by task C2 (#26), then extended by C4 (#28) and C5 (#29).
 
 Everything here is compiled only with the RSVP feature flag: every file includes `RsvpFeature.h` and wraps its code in `#if CROSSPOINT_RSVP_ENABLED` (see `docs/ARCHITECTURE-RSVP.md`).
 
-Now: `ReadingSession.cpp` is a placeholder. `RsvpLinkCheck.h/.cpp` is a temporary start-up check, called from `setup()` in `src/main.cpp`, that links every source file of RsvpCore and CheckpointCore into the firmware and logs one debug line. C2 removes both, and the call in `main.cpp`, when the real ReadingSession lands.
+Now: `ReadingSession.cpp` is a placeholder. `RsvpLinkCheck.h/.cpp` is a temporary start-up check, called from `setup()` in `src/main.cpp`, that links every source file of RsvpCore and CheckpointCore into the firmware and logs one debug line; it also runs DisplayProfile's link check (`src/display/DisplayProfile.h`, task E3), which logs a second line. C2 removes both, and the call in `main.cpp`, when the real ReadingSession lands.

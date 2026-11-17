@@ -9,11 +9,10 @@ import sys
 import pytest
 
 from tools.prep import version
-from tools.prep.loop import instructions_version
 from tools.prep.verify_check import CRITERIA
 from tools.prep.build import build_file
 from tools.prep.fixture import prepared as gen
-from tools.prep.tests.prepkit import BOOKS, DRAFT, MANIFEST, NEGATIVE, ORIGINAL, PREPARED_BYTES, REPO
+from tools.prep.tests.prepkit import BOOKS, DRAFT, DRAFT_MANIFEST, MANIFEST, NEGATIVE, ORIGINAL, PREPARED_BYTES, REPO
 
 GENERATOR = REPO / "tools" / "prep" / "fixture" / "prepared.py"
 
@@ -62,11 +61,24 @@ def test_manifest_shape():
         assert entry["criterion"] in CRITERIA and entry["reason"].strip()
 
 
+def test_draft_manifest_shape_and_excluded_chapter(tmp_path):
+    assert DRAFT_MANIFEST["format"] == "rsvp-negative-drafts" and DRAFT_MANIFEST["original"] == "../fixture.epub"
+    assert [e["file"] for e in DRAFT_MANIFEST["drafts"]] == ["excluded-chapter.prepared.epub"]
+    for entry in DRAFT_MANIFEST["drafts"]:
+        assert set(entry) == {"draft", "file", "failing_checks", "codes", "reason"}
+        out = tmp_path / "x.prepared.epub"
+        build_file(ORIGINAL, NEGATIVE / entry["draft"], out)  # it builds: only the validator can refuse it
+        assert out.read_bytes() == (NEGATIVE / entry["file"]).read_bytes()
+    draft = json.loads((NEGATIVE / "excluded-chapter.draft.json").read_text(encoding="utf-8"))
+    assert [s["chapter_href"] for s in draft["sections"]] == ["text/chapter-1.xhtml"] * 2 + ["text/chapter-3.xhtml"]
+    assert draft["excluded"][1]["chapter_href"] == "text/chapter-2.xhtml"
+
+
 @pytest.mark.parametrize("entry", MANIFEST["checker"], ids=lambda e: e["file"])
 def test_checker_fixture_plants_exactly_one_fault(entry, tmp_path):
     base = json.loads(DRAFT.read_text(encoding="utf-8"))
     draft = json.loads((NEGATIVE / entry["draft"]).read_text(encoding="utf-8"))
-    assert draft["book"]["instructions_version"] == instructions_version()
+    assert draft["book"]["instructions_version"] == gen.CHECKER_INSTRUCTIONS_VERSION == "1.0"
     base["book"]["instructions_version"] = draft["book"]["instructions_version"]
     prompts = {p["id"]: p for c in draft["checkpoints"] for p in c["prompts"]}
     base_prompts = {p["id"]: p for c in base["checkpoints"] for p in c["prompts"]}

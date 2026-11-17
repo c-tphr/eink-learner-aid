@@ -33,6 +33,7 @@ from typing import Any, Callable
 from . import checkpoints as cp
 from . import draft as draft_mod
 from . import epubcheck as epubcheck_mod
+from . import matter
 from .build import CHECKPOINTS_HREF, CHECKPOINTS_ID, CHECKPOINTS_MEDIA_TYPE
 from .epub import OPF_NS, XHTML_MEDIA_TYPE, Book, EpubError, SpineDoc, load_book_bytes
 from .epubzip import ZipFormatError
@@ -59,6 +60,7 @@ CHECKS = [
     ("anchors", "Every section's two anchors exist once, in its chapter, as empty spans, in order, without overlap"),
     ("word-boundaries", "Every anchor sits between two words, outside tables and code blocks"),
     ("coverage", "Sections cover the body text; everything else is footnotes or listed excluded matter"),
+    ("exclusions", "Excluded text is front, back or editorial matter, not the body of the book"),
     ("word-counts", "Every section's word_count equals the words between its anchors"),
     ("text-unchanged", "Every spine document has the original's words, flags, markers and footnote marks"),
     ("archive-unchanged", "Only the anchors, one manifest line and the checkpoint file differ from the original"),
@@ -435,18 +437,34 @@ def _load_draft(raw: bytes, original: Book | None, data: dict[str, Any] | None, 
     return parsed
 
 
+def _note_mask(sd: SpineDoc) -> list[bool]:
+    """For each word of the document: is it in a footnote or endnote body (a NOTE region)?"""
+    n = len(sd.words)
+    note = [False] * n
+    for marker in sd.stream.markers if sd.stream is not None else []:
+        if marker.kind == NOTE:
+            for k in range(marker.start, min(marker.end, n)):
+                note[k] = True
+    return note
+
+
+Exclusions = dict[str, list[tuple[int, int, str]]]
+
+
 def _check_coverage(original: Book | None, prepared: Book, data: dict[str, Any], resolved: dict[str, Resolved],
-                    broken_docs: set[str], draft_raw: bytes | None, check: Check) -> str:
-    """``coverage``. Returns the mode used: 'draft' or 'implicit'."""
-    excluded: dict[str, list[tuple[int, int, str]]] = {}
+                    broken_docs: set[str], draft_raw: bytes | None,
+                    check: Check) -> tuple[str, dict[str, Any] | None, Exclusions]:
+    """``coverage``. Returns the mode used ('draft' or 'implicit'), the usable draft and its excluded ranges."""
+    excluded: Exclusions = {}
     mode = "implicit"
+    draft_data = None
     if draft_raw is not None:
         mode = "draft"
         draft_data = _load_draft(draft_raw, original, data, check)
         if draft_data is None or original is None:
             check.details.append("coverage not judged: the draft cannot be used")
             check.incomplete = True
-            return mode
+            return mode, None, excluded
         excluded = _exclusions(draft_data, original, check)
     section_docs = {s["chapter_href"] for s in data["sections"]}
     for sd in prepared.spine:
@@ -457,11 +475,7 @@ def _check_coverage(original: Book | None, prepared: Book, data: dict[str, Any],
             check.details.append(f"{sd.href}: not judged, a section's anchors there did not resolve")
             continue
         n = len(sd.words)
-        note = [False] * n
-        for marker in sd.stream.markers:
-            if marker.kind == NOTE:
-                for k in range(marker.start, min(marker.end, n)):
-                    note[k] = True
+        note = _note_mask(sd)
         secs = sorted((r for r in resolved.values() if r.doc is sd), key=lambda r: r.start)
         if mode == "implicit" and not secs and sd.href not in section_docs:
             body = n - sum(note)
@@ -480,7 +494,8 @@ def _check_coverage(original: Book | None, prepared: Book, data: dict[str, Any],
                            f"{len(overlap)} words are both in a section and in an excluded range ({reason!r})")
             for k in range(start, min(end, n)):
                 out[k] = True
-            check.details.append(f"{sd.href}: words {start}-{end - 1} excluded by the draft: {reason}")
+            span = f"words {start}-{end - 1}" if end > start else "a range with no words"
+            check.details.append(f"{sd.href}: {span} excluded by the draft: {reason}")
         k = 0
         while k < n:
             if covered[k] or out[k] or note[k]:
@@ -493,7 +508,96 @@ def _check_coverage(original: Book | None, prepared: Book, data: dict[str, Any],
                        f"{run_end - k} words are in no section and not excluded: {_words(sd.words, k, run_end)}")
             k = run_end
         check.details.append(f"{sd.href}: {sum(covered)} of {n} words in sections, {sum(note)} in footnotes")
-    return mode
+    return mode, draft_data, excluded
+
+
+# What may be excluded (INSTRUCTIONS.md section 3; tools/prep/README.md, "The exclusions check").
+EXCLUSION_CATEGORIES = ("Front matter", "Back matter", "Editorial matter")
+MAX_EXCLUDED_BODY_PERCENT = 10
+
+
+def exclusion_category(reason: str) -> str | None:
+    """The category a reason starts with ('Front matter: title page.' -> 'Front matter'), else None."""
+    text = reason.strip().lower()
+    for name in EXCLUSION_CATEGORIES:
+        if text.startswith(name.lower()) and (len(text) == len(name) or text[len(name)] in ": "):
+            return name
+    return None
+
+
+def _check_exclusions(prepared: Book, data: dict[str, Any], resolved: dict[str, Resolved], mode: str,
+                      draft_data: dict[str, Any] | None, excluded: Exclusions, check: Check) -> None:
+    """``exclusions``: the excluded text is what INSTRUCTIONS.md section 3 allows to leave out.
+
+    Which documents the EPUB marks as front, back or body matter comes from ``matter.py``. Words are
+    counted outside NOTE regions. In implicit mode a document without a section counts as excluded.
+    """
+    if mode == "draft" and draft_data is None:
+        check.details.append("not judged: the draft cannot be used (see coverage)")
+        check.incomplete = True
+        return
+    if draft_data is not None:
+        for i, entry in enumerate(draft_data["excluded"]):
+            if exclusion_category(entry["reason"]) is None:
+                check.fail("exclusion-category", f"draft.json#/excluded/{i}/reason",
+                           f"the reason {entry['reason']!r} does not start with one of the categories "
+                           f"{', '.join(EXCLUSION_CATEGORIES)}; nothing else may be excluded")
+    if not resolved or len(resolved) != len(data["sections"]):
+        check.details.append("the excluded words are not judged: a section's anchors did not resolve")
+        check.incomplete = True
+        return
+    roles = matter.document_roles(prepared)
+    first_start = min((r.doc.index, r.start) for r in resolved.values())
+    last_end = max((r.doc.index, r.end) for r in resolved.values())
+    section_docs = {r.doc.index for r in resolved.values()}
+    section_hrefs = {s["chapter_href"] for s in data["sections"]}
+    total = 0
+    counted: list[tuple[str, int, str]] = []
+    for sd in prepared.spine:
+        if not sd.is_xhtml or sd.stream is None:
+            continue
+        n = len(sd.words)
+        note = _note_mask(sd)
+        words_here = n - sum(note)
+        total += words_here
+        if mode == "draft":
+            ranges = [(start, min(end, n)) for start, end, _ in excluded.get(sd.href, [])]
+        elif sd.index not in section_docs and sd.href not in section_hrefs:
+            ranges = [(0, n)]
+        else:
+            ranges = []
+        out = [False] * n
+        for start, end in ranges:
+            for k in range(start, end):
+                out[k] = not note[k]
+        excluded_here = sum(out)
+        if not excluded_here:
+            continue
+        role = roles[sd.zip_path]
+        check.details.append(f"{sd.href}: {excluded_here} words excluded; the EPUB marks it as {role.kind} "
+                             f"({role.evidence})")
+        if role.kind == matter.FRONT_BACK:
+            continue
+        # Body matter always counts; an unmarked document counts only between the first and last section.
+        count = sum(sum(out[start:end]) for start, end in ranges
+                    if role.kind == matter.BODY or first_start < (sd.index, start) and (sd.index, end) <= last_end)
+        if count:
+            counted.append((sd.href, count, role.kind))
+        between = any(i < sd.index for i in section_docs) and any(i > sd.index for i in section_docs)
+        if excluded_here == words_here and between:
+            check.fail("excluded-body-document", sd.zip_path,
+                       f"the whole of {sd.href} ({excluded_here} words) is excluded, between documents that hold "
+                       f"sections, and the EPUB does not mark it as front or back matter ({role.evidence}); body "
+                       "text belongs in sections")
+    share = sum(count for _, count, _ in counted)
+    check.details.append(f"excluded words that count against the limit: {share} of the book's {total} words outside "
+                         f"footnotes (limit {MAX_EXCLUDED_BODY_PERCENT}%)")
+    if total and share * 100 > MAX_EXCLUDED_BODY_PERCENT * total:
+        listed = "; ".join(f"{href}: {count} words ({kind})" for href, count, kind in counted)
+        check.fail("excluded-body-text", "draft.json#/excluded" if mode == "draft" else prepared.source_name,
+                   f"{share} excluded words ({100 * share / total:.1f}% of the book's {total} words) are in body "
+                   f"matter or between sections, more than the {MAX_EXCLUDED_BODY_PERCENT}% allowed for editorial "
+                   f"matter: {listed}")
 
 
 def _check_word_counts(data: dict[str, Any], resolved: dict[str, Resolved], cp_path: str, check: Check) -> None:
@@ -718,7 +822,7 @@ def validate_bytes(original_bytes: bytes | None, original_name: str, prepared_by
     else:
         c.not_run("the checkpoint file cannot be read")
 
-    structural = ("anchors", "word-boundaries", "coverage", "word-counts")
+    structural = ("anchors", "word-boundaries", "coverage", "exclusions", "word-counts")
     if prepared is None or data is None:
         for name in structural:
             checks[name].not_run("the checkpoint file is missing or fails its schema")
@@ -727,10 +831,12 @@ def validate_bytes(original_bytes: bytes | None, original_name: str, prepared_by
         outcome.resolved = resolved
         total = len(data["sections"])
         _check_boundaries(resolved, total, checks["word-boundaries"])
-        mode = _check_coverage(original, prepared, data, resolved, broken, draft_raw, checks["coverage"])
+        mode, draft_data, excluded = _check_coverage(original, prepared, data, resolved, broken, draft_raw,
+                                                     checks["coverage"])
         checks["coverage"].details.insert(0, "exclusions from the draft" if mode == "draft" else
                                           "no draft given: a spine document without a section counts as excluded")
         outcome.result["coverage_mode"] = mode
+        _check_exclusions(prepared, data, resolved, mode, draft_data, excluded, checks["exclusions"])
         _check_word_counts(data, resolved, cp_path, checks["word-counts"])
 
     if original is None or prepared is None:

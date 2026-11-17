@@ -1,0 +1,16 @@
+{
+  "$comment": "EXAMPLE ONLY: the format of docs/device/picco-timings.json (schema: tools/device/schema/picco-timings.schema.json). These are Xteink X4 figures, not Picco measurements, and the build refuses this file under the real name while \"example\" is true. The device session writes the real file from its benchmark results.",
+  "format": "crosspoint-display-timings",
+  "version": 1,
+  "example": true,
+  "panel": "XteinkX4",
+  "controller": "SSD1677",
+  "source": "Xteink X4 (same 800x480 SSD1677 class): a partial refresh took about 542 ms regardless of area and a full refresh 1958 ms (inkflow measurements, quoted in docs/PLAN.md section 2, 'Closest display data'). p95 and max were not reported.",
+  "date": "2026-11-16",
+  "profiles": {
+    "stock": {
+      "wordUpdateMs": {"median": 542, "p95": null, "max": null},
+      "clearMs": {"median": 1958}
+    }
+  }
+}

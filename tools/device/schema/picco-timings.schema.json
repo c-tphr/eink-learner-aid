@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/c-tphr/eink-learner-aid/tools/device/schema/picco-timings.schema.json",
+  "title": "Picco display timings",
+  "description": "docs/device/picco-timings.json: measured refresh times of the display profiles on the owner's Picco, written after the device session from its benchmark results (plan section 10). The simulator build (scripts/gen_display_timings.py) compiles the medians into the simulator's timing model (lib/DisplayProfileCore/README.md, 'Timing model'). scripts/display_timings.py checks a file against this schema AND these further rules: integers only (no fractions, NaN or Infinity), no duplicate members, p95 >= median and max >= p95 where given, and a file marked \"example\": true is refused. Every time is in milliseconds.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "panel", "source", "date", "profiles"],
+  "properties": {
+    "$comment": {"type": "string"},
+    "format": {"const": "crosspoint-display-timings"},
+    "version": {"const": 1},
+    "example": {
+      "type": "boolean",
+      "description": "True only in docs/device/picco-timings.example.json. The build refuses a timings file that has it set."
+    },
+    "panel": {
+      "description": "The panel the numbers were measured on, as the firmware logs it at boot ([EPD] Picco panel ...). XteinkX4 is allowed only in the example, which carries the X4 figures of plan section 2.",
+      "enum": ["YRD0426", "DEPG0397", "OPM040B3", "SE0400NQW47", "XteinkX4"]
+    },
+    "controller": {"enum": ["SSD1677", "SSD2677"]},
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Where the numbers come from: the results files and serial log of the device session, or for the example the measurement it quotes."
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "When they were measured, YYYY-MM-DD."
+    },
+    "profiles": {
+      "type": "object",
+      "description": "Per display profile id (lib/DisplayProfileCore/DisplayProfiles.h). Stock is required; a profile left out keeps the simulator's built-in update time and the stock clear time from this file. An unknown id is an error, so a typo cannot silently leave a profile on its default.",
+      "additionalProperties": false,
+      "required": ["stock"],
+      "properties": {
+        "stock": {"$ref": "#/$defs/profile"},
+        "trial-a": {"$ref": "#/$defs/profile"},
+        "trial-b": {"$ref": "#/$defs/profile"},
+        "trial-c": {"$ref": "#/$defs/profile"},
+        "trial-d": {"$ref": "#/$defs/profile"}
+      }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wordUpdateMs", "clearMs"],
+      "properties": {
+        "$comment": {"type": "string"},
+        "wordUpdateMs": {
+          "description": "Word-band update time over the benchmark's 100 updates. The simulator models each update as the median.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["median", "p95", "max"],
+          "properties": {
+            "median": {"type": "integer", "minimum": 1, "maximum": 5000},
+            "p95": {"type": ["integer", "null"], "minimum": 1, "maximum": 60000, "description": "null: not measured"},
+            "max": {"type": ["integer", "null"], "minimum": 1, "maximum": 60000, "description": "null: not measured"}
+          }
+        },
+        "clearMs": {
+          "description": "Clearing refresh time over the benchmark's 5 refreshes. The simulator models each clear as the median.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["median"],
+          "properties": {
+            "median": {"type": "integer", "minimum": 1, "maximum": 10000}
+          }
+        }
+      }
+    }
+  }
+}
