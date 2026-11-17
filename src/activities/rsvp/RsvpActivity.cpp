@@ -91,6 +91,25 @@ const char* itemLabel(const Item item) {
     case Item::WordsDown:
     case Item::WordsUp:
       return nullptr;  // a drawn minus or plus
+    case Item::Reveal:
+    case Item::SkipPrompt:
+    case Item::SkipCheckpoint:
+    case Item::AnswerBox:
+    case Item::Correct:
+    case Item::Incorrect:
+    case Item::RereadRsvp:
+    case Item::RereadPage:
+    case Item::ContinueOn:
+    case Item::ChoiceRow0:
+    case Item::ChoiceRow1:
+    case Item::ChoiceRow2:
+    case Item::ChoiceRow3:
+    case Item::ChoiceRow4:
+    case Item::ChoiceRow5:
+    case Item::ChoiceRow6:
+    case Item::ChoiceRow7:
+    case Item::ControlsFinish:
+      break;  // checkpoint and device test screens draw their own labels
   }
   return "";
 }
@@ -162,6 +181,9 @@ void RsvpActivity::onEnter() {
     band.lineHeight[i] = static_cast<int16_t>(renderer.getLineHeight(BAND_FONTS[i]));
   }
 
+  const displayprofile::TrialSetting profile = displayprofile::decodeTrialSetting(SETTINGS.rsvpDisplayProfile);
+  backend.setUnlockedTrials(profile.unlocked);
+  backend.select(profile.chosen);
   scheduler.setClearingLimits(backend.info().clearing);
   lastLoopMs.store(static_cast<uint32_t>(millis()));
   controlInput.restartGuard();
@@ -815,6 +837,25 @@ void RsvpActivity::activate(const Item item) {
     case Item::Continue:
     case Item::Stay:
       return;  // banner items (ItemBanner.cpp)
+    case Item::Reveal:
+    case Item::SkipPrompt:
+    case Item::SkipCheckpoint:
+    case Item::AnswerBox:
+    case Item::Correct:
+    case Item::Incorrect:
+    case Item::RereadRsvp:
+    case Item::RereadPage:
+    case Item::ContinueOn:
+    case Item::ChoiceRow0:
+    case Item::ChoiceRow1:
+    case Item::ChoiceRow2:
+    case Item::ChoiceRow3:
+    case Item::ChoiceRow4:
+    case Item::ChoiceRow5:
+    case Item::ChoiceRow6:
+    case Item::ChoiceRow7:
+    case Item::ControlsFinish:
+      return;  // not on the pause screen
   }
 }
 

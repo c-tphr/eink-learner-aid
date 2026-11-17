@@ -46,6 +46,16 @@ When a hold activates, the adapter hands the held key to `MappedInputManager`'s 
 (`wasLongPressed(button, 0)`), so its release is swallowed and the next screen (the reader, after
 "Page view") never sees that key as a new long press or page turn.
 
+## Device test screens (task D3a)
+
+`ControlMap.h` holds their zones too: `CHOICE_ZONES` (eight rows of 448x72 from y=72, 8 px apart, S4
+row 34) with `choiceScreen(count, default)`, which `src/activities/devicetest/ChoiceList.h` uses for
+every device-test list (task D3b reuses it), and `CONTROLS_CHECK` (the Controls check's Finish button,
+16,672,448,72). Their items are `ChoiceRow0` to `ChoiceRow7` and `ControlsFinish`. The lists read input
+through `ControlInput::pollFocus()` like the pause screen, and a running benchmark series through
+`pollPlaying()` (any key or touch stops it). The Controls check alone reads the raw `HalGPIO` indices,
+to record them (S4 section 7).
+
 ## Swapped side keys
 
 `KEYS.prev` and `KEYS.next` are `PageBack` and `PageForward`, which follow Settings > Controls > Side

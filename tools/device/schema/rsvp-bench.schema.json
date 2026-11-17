@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/c-tphr/eink-learner-aid/tools/device/schema/rsvp-bench.schema.json",
+  "title": "Device test results file (/rsvp-bench/NNNN-bench.json, NNNN-controls.json)",
+  "description": "Written by the firmware's Device test screens (src/activities/devicetest/, task D3a). Every member is described in rsvp-bench.md beside this file. Version 1.",
+  "oneOf": [
+    { "$ref": "#/$defs/benchmark" },
+    { "$ref": "#/$defs/controls" }
+  ],
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0 },
+    "ms": { "type": "integer", "minimum": 0 },
+    "nullableCount": { "type": ["integer", "null"], "minimum": 0 },
+    "runStatus": { "enum": ["running", "complete", "ended-by-owner", "interrupted"] },
+    "profileKey": { "enum": ["stock", "trial-a", "trial-b", "trial-c", "trial-d"] },
+    "trialList": {
+      "type": "array",
+      "items": { "enum": ["trial-a", "trial-b", "trial-c", "trial-d"] },
+      "uniqueItems": true,
+      "maxItems": 4
+    },
+    "firmware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "elf_sha256"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "elf_sha256": { "type": "string", "pattern": "^([0-9a-f]{64}|simulator|unknown)$" }
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["board", "panel", "panel_variant", "controller", "driver", "recognised", "simulated", "fading_fix",
+                   "inverted", "async_split", "stock_update_waveform", "clear_waveform", "predicted_update_ms",
+                   "predicted_clear_ms"],
+      "properties": {
+        "board": { "type": "string" },
+        "panel": { "enum": ["unknown", "YRD0426", "DEPG0397", "OPM040B3", "SE0400NQW47", "simulator"] },
+        "panel_variant": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "controller": { "enum": ["SSD1677", "SSD2677", "none"] },
+        "driver": { "type": "string" },
+        "recognised": { "type": "boolean" },
+        "simulated": { "type": "boolean" },
+        "fading_fix": { "type": "boolean" },
+        "inverted": { "type": "boolean" },
+        "async_split": { "type": "boolean" },
+        "stock_update_waveform": { "type": "string" },
+        "clear_waveform": { "type": "string" },
+        "predicted_update_ms": { "type": ["integer", "null"], "minimum": 1 },
+        "predicted_clear_ms": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "batteryPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "clock": { "type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$" },
+    "benchConditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["room_temperature_c", "battery_percent", "usb_connected", "clock", "uptime_ms"],
+      "properties": {
+        "room_temperature_c": { "type": ["integer", "null"], "minimum": -20, "maximum": 60 },
+        "battery_percent": { "$ref": "#/$defs/batteryPercent" },
+        "usb_connected": { "type": "boolean" },
+        "clock": { "$ref": "#/$defs/clock" },
+        "uptime_ms": { "$ref": "#/$defs/ms" }
+      }
+    },
+    "controlsConditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["battery_percent", "usb_connected", "clock", "uptime_ms"],
+      "properties": {
+        "battery_percent": { "$ref": "#/$defs/batteryPercent" },
+        "usb_connected": { "type": "boolean" },
+        "clock": { "$ref": "#/$defs/clock" },
+        "uptime_ms": { "$ref": "#/$defs/ms" }
+      }
+    },
+    "simulator": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["time_scale"],
+          "properties": { "time_scale": { "type": "integer", "minimum": 1, "maximum": 1000 } }
+        }
+      ]
+    },
+    "series": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "median_ms", "p95_ms", "max_ms", "min_ms", "mean_ms", "timeouts"],
+      "properties": {
+        "count": { "$ref": "#/$defs/count" },
+        "median_ms": { "$ref": "#/$defs/ms" },
+        "p95_ms": { "$ref": "#/$defs/ms" },
+        "max_ms": { "$ref": "#/$defs/ms" },
+        "min_ms": { "$ref": "#/$defs/ms" },
+        "mean_ms": { "$ref": "#/$defs/ms" },
+        "timeouts": { "$ref": "#/$defs/count" }
+      }
+    },
+    "playback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["delivered_wpm", "words_shown", "frames", "clearing_refreshes", "active_ms", "order"],
+      "properties": {
+        "delivered_wpm": { "type": "number", "minimum": 0 },
+        "words_shown": { "$ref": "#/$defs/count" },
+        "frames": { "$ref": "#/$defs/count" },
+        "clearing_refreshes": { "$ref": "#/$defs/count" },
+        "active_ms": { "$ref": "#/$defs/ms" },
+        "order": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["in_order", "words_drawn", "segments", "violations", "gaps", "repeats"],
+          "properties": {
+            "in_order": { "type": "boolean" },
+            "words_drawn": { "$ref": "#/$defs/count" },
+            "segments": { "$ref": "#/$defs/count" },
+            "violations": { "$ref": "#/$defs/count" },
+            "gaps": { "$ref": "#/$defs/count" },
+            "repeats": { "$ref": "#/$defs/count" }
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["step", "kind", "status", "attempts", "requested", "target_wpm", "words_per_update", "updates",
+                   "clears", "promotions", "duration_ms", "playback", "rating", "residue"],
+      "properties": {
+        "step": {
+          "enum": ["word-band", "full-screen", "clearing", "playback-120-1", "playback-180-1", "playback-240-1",
+                   "playback-300-1", "playback-240-2", "playback-240-3", "endurance"]
+        },
+        "kind": { "enum": ["word-band", "full-screen", "clearing", "playback", "endurance"] },
+        "status": { "enum": ["pending", "unrated", "done", "stopped", "skipped"] },
+        "attempts": { "$ref": "#/$defs/count" },
+        "requested": { "type": "integer", "minimum": 1 },
+        "target_wpm": { "$ref": "#/$defs/nullableCount" },
+        "words_per_update": { "type": ["integer", "null"], "minimum": 1, "maximum": 4 },
+        "updates": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/series" }] },
+        "clears": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/series" }] },
+        "promotions": { "$ref": "#/$defs/nullableCount" },
+        "duration_ms": { "$ref": "#/$defs/nullableCount" },
+        "playback": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/playback" }] },
+        "rating": { "enum": [null, "clean", "tolerable", "unreadable"] },
+        "residue": { "enum": [null, "no", "yes"] }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "status", "reason", "skipped_from", "clearing", "waveform", "predicted_waveform_ms",
+                   "steps"],
+      "properties": {
+        "key": { "$ref": "#/$defs/profileKey" },
+        "name": { "enum": ["Stock", "Trial A", "Trial B", "Trial C", "Trial D"] },
+        "status": { "enum": ["not-allowed", "pending", "running", "done", "skipped-part-way", "not-run"] },
+        "reason": {
+          "enum": [null, "panel-unrecognised", "panel-no-tables", "screen-inverted", "refused", "ended-by-owner",
+                   "interrupted"]
+        },
+        "skipped_from": {
+          "enum": [null, "word-band", "full-screen", "clearing", "playback-120-1", "playback-180-1", "playback-240-1",
+                   "playback-300-1", "playback-240-2", "playback-240-3", "endurance"]
+        },
+        "clearing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["soft", "hard"],
+          "properties": { "soft": { "$ref": "#/$defs/count" }, "hard": { "$ref": "#/$defs/count" } }
+        },
+        "waveform": { "type": "string", "minLength": 1 },
+        "predicted_waveform_ms": { "type": ["integer", "null"], "minimum": 1 },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/step" }, "minItems": 10, "maxItems": 10 }
+      }
+    },
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "version", "kind", "run", "file", "status", "firmware", "device", "conditions",
+                   "simulator", "plan", "trial_setting", "profiles"],
+      "properties": {
+        "format": { "const": "rsvp-bench" },
+        "version": { "const": 1 },
+        "kind": { "const": "benchmark" },
+        "run": { "type": "integer", "minimum": 1, "maximum": 9999 },
+        "file": { "type": "string", "pattern": "^[0-9]{4}-bench\\.json$" },
+        "status": { "$ref": "#/$defs/runStatus" },
+        "firmware": { "$ref": "#/$defs/firmware" },
+        "device": { "$ref": "#/$defs/device" },
+        "conditions": { "$ref": "#/$defs/benchConditions" },
+        "simulator": { "$ref": "#/$defs/simulator" },
+        "plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["word_band_updates", "word_band_wpm", "full_screen_updates", "clearing_refreshes",
+                       "passage_words", "endurance_updates", "endurance_wpm", "min_dwell_ms"],
+          "properties": {
+            "word_band_updates": { "const": 100 },
+            "word_band_wpm": { "type": "integer", "minimum": 1 },
+            "full_screen_updates": { "const": 10 },
+            "clearing_refreshes": { "const": 5 },
+            "passage_words": { "const": 150 },
+            "endurance_updates": { "const": 300 },
+            "endurance_wpm": { "type": "integer", "minimum": 1 },
+            "min_dwell_ms": { "$ref": "#/$defs/ms" }
+          }
+        },
+        "trial_setting": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["before", "after", "unlocked_before", "unlocked_after", "chosen_before", "chosen_after"],
+          "properties": {
+            "before": { "type": "integer", "minimum": 0, "maximum": 255 },
+            "after": { "type": "integer", "minimum": 0, "maximum": 127 },
+            "unlocked_before": { "$ref": "#/$defs/trialList" },
+            "unlocked_after": { "$ref": "#/$defs/trialList" },
+            "chosen_before": { "$ref": "#/$defs/profileKey" },
+            "chosen_after": { "$ref": "#/$defs/profileKey" }
+          }
+        },
+        "profiles": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "prefixItems": [
+            { "allOf": [{ "$ref": "#/$defs/profile" }, { "properties": { "key": { "const": "stock" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/profile" }, { "properties": { "key": { "const": "trial-a" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/profile" }, { "properties": { "key": { "const": "trial-b" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/profile" }, { "properties": { "key": { "const": "trial-c" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/profile" }, { "properties": { "key": { "const": "trial-d" } } }] }
+          ]
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n", "t_ms", "source", "kind", "raw", "raw_name", "logical", "role", "held_ms", "x", "y", "x2", "y2"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 1 },
+        "t_ms": { "$ref": "#/$defs/ms" },
+        "source": { "enum": ["key", "touch"] },
+        "kind": {
+          "enum": ["short", "hold", "exit-hold", "tap", "long-press", "swipe-left", "swipe-right", "swipe-up",
+                   "swipe-down", "back-gesture", "home-gesture"]
+        },
+        "raw": { "type": ["integer", "null"], "minimum": 0, "maximum": 6 },
+        "raw_name": {
+          "enum": [null, "BTN_BACK", "BTN_CONFIRM", "BTN_LEFT", "BTN_RIGHT", "BTN_UP", "BTN_DOWN", "BTN_POWER"]
+        },
+        "logical": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["Back", "Confirm", "Left", "Right", "Up", "Down", "Power", "PageBack", "PageForward", "NavNext",
+                     "NavPrevious"]
+          }
+        },
+        "role": { "enum": ["none", "prev", "next", "confirm"] },
+        "held_ms": { "$ref": "#/$defs/nullableCount" },
+        "x": { "type": ["integer", "null"] },
+        "y": { "type": ["integer", "null"] },
+        "x2": { "type": ["integer", "null"] },
+        "y2": { "type": ["integer", "null"] }
+      }
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "version", "kind", "run", "file", "status", "firmware", "device", "conditions",
+                   "simulator", "settings", "summary", "events", "events_dropped"],
+      "properties": {
+        "format": { "const": "rsvp-bench" },
+        "version": { "const": 1 },
+        "kind": { "const": "controls" },
+        "run": { "type": "integer", "minimum": 1, "maximum": 9999 },
+        "file": { "type": "string", "pattern": "^[0-9]{4}-controls\\.json$" },
+        "status": { "$ref": "#/$defs/runStatus" },
+        "firmware": { "$ref": "#/$defs/firmware" },
+        "device": { "$ref": "#/$defs/device" },
+        "conditions": { "$ref": "#/$defs/controlsConditions" },
+        "simulator": { "$ref": "#/$defs/simulator" },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["side_button_layout", "side_button_layout_value", "short_power_button",
+                       "short_power_button_value", "prev_key", "next_key", "confirm_selects", "hold_ms",
+                       "exit_hold_ms"],
+          "properties": {
+            "side_button_layout": { "enum": ["prev-next", "next-prev", "disabled", "next-next", "prev-prev", "unknown"] },
+            "side_button_layout_value": { "type": "integer", "minimum": 0, "maximum": 255 },
+            "short_power_button": {
+              "enum": ["ignore", "sleep", "page-turn", "force-refresh", "footnotes", "confirm", "clipping", "bookmark",
+                       "sync", "reader-menu", "frontlight", "unknown"]
+            },
+            "short_power_button_value": { "type": "integer", "minimum": 0, "maximum": 255 },
+            "prev_key": { "enum": ["PageBack", "PageForward", "Up", "Down", "Confirm"] },
+            "next_key": { "enum": ["PageBack", "PageForward", "Up", "Down", "Confirm"] },
+            "confirm_selects": { "type": "boolean" },
+            "hold_ms": { "type": "integer", "minimum": 1 },
+            "exit_hold_ms": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["up_pressed", "up_held", "down_pressed", "down_held", "confirm_pressed", "power_clicked",
+                       "touched"],
+          "properties": {
+            "up_pressed": { "type": "boolean" },
+            "up_held": { "type": "boolean" },
+            "down_pressed": { "type": "boolean" },
+            "down_held": { "type": "boolean" },
+            "confirm_pressed": { "type": "boolean" },
+            "power_clicked": { "type": "boolean" },
+            "touched": { "type": "boolean" }
+          }
+        },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/event" }, "maxItems": 64 },
+        "events_dropped": { "$ref": "#/$defs/count" }
+      }
+    }
+  }
+}

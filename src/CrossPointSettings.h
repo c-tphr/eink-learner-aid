@@ -357,6 +357,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // RSVP global defaults, saved from the pause screen (src/reading/RsvpValues.h): WPM in tens, 6 to 100.
   uint8_t rsvpWpmTens = 24;
   uint8_t rsvpWordsPerUpdate = 1;
+  // Trial display profiles unlocked and chosen (lib/DisplayProfileCore/TrialUnlock.h); set by the device test.
+  uint8_t rsvpDisplayProfile = 0;
 #endif
   // Long-press Confirm function in EPUB reader (cycles through LONG_PRESS_MENU_FUNCTION values).
   // Defaults to Disabled so shortcut-based bookmark toggling remains opt-in.
