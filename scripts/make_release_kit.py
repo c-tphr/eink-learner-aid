@@ -446,8 +446,8 @@ def pack(tree, files, out_zip, epoch):
         for f in sorted(files):
             info = zipfile.ZipInfo(f, date_time=zip_time(epoch))
             info.compress_type = zipfile.ZIP_STORED
-            info.create_system = 0  # MS-DOS: no Unix permissions travel with the files
-            info.external_attr = 0
+            info.create_system = 0  # MS-DOS: Windows reads only the low byte (0 = normal file)
+            info.external_attr = 0o644 << 16  # set explicitly; writestr would otherwise pick 0o600
             with open(os.path.join(tree, f), "rb") as fp:
                 zf.writestr(info, fp.read())
 
