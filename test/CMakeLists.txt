@@ -101,6 +101,7 @@ add_subdirectory(checkpoint_core)
 add_subdirectory(word_index)
 add_subdirectory(display_profile)
 add_subdirectory(rsvp_activity)
+add_subdirectory(checkpoint_activity)
 add_subdirectory(update_policy)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)

@@ -42,6 +42,7 @@
 #include "WifiCredentialStore.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
+#include "activities/checkpoint/CheckpointSimEntry.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
 #include "components/UITheme.h"
 #include "controls/ControlDefaults.h"
@@ -1042,6 +1043,7 @@ void loop() {
   const unsigned long activityStartTime = millis();
   activityManager.loop();
   runDisplaySelfTestIfRequested(renderer);
+  runCheckpointSimEntryIfRequested(renderer, mappedInputManager);
   const unsigned long activityDuration = millis() - activityStartTime;
 
   const unsigned long loopDuration = millis() - loopStartTime;
