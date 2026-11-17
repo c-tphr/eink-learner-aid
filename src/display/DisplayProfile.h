@@ -21,14 +21,17 @@
 // - Who draws: the caller (the RSVP activity, through its FramePainter). It draws the whole frame
 //   into the renderer's frame buffer before update() or clear(). The backend never draws.
 // - Who refreshes: the backend only. update() is one word update (on the device: the existing
-//   renderer.displayBuffer(FAST_REFRESH) path; D1/D2 add the profile's waveform). clear() is one
+//   renderer.displayBuffer(FAST_REFRESH) path with the panel's reading waveform; D2 adds the trial
+//   waveforms). clear() is one
 //   clearing refresh (HALF_REFRESH, trial waveform released). While a profile is in use the caller
 //   makes no displayBuffer() call of its own, so every refresh is timed and counted.
 // - Which task: the task that owns the display, holding the RenderLock. For RSVP that is the
 //   ActivityManager render task inside render(), where Scheduler::step() runs. One task at a time;
 //   never from an interrupt or a second task.
 // - Blocking: both calls return when the refresh has finished and return its duration in ms.
-//   Device: measured with millis() around displayBuffer(), which waits for the panel's BUSY line.
+//   Device: measured with millis() from just before the frame transfer to the end of the driver's
+//   wait for the panel's BUSY line (TimedBackend.h); a call of 5 s or more (10 s for a clear) is
+//   counted as a timeout and logged as an error.
 //   Simulator: the real draw, then a sleep for the rest of the modelled time (a thread sleep:
 //   the simulator's main loop keeps presenting frames and reading input meanwhile).
 //
@@ -61,11 +64,14 @@ class MillisClock final : public rsvp::Clock {
 // This build's backend, created on the first call and kept for the program's life (one panel).
 // Simulator: SimulatorDisplayBackend (modelled timing; reads and checks its configuration here and
 // stops the program with an error line if an environment override is malformed). Device:
-// DeviceDisplayBackend, a placeholder that task D1 replaces. Later calls ignore `renderer`.
+// DeviceDisplayBackend (the stock profile's refresh, timed; logs the panel on creation). Later
+// calls ignore `renderer`.
 DisplayBackend& firmwareBackend(GfxRenderer& renderer);
 
 // One summary line: "[DSP] stats profile=<id> panel=<name> updates=<n> min=.. max=.. mean=.. last=..
-// clears=<n> min=.. max=.. mean=.. last=..".
+// clears=<n> min=.. max=.. mean=.. last=.. update_median=.. update_p95=.. update_timeouts=..
+// clear_median=.. clear_p95=.. clear_timeouts=..". Median and p95 cover the last
+// RefreshStats::SAMPLE_WINDOW calls of each kind.
 void logStats(const DisplayBackend& backend);
 
 // TEMPORARY, removed with RsvpLinkCheck (task C2): links the profiles, the adapter, the modelled

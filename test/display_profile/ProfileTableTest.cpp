@@ -49,6 +49,18 @@ TEST(ProfileTable, ClearingLimitsFollowS2) {
   EXPECT_EQ(profileInfo(ProfileId::STOCK).clearing.hardLimit, rsvp::DEFAULT_CLEAR_HARD_LIMIT);
 }
 
+TEST(ProfileTable, EveryProfileClearsAndTrialsNeverLater) {
+  // Plan section 6: every profile runs both rules; trials may use lower limits, never higher ones.
+  const ProfileInfo& stock = profileInfo(ProfileId::STOCK);
+  for (const ProfileInfo& info : PROFILES) {
+    EXPECT_GT(info.clearing.softLimit, 0) << info.key;  // 0 would turn the rule off
+    EXPECT_GT(info.clearing.hardLimit, 0) << info.key;
+    EXPECT_LT(info.clearing.softLimit, info.clearing.hardLimit) << info.key;
+    EXPECT_LE(info.clearing.softLimit, stock.clearing.softLimit) << info.key;
+    EXPECT_LE(info.clearing.hardLimit, stock.clearing.hardLimit) << info.key;
+  }
+}
+
 TEST(ProfileTable, SimulatorDefaults) {
   // Stock: the Xteink X4 figures of plan section 9. Trials: S2's drive time plus 38 ms transfer.
   EXPECT_EQ(profileInfo(ProfileId::STOCK).simulatorDefault.updateMs, 540u);
