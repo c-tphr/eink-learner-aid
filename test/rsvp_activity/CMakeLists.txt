@@ -55,6 +55,9 @@ add_executable(RsvpActivityTest
   ${DISPLAY_PROFILE_DIR}/ProfileDisplaySink.cpp
   ${DISPLAY_PROFILE_DIR}/PanelRecords.cpp
   ${DISPLAY_PROFILE_DIR}/TimedBackend.cpp
+  ${DISPLAY_PROFILE_DIR}/TrialUnlock.cpp
+  ${DISPLAY_PROFILE_DIR}/TrialWaveforms.cpp
+  ${DISPLAY_PROFILE_DIR}/TrialExposure.cpp
   ${CHECKPOINT_CORE_DIR}/BookState.cpp
   ${CHECKPOINT_CORE_DIR}/GradeTable.cpp
   ${CHECKPOINT_CORE_DIR}/StateCodec.cpp
