@@ -36,7 +36,9 @@ REPO = Path(__file__).resolve().parents[3]
 if __package__ in (None, ""):
     sys.path.insert(0, str(REPO))
 
+from tools.prep import refs  # noqa: E402
 from tools.prep.fixture import content as C  # noqa: E402
+from tools.prep.words import WORD_RE, tokenize  # noqa: E402,F401  (re-exported: the one word definition)
 
 DEFAULT_OUT = REPO / "fixtures" / "books"
 EPUB_NAME = "fixture.epub"
@@ -53,21 +55,9 @@ ANSWER_MAX_CHARS = 600
 
 
 # ---------------------------------------------------------------------------
-# Word definition. Keep it in this one function so a later task can align it
-# with the firmware's parser; RULES documents it for readers of expected.json.
-
-WORD_RE = re.compile(r"[^ \t\n\r]+")
-
-
-def tokenize(text: str) -> list[str]:
-    """Split visible prose text into words.
-
-    A word is a maximal run of characters other than the four XML white space
-    characters (U+0020, U+0009, U+000A, U+000D). Punctuation stays attached;
-    nothing is normalised, case-folded or stripped.
-    """
-    return WORD_RE.findall(text)
-
+# Word definition: ``tokenize`` lives in tools/prep/words.py, shared with
+# ``prep extract`` and ``prep build`` so there is exactly one implementation;
+# RULES documents it for readers of expected.json.
 
 RULES = {
     "word": "A word is a maximal run of characters other than U+0020 SPACE, U+0009 TAB, U+000A LINE FEED and "
@@ -90,6 +80,10 @@ RULES = {
     "-1 when nothing precedes the item.",
     "sections": "A section's start anchor goes immediately before word 'first_word' and its end anchor "
     "immediately after word 'last_word' of the section's chapter.",
+    "paragraphs": "'paragraph' is the reference 'prep extract' gives a block (tools/prep/refs.py): 'd' and the "
+    "1-based spine position, '-p' and the 1-based block number within the document (footnote paragraphs: "
+    "'-n' and their own count). The draft cites these references, never the XHTML ids ('id'), which real books "
+    "mostly lack.",
 }
 
 
@@ -137,8 +131,10 @@ def build_model() -> list[dict[str, Any]]:
     """Number blocks, assign footnote marks and compute every document's word stream."""
     note_numbers: dict[str, int] = {}
     docs = []
-    for src in _documents():
+    sources = _documents()
+    for spine_index, src in enumerate(sources, start=1):
         doc: dict[str, Any] = {
+            "spine_index": spine_index,
             "href": src["href"],
             "role": src["role"],
             "prefix": src["prefix"],
@@ -152,6 +148,7 @@ def build_model() -> list[dict[str, Any]]:
         words: list[str] = doc["words"]
         for number, (element, payload) in enumerate(src["blocks"], start=1):
             block_id = f"{src['prefix']}-p{number:03d}"
+            paragraph = refs.paragraph_ref(spine_index, len(sources), number, len(src["blocks"]))
             if element in PROSE_ELEMENTS:
                 segments = parse_inline(payload)
                 text, marks, spans = _visible_text(segments, block_id)
@@ -161,6 +158,7 @@ def build_model() -> list[dict[str, Any]]:
                 first = len(words)
                 block = {
                     "id": block_id,
+                    "paragraph": paragraph,
                     "element": element,
                     "kind": PROSE_ELEMENTS[element],
                     "segments": segments,
@@ -198,6 +196,7 @@ def build_model() -> list[dict[str, Any]]:
             elif element in NON_PROSE_KINDS:
                 block = {
                     "id": block_id,
+                    "paragraph": paragraph,
                     "element": element,
                     "kind": NON_PROSE_KINDS[element],
                     "payload": payload,
@@ -658,8 +657,10 @@ def section_words(docs, section) -> dict[str, Any]:
         "id": section["id"],
         "label": section["label"],
         "chapter_href": section["chapter_href"],
-        "first_paragraph": section["first_paragraph"],
-        "last_paragraph": section["last_paragraph"],
+        "first_paragraph": doc["blocks"][first]["paragraph"],
+        "last_paragraph": doc["blocks"][last]["paragraph"],
+        "first_block_id": section["first_paragraph"],
+        "last_block_id": section["last_paragraph"],
         "start_anchor": f"rsvp-{section['id']}-start",
         "end_anchor": f"rsvp-{section['id']}-end",
         "first_word": first_word,
@@ -671,7 +672,33 @@ def section_words(docs, section) -> dict[str, Any]:
     }
 
 
-def build_draft(epub_sha256: str) -> dict[str, Any]:
+def _paragraph_refs(docs) -> dict[str, str]:
+    """XHTML block id -> the paragraph reference ``prep extract`` gives that block."""
+    return {b["id"]: b["paragraph"] for doc in docs for b in doc["blocks"]}
+
+
+def _cite_refs(entries: list[dict[str, Any]], to_ref: dict[str, str]) -> list[dict[str, Any]]:
+    """content.py ranges cite block ids; the draft cites paragraph references."""
+    out = []
+    for entry in entries:
+        entry = dict(entry)
+        for key in ("first_paragraph", "last_paragraph"):
+            entry[key] = to_ref[entry[key]]
+        out.append(entry)
+    return out
+
+
+def build_draft(docs, epub_sha256: str) -> dict[str, Any]:
+    to_ref = _paragraph_refs(docs)
+    checkpoints = [
+        {
+            **cp,
+            "prompts": [
+                {**p, "supporting_paragraphs": [to_ref[i] for i in p["supporting_paragraphs"]]} for p in cp["prompts"]
+            ],
+        }
+        for cp in C.CHECKPOINTS
+    ]
     return {
         "format": "rsvp-draft",
         "version": 1,
@@ -681,14 +708,14 @@ def build_draft(epub_sha256: str) -> dict[str, Any]:
             "source_sha256": epub_sha256,
             "instructions_version": C.INSTRUCTIONS_VERSION,
         },
-        "excluded": C.EXCLUDED,
-        "sections": C.SECTIONS,
-        "checkpoints": C.CHECKPOINTS,
+        "excluded": _cite_refs(C.EXCLUDED, to_ref),
+        "sections": _cite_refs(C.SECTIONS, to_ref),
+        "checkpoints": checkpoints,
     }
 
 
 def _expected_block(block) -> dict[str, Any]:
-    out = {"id": block["id"], "kind": block["kind"], "element": block["element"]}
+    out = {"id": block["id"], "paragraph": block["paragraph"], "kind": block["kind"], "element": block["element"]}
     if "first_word" in block:
         if "level" in block:
             out["level"] = block["level"]
@@ -710,14 +737,17 @@ def build_expected(docs, epub_sha256: str) -> dict[str, Any]:
     for doc in docs:
         footnotes = []
         note_index = 0
+        note_total = sum(len(C.FOOTNOTES[n]) for n in doc["notes"])
         for note_id in doc["notes"]:
             paragraphs = []
             for words in _footnote_words(note_id):
                 note_index += 1
-                paragraphs.append({"id": f"{doc['prefix']}-n{note_index:03d}", "words": words})
+                paragraph = refs.paragraph_ref(doc["spine_index"], len(docs), note_index, note_total, refs.NOTE)
+                paragraphs.append({"id": f"{doc['prefix']}-n{note_index:03d}", "paragraph": paragraph, "words": words})
             footnotes.append({"id": note_id, "mark": str(doc["note_numbers"][note_id]), "paragraphs": paragraphs})
         documents.append(
             {
+                "spine_index": doc["spine_index"],
                 "href": doc["href"],
                 "zip_path": f"{OPF_DIR}/{doc['href']}",
                 "role": doc["role"],
@@ -776,7 +806,8 @@ def build_readme(docs, expected) -> str:
         "Every zip entry is stored (no compression) with a fixed timestamp, so the bytes do not depend on the "
         "zlib build. |",
         "| `fixture.draft.json` | The draft a drafter session would write for it (plan section 8, step 2): sections "
-        "as paragraph ranges, excluded front matter, checkpoints with cited paragraphs. Schema: "
+        "as ranges of `prep extract` paragraph references, excluded front matter, checkpoints with cited "
+        "paragraphs. Schema: "
         "`tools/prep/schema/draft.schema.json`, documented in `tools/prep/README.md`. |",
         "| `fixture.expected.json` | Ground truth for other layers, computed from the source data (not by parsing "
         "the EPUB): each spine document's word stream, block boundaries, non-prose blocks, footnote marks and "
@@ -796,13 +827,14 @@ def build_readme(docs, expected) -> str:
         "Word counts follow the rules in `fixture.expected.json` (headings included, footnote bodies and the "
         "inner text of figures, tables and code excluded).",
         "",
-        "| Spine | File (relative to `OEBPS/`) | Role | Title | Blocks | Words |",
+        "| Spine | File (relative to `OEBPS/`) | Role | Title | Paragraphs (XHTML ids) | Words |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
     for i, doc in enumerate(docs, start=1):
+        first, last = doc["blocks"][0], doc["blocks"][-1]
         out.append(
             f"| {i} | `{doc['href']}` | {doc['role']} | {doc['title']} | "
-            f"{doc['blocks'][0]['id']} to {doc['blocks'][-1]['id']} | {len(doc['words'])} |"
+            f"{first['paragraph']} to {last['paragraph']} ({first['id']} to {last['id']}) | {len(doc['words'])} |"
         )
     out += [
         "",
@@ -819,10 +851,11 @@ def build_readme(docs, expected) -> str:
             f"{s['word_count']} ({s['first_word']} to {s['last_word']}) | {'yes' if s['ends_chapter'] else 'no'} | "
             f"{cp_text} |"
         )
+    to_ref = _paragraph_refs(docs)
     out += [
         "",
-        f"`{C.EXCLUDED[0]['chapter_href']}` ({C.EXCLUDED[0]['first_paragraph']} to "
-        f"{C.EXCLUDED[0]['last_paragraph']}) is excluded front matter.",
+        f"`{C.EXCLUDED[0]['chapter_href']}` ({to_ref[C.EXCLUDED[0]['first_paragraph']]} to "
+        f"{to_ref[C.EXCLUDED[0]['last_paragraph']]}) is excluded front matter.",
         "",
         "### Content inventory",
         "",
@@ -841,17 +874,19 @@ def build_readme(docs, expected) -> str:
             else:
                 continue
             detail += f"; after word {block['after_word']}"
-            out.append(f"| {block['kind'].capitalize()} | `{doc['href']}` | {block['id']} | {detail} |")
+            out.append(
+                f"| {block['kind'].capitalize()} | `{doc['href']}` | {block['paragraph']} ({block['id']}) | {detail} |"
+            )
         for ref in doc["noterefs"]:
             out.append(
-                f"| Footnote {ref['mark']} | `{doc['href']}` | {ref['block']} | "
+                f"| Footnote {ref['mark']} | `{doc['href']}` | {to_ref[ref['block']]} ({ref['block']}) | "
                 f"`<sup><a epub:type=\"noteref\" href=\"#{ref['note']}\">`, after word {ref['after_word']} "
                 f"(\"{doc['words'][ref['after_word']]}\"); body in `<aside epub:type=\"footnote\" id=\"{ref['note']}\">` "
                 "at chapter end |"
             )
         for item in doc["inline"]:
             out.append(
-                f"| `<{item['element']}>` word | `{doc['href']}` | {item['block']} | "
+                f"| `<{item['element']}>` word | `{doc['href']}` | {to_ref[item['block']]} ({item['block']}) | "
                 f"\"{item['text']}\" is word {item['word_index']} (\"{doc['words'][item['word_index']]}\") |"
             )
     out += [
@@ -880,8 +915,11 @@ def build_readme(docs, expected) -> str:
         f"- Identifier `{C.IDENTIFIER}`, `dcterms:modified` `{C.MODIFIED}`, language `{C.LANGUAGE}`.",
         f"- Zip entries in a fixed order, `mimetype` first, all stored, timestamp "
         f"{'-'.join(f'{v:02d}' for v in C.ZIP_DATE_TIME[:3])} 00:00:00.",
-        "- Block ids `<prefix>-pNNN` number every heading, paragraph, figure, table and pre of a document in "
-        "order (`fm`, `c1`, `c2`, `c3`); footnote paragraphs are `<prefix>-nNNN`.",
+        "- XHTML block ids `<prefix>-pNNN` number every heading, paragraph, figure, table and pre of a document in "
+        "order (`fm`, `c1`, `c2`, `c3`); footnote paragraphs are `<prefix>-nNNN`. They exist only to show that "
+        "`prep extract` records source ids: the draft cites paragraph references (`d02-p006`: spine document 2, "
+        "block 6), which `prep extract` derives from spine position and block order alone "
+        "(`tools/prep/refs.py`). `content.py` cites the XHTML ids and the generator translates them.",
         "",
     ]
     return "\n".join(out)
@@ -904,7 +942,7 @@ def generate_files() -> dict[str, bytes]:
     expected = build_expected(docs, sha)
     return {
         EPUB_NAME: epub,
-        DRAFT_NAME: _json_bytes(build_draft(sha)),
+        DRAFT_NAME: _json_bytes(build_draft(docs, sha)),
         EXPECTED_NAME: _json_bytes(expected),
         README_NAME: build_readme(docs, expected).encode("utf-8"),
     }

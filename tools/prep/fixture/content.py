@@ -18,7 +18,11 @@ deliberately holds non-ASCII characters (``c2-p009``: U+00E9 and U+2014).
 Block ids are not written here: the generator numbers every block of a
 document in order (``<prefix>-p001``, ``<prefix>-p002``, ...) and every
 footnote paragraph as ``<prefix>-n001``, ... The draft below cites those ids,
-and the generator fails if a cited id does not exist.
+and the generator fails if a cited id does not exist. When it writes
+``fixture.draft.json`` the generator translates each id into the paragraph
+reference ``prep extract`` gives that block (``d02-p006``: spine document 2,
+block 6; see tools/prep/refs.py), because drafts cite extract's references,
+not source ids.
 """
 
 from __future__ import annotations
@@ -303,7 +307,8 @@ TOKEN_CASES = [
 
 # ---------------------------------------------------------------------------
 # The draft (docs/PLAN.md section 8, step 2), as a drafter session would write
-# it. Paragraph ranges are inclusive and cite block ids.
+# it. Paragraph ranges are inclusive and cite XHTML block ids here; the
+# generator rewrites them as paragraph references in fixture.draft.json.
 
 EXCLUDED = [
     {
