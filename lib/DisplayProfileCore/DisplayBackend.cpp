@@ -2,27 +2,50 @@
 
 namespace displayprofile {
 
+bool DisplayBackend::allows(const ProfileId id) const {
+  return profileAllowed(id, panel(), inverted(), (unlocked & trialBit(id)) != 0);
+}
+
+void DisplayBackend::setUnlockedTrials(const TrialMask mask) {
+  unlocked = static_cast<TrialMask>(mask & ALL_TRIALS);
+  if (!allows(current)) {
+    current = ProfileId::STOCK;
+    onSelect(current);
+  }
+}
+
 bool DisplayBackend::select(const ProfileId id) {
-  if (static_cast<size_t>(id) >= PROFILE_COUNT || !allows(id)) return false;
-  current = id;
-  onSelect(id);
-  return true;
+  const bool allowed = static_cast<size_t>(id) < PROFILE_COUNT && allows(id);
+  current = allowed ? id : ProfileId::STOCK;
+  onSelect(current);
+  return allowed;
 }
 
-uint32_t DisplayBackend::update() {
-  const uint32_t ms = presentUpdate();
-  statistics.updates.add(ms);
+uint32_t DisplayBackend::update(const UpdateKind kind) {
+  return run(kind == UpdateKind::WORD ? RefreshRequest::WORD : RefreshRequest::SCREEN);
+}
+
+uint32_t DisplayBackend::clear() { return run(RefreshRequest::CLEAR); }
+
+uint32_t DisplayBackend::run(const RefreshRequest request) {
+  // The allow rule is checked again on every word update: the screen may have been inverted, or a
+  // trial locked, since select().
+  const ProfileId inForce = allows(current) ? current : ProfileId::STOCK;
+  decision = guard.decide(request, inForce);
+  uint32_t ms = 0;
+  if (decision.action == RefreshAction::CLEAR) {
+    ms = presentClear();
+    statistics.clears.add(ms);
+  } else {
+    ms = presentUpdate(decision.action == RefreshAction::TRIAL_UPDATE ? decision.waveform : ProfileId::STOCK);
+    statistics.updates.add(ms);
+  }
+  guard.record(decision);
   return ms;
 }
 
-uint32_t DisplayBackend::clear() {
-  const uint32_t ms = presentClear();
-  statistics.clears.add(ms);
-  return ms;
-}
-
-uint32_t ModelledBackend::run(const RefreshKind kind) {
-  const ProfileTiming timing = timingModel.timing(profile());
+uint32_t ModelledBackend::run(const RefreshKind kind, const ProfileId timingOf) {
+  const ProfileTiming timing = timingModel.timing(timingOf);
   ModelledCall call;
   call.kind = kind;
   call.modelMs = kind == RefreshKind::UPDATE ? timing.updateMs : timing.clearMs;
