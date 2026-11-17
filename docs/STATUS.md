@@ -4,10 +4,10 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 ## Where we are
 
-_Updated 2026-11-19._
+_Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before this update carry dates that ran up to two days ahead of the calendar; their order is right._
 
-- **Milestones:** M0 to M3 complete. M4: libraries and R4a merged (RSVP plays in the simulator); **R4b in progress**, then R5. M5: libraries merged (C1a, C1b); C2 to C5 follow R5. M6: D4, D5, the early-check sheet and A0 merged; **D1 in progress**; D2, D3a, D3b, D6 open. M7: P5 merged (the real book is READY); **H1 in progress**; A1 open.
-- **Merged since the last update:** #37 A0 (PR #81), #21 R4a (PR #82).
+- **Milestones:** M0 to M3 complete. M4: libraries and R4a merged (RSVP plays in the simulator); **R4b in progress**, then R5. M5: libraries merged (C1a, C1b); C2 to C5 follow R5. M6: D4, D5, the early-check sheet and A0 merged; **D1 in progress**; D2, D3a, D3b, D6 open. M7: P5 and P8 merged (the real book is READY); **H1 in progress**; A1 open.
+- **Merged since the last update:** #37 A0 (PR #81), #21 R4a (PR #82), #84 P8 (PR #86).
 - **Assigned, in progress:**
   - #22 R4b: steppers, save as default / for this book, saved RSVP position, mode switch (branch `task/22-rsvp-settings`).
   - #30 D1: device display backend, stock profile, timing statistics (branch `task/30-display-device-backend`).
@@ -18,8 +18,6 @@ _Updated 2026-11-19._
 - **Waiting on the owner:**
   1. Run the read-only early check on the Picco: `docs/DEVICE_EARLY_CHECK.md`. Return only the summary file.
   2. Optional: try the simulator in a Codespace (`docs/SIMULATOR.md`); it has never run in a real Codespace.
-  3. Delete the test draft release "v2.0.1 (preview kit)" on the Releases page (sessions cannot delete or edit releases). It is not public and has no tag.
-  4. Decide how `/prep-book` should work where the checker's guard hook does not run (issue #75, last comment).
 
 ## Last decisions
 
@@ -59,6 +57,7 @@ _Updated 2026-11-19._
 - 2026-11-19: A0: releases are made only by the manual workflow `.github/workflows/release-kit.yml` (`docs/RELEASING.md`). One build of `picco_2slot` with `EINK_RELEASE_VERSION`; development builds now show `2.0.0-dev-picco2`. The kit is `picco-2slot-<version>.zip`; the workflow only creates a draft. Both runs on `main` passed, including the draft-release job with attestation. Cloud sessions cannot create, edit or delete releases through the API (HTTP 403): publishing or deleting a draft is the owner's click, or a workflow step. Version 2.0.1 is used by the test draft; the next kit is 2.0.2 or higher. A `final` kit needs `docs/DEVICE_SESSION.md`.
 - 2026-11-19: R4a: RSVP runs on the render task, one display call per step; entry is the first row of the reader's menu ("Speed read") or a 0.7 s side-key hold ("Page turn long press: Speed read", the default in feature builds). Leaving by Page view, Menu or Exit updates the reader's saved page; the Home gesture and sleep do not yet (R4b). A non-prose item stops playback with a note and Play continues after it (R5 shows the item). Simulator patch 0002 makes a zero-timeout mutex take non-blocking, as on the device. Firmware log lines listed in `src/activities/rsvp/README.md` are the contract for scenarios and the benchmark.
 - 2026-11-19: The checker's guard hook did not run in a cloud session (first real run; issue #75): the checker judged correctly, but `save-check` refused the unguarded result, so `/prep-book` cannot reach READY there. Claude Code skips hooks in a project agent's frontmatter until the folder is trusted. Whether it runs in a local trusted session is unobserved. The committed real book is unaffected.
+- 2026-11-18 (real date): Owner's decisions: the test draft release is deleted (2.0.1 is free again); the device kit will be handed over as a draft release that the owner downloads and publishes. `/prep-book` keeps its design and needs a local Claude Code session in a trusted folder; P8 (#84) added a one-minute guard probe as its first step (`python3 -m tools.prep guard-probe OUT`, the real checker, then `--check`). In a cloud session the real probe ends with `FAILED (guard-not-active)`, as intended. The "guard active" path is unobserved until someone runs it locally. `docs/PLAN.md` section 8 corrected to match.
 
 ## Issue map
 
@@ -108,6 +107,7 @@ _Updated 2026-11-19._
 | A2 | #40 | M8 | open |
 | H1 | #72 | M7 | in progress (housekeeping) |
 | P7 | #75 | M7 | merged |
+| P8 | #84 | M7 | merged (guard probe for `/prep-book`) |
 
 ## Facts learned so far
 
@@ -117,7 +117,7 @@ _Updated 2026-11-19._
 - Host tests upstream are CMake and GoogleTest under `test/`: 924 pass at the pinned commit (about 5 minutes to build on 4 cores).
 - Cloud builds: run `./scripts/cloud-setup.sh` first in every session (about 3 minutes from empty caches, seconds afterwards). A plain `pio run` on empty caches fails with `CERTIFICATE_VERIFY_FAILED` because pioarduino replaces the CA settings; worse, its `idf_tools.py` falls back to unverified downloads, which the setup script treats as a failure. Building a `custom_sdkconfig` environment (upstream `default`) in the same core directory triggers a reinstall that hits the TLS problem again; re-run the setup script. `picco` builds in about 5.5 minutes: flash 5,449,518 B of the 7,431,782 B two-slot budget, RAM 34.4%.
 - Upload hazard confirmed by `pio run -e picco -t envdump`: `UPLOADERFLAGS` holds 0x0, 0x8000 and 0xe000 images although `FLASH_EXTRA_IMAGES` is empty.
-- Host suite on `main`: 1,328 tests. Python: `tools/prep` 686 tests, `tools/device` 190 plus `scripts/tests` 68, `tools/simtest` 90 plus 14 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
+- Host suite on `main`: 1,328 tests. Python: `tools/prep` 708 tests, `tools/device` 190 plus `scripts/tests` 68, `tools/simtest` 90 plus 14 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
 - The session disk is small: finished implementers' working copies keep build output under `.claude/worktrees/agent-*/.pio` and `build`; delete those folders (not the working copies of running tasks) when `df` shows little free space.
 - Simulator: `pio run -e simulator_picco` applies `scripts/simulator_patches/` automatically; headless run: `xvfb-run -a .pio/build/simulator_picco/program` with `CROSSPOINT_SIM_INPUT_SCRIPT="0:WAIT:Entering activity: Home;1500:SHOT:home;2500:QUIT"` (SHOT writes a BMP at the given path).
 - Upstream renderer quirks found by the parity test (not ours, not fixed): the last word of a table caption is never drawn; rows of a grid table split across pages are drawn line by line. Neither affects RSVP positions or anchors.
