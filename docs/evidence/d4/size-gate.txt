@@ -1,0 +1,49 @@
+$ pio run -e picco_2slot   (build log, lines about size and images)
+Retrieving maximum program size .pio/build/picco_2slot/firmware.elf
+Checking size .pio/build/picco_2slot/firmware.elf
+RAM:   [===       ]  34.4% (used 112692 bytes from 327680 bytes)
+Flash: [=======   ]  66.4% (used 5482566 bytes from 8257536 bytes)
+Creating binary "firmware.factory.bin" with:
+ -  0x0000   | bootloader.bin
+ -  0x8000   | partitions.bin
+ -  0x15000  | boot_app0.bin
+ -  0x20000  | firmware.bin
+picco_2slot: firmware.bin is 5487824 bytes: 66.5% of the 0x7E0000-byte slot, 73.8% of the 7431782-byte budget
+======================== [SUCCESS] Took 7325.12 seconds ========================
+picco_2slot    SUCCESS   02:02:05.121
+
+$ .github/scripts/firmware-size.sh picco_2slot build/pio-picco_2slot.log --gate
+== picco_2slot
+RAM:   [===       ]  34.4% (used 112692 bytes from 327680 bytes)
+Flash: [=======   ]  66.4% (used 5482566 bytes from 8257536 bytes)
+firmware.bin         5487824 bytes
+bootloader.bin         18720 bytes
+partitions.bin          3072 bytes
+firmware.map        35104391 bytes
+.pio/build/picco_2slot/firmware.elf  :
+section                     size         addr
+.rtc.text                     92   1611653120
+.rtc.force_fast                4   1611653212
+.rtc_noinit                 5532   1342177792
+.rtc.force_slow               32   1342183324
+.rtc_reserved                 40   1611661272
+.iram0.vectors              1028   1077362688
+.iram0.text               105823   1077363716
+.dram0.dummy               90624   1070104576
+.dram0.data                31555   1070195200
+.noinit                        1   1070226755
+.dram0.bss                 81136   1070226760
+.flash.text              2749896   1107296288
+.flash_rodata_dummy      2752512   1006632992
+.flash.appdesc               256   1009385504
+.flash.rodata            2594264   1009385760
+.eh_frame                   4756   1011980024
+.flash.rodata_noload       24811   1011984780
+.ext_ram.dummy           5373920   1006632992
+.iram0.text_end              157   1077469539
+.xt.prop                  141432            0
+.xt.lit                     4328            0
+Total                  108439724
+size gate: firmware.bin 5487824 bytes, budget 7431782 bytes, headroom 1943958 bytes (73.8% used)
+size gate: PASS
+[exit 0]

@@ -1,0 +1,16 @@
+$ sha256sum build/device-kit/kit/* build/device-kit/update.bin
+f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0  kit/boot_app0.bin
+15f88ae11793eddc5b7e1f770fba54b10a6f59809c14d7c51cfbf0db8d2fa3ca  kit/bootloader.bin
+c1da249424676caac3b110509192ead9ff3d3a1ef728eb66da6d0549363fa615  kit/firmware.bin
+95a3cc914f0498250e2a45ed0052a7eb021bd9ddbf63eb323e9ecaa31d09eed2  kit/flash-plan.json
+0d3fad517e6421219fb3754b58c1e1153505655aba69dac3fc40cbd528d4a332  kit/partitions.bin
+c1da249424676caac3b110509192ead9ff3d3a1ef728eb66da6d0549363fa615  update.bin
+-rw-r--r-- 1 root root 5487824 Nov 17 07:36 update.bin
+
+kit:
+total 5396
+-rw-r--r-- 1 root root    8192 Nov 17 07:36 boot_app0.bin
+-rw-r--r-- 1 root root   18720 Nov 17 07:36 bootloader.bin
+-rw-r--r-- 1 root root 5487824 Nov 17 07:36 firmware.bin
+-rw-r--r-- 1 root root    1934 Nov 17 07:36 flash-plan.json
+-rw-r--r-- 1 root root    3072 Nov 17 07:36 partitions.bin

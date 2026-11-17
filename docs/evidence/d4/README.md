@@ -12,3 +12,8 @@ Text outputs from a real `pio run -e picco_2slot` in a Claude Code cloud session
 | `kit-report.txt` | `scripts/make_device_kit.py --rehearse`: offsets from the envdump and the built table, `piccoflash make-plan` with all four `--expect-offset`, `piccoflash plan`, the SD `update.bin`, and `flash --dry-run` on the real kit against the fake device: `DRY RUN RESULT: READY` |
 | `kit-files.txt` | SHA-256 and sizes of the kit files and `update.bin` |
 | `negative-checks.txt` | The build fails when `boot_app0` would land at 0xe000, and when `picco_2slot`'s `build_flags` drift from `picco`'s |
+| `x4pro-unchanged.txt` | `x4pro` (no feature flag) built with and without this task's edits to upstream files: same symbols, same `.flash.text` and `.flash.rodata`; the images differ only in the embedded ELF hash and the image checksum and hash |
+
+The `Took ... seconds` durations in `size-gate.txt` are wrong: the session's VM was paused during that build and PlatformIO measures wall-clock time. The incremental build itself compiled two files.
+
+Note on `image-info-app.txt`: the ESP-IDF application description says `Project name: arduino-lib-builder` and `App version: ee57070`. Those come from the prebuilt Arduino libraries, not from this firmware; the firmware's own version, `2.0.0-picco2`, is the `CROSSPOINT_VERSION` string shown on the About screen and in the serial log. The guard only requires that the description exists.
