@@ -13,14 +13,17 @@
 #    beside one." and Play: the mark "1" is not shown ("one." is the frame) and nothing pauses there.
 # 3. Table, swipe. Page view, swipe on to chapter 2, page 2; RSVP; two sentence steps; Play. RSVP hands
 #    over at the table's first page with the table banner. A page-turn swipe is Stay and turns the page:
-#    page 3 shows the rest of the table. Swipe back, RSVP from page 2 again, Play: the same banner; a tap
-#    on Stay leaves page view in place, and the state file's mode becomes page.
+#    page 3 shows the rest of the table. Swipe back, RSVP from page 2 again, Play: the same banner; a
+#    left-edge swipe (Back) is Stay. Once more: a tap on Stay leaves page view in place. Each Stay
+#    writes the state file's mode as page.
 # 4. Code block, restart. Swipe on to chapter 3; RSVP; six sentence steps to word 102; Play. The code
-#    block banner. SIGKILL while it shows; restart and reopen the book from its Home card: the reader
-#    shows the code block's page and RSVP opens by itself at word 141, after the code block.
+#    block banner. The light panel (top-edge swipe) opens over it and closes again: the reader draws
+#    the page again and the banner returns. SIGKILL while it shows; restart and reopen the book from
+#    its Home card (a kill with the reader open boots to Home): the reader shows the code block's page
+#    and RSVP opens by itself at word 141, after the code block.
 # 5. End of the book: from chapter 3's last page, Play to its end; the endnotes document holds no
 #    prose word, so playback passes over it and pauses with "End of the book".
-description = "Non-prose items by touch: image Continue, table and code block Stay (tap, swipe, Back), footnote mark, end of book"
+description = "Non-prose items by touch: image Continue, table Stay (swipe, Back, tap), code block restart, footnote mark, end of book"
 
 timeout_s = 300
 env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
@@ -285,5 +288,6 @@ steps = [
   { compare = "table_rest" },
   { compare = "table_stay" },
   { compare = "code_banner" },
+  { compare = "code_banner_after_light_panel", same_as = "code_banner" },
   { compare = "resumed_after_code" },
 ]

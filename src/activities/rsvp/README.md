@@ -258,10 +258,14 @@ are decimal, times in ms.
 
 ## Memory
 
-The activity is one heap object made when RSVP opens (`activity_bytes` in the enter line, 5,440
+The activity is one heap object made when RSVP opens (`activity_bytes` in the enter line, 5,464
 bytes in the simulator: the scheduler with its 300-byte frame, the 1.9 KB index reader, the 2.3 KB
 sentence window, the band geometry; R4b's entry parameters, values, status and last saved place add
-40 bytes). Playback allocates nothing per word: frames, text widths (a 257-byte stack copy) and the
+40 bytes; R5's `Entry::after`, timeout watch and two flags 24 bytes). The `HandOff` the reader makes
+at each entry (one `make_shared`, as before) grows by `ItemStop`, the meter and audit kept across an
+item: 176 bytes in the simulator (`hand_off_bytes` in the banner line). The banner is one more heap
+object per item shown, 248 bytes in the simulator (`activity_bytes` in the banner line), freed when it
+closes; Stay writes the state file as below. Playback allocates nothing per word: frames, text widths (a 257-byte stack copy) and the
 band layout use fixed storage. An index build is transient (`src/reading/README.md`).
 
 Reading or writing the state file allocates one `checkpoint::BookState` (78 KB; on the Picco the
