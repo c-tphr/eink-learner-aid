@@ -201,7 +201,7 @@ The validation report is delivered beside the prepared file as `<title>.validati
 
 ## 6. RSVP engine and display strategy
 
-Playback never drops or reorders a word: when the panel cannot keep up, each update simply takes as long as it takes, and the pause screen reports the pace actually delivered. If the Picco's panel behaves like the Xteink X4's, the 240 WPM single-word default will deliver roughly 100 to 111 WPM on the stock refresh. Reaching 240 with one word per update needs a refresh near 160 ms, which only the fastest trial waveform could provide.
+Playback never drops or reorders a word: when the panel cannot keep up, each update simply takes as long as it takes, and the pause screen reports the pace actually delivered. From the SDK's waveform tables (spike S2), the 240 WPM single-word default is predicted to deliver roughly 125 WPM on the stock refresh of the DEPG0397 panel, and roughly 100 to 111 WPM if the panel behaves like the Xteink X4's. Reaching 240 with one word per update needs a complete update, transfer included, of about 190 ms; Trial C is predicted to fall just short (about 232 WPM), and only Trial D on some panels might get there.
 
 ### Pacing
 
@@ -231,17 +231,17 @@ A display profile is a named refresh strategy: which waveform is used for word u
 
 | Profile | Word update | Predicted delivered pace, one word per update | Status |
 | --- | --- | --- | --- |
-| Stock | CrossPoint's fast refresh of the full frame (only the word band changes), using the panel's reading waveform | DEPG0397: about 380 ms waveform plus at least 40 ms transfer, about 125 WPM; other panels unknown until measured | Default |
+| Stock | CrossPoint's fast refresh of the full frame (only the word band changes), using the panel's reading waveform | DEPG0397: about 380 ms waveform plus at least 38 ms transfer, about 125 WPM; other panels unknown until measured | Default |
 | Trial A | Shortened waveform, about 300 ms drive | About 151 WPM | Experimental |
 | Trial B | Shortened waveform, about 220 ms drive | About 188 WPM | Experimental |
 | Trial C | Shortened waveform, about 160 ms drive | About 232 WPM | Experimental |
 | Trial D | The panel's stock non-flashing UI waveform (BOOX mode 3); 160 ms on DEPG0397, about 80 ms on YRD0426/OPM040B3, unknown on SE0400NQW47 | Unknown until measured | Experimental |
 
-Predictions assume the 60 ms dwell and are arithmetic, not measurements. Predictions include the at least 38 ms needed to send two 48 KB planes at 20 MHz. Two words per update on the stock profile would deliver about 200 to 222 WPM, which is the dependable route to the owner's target range if no trial waveform is clean.
+Predictions assume the 60 ms dwell and are arithmetic, not measurements. Predictions include the at least 38 ms needed to send two 48 KB planes at 20 MHz. Two words per update on the stock profile would deliver about 200 to 222 WPM at X4 timings, and the full 240 if the DEPG0397 prediction holds, which makes it the dependable route to the owner's target range if no trial waveform is clean.
 
 - **How trial waveforms are supplied.** The SDK's `Ssd1677Config` is chosen once from the panel ID and cannot change at run time. Trial tables are loaded per update through the SDK's public `setCustomLUT()`, exposed by one pass-through in `HalDisplay`. The SDK is not forked.
 - **Clearing.** Every profile runs a clearing refresh at paragraph and section ends once at least 60 word updates have passed, and unconditionally after 120. Trial profiles may use lower limits.
-- **Safety limits.** Trial profiles are off by default and are always followed by a clearing refresh when playback pauses. Trials A to C run only on the three SSD1677 panels. Trial D runs on any recognised panel because it uses only stock waveforms. All trials are disabled on an unrecognised panel and while the screen is inverted. Trial tables keep the panel's stock voltages and leave unchanged pixels undriven. Shortened waveforms can leave faint residue and, with long uninterrupted use, may stress the panel; the limits above bound that exposure.
+- **Safety limits.** Trial profiles are off by default and are always followed by a clearing refresh when playback pauses. Trials A to C run only on the three SSD1677 panels. Trial D runs on any recognised panel because it uses only stock waveforms. All trials are disabled on an unrecognised panel and while the screen is inverted. Trial tables keep the panel's stock voltages, and tables A to C leave unchanged pixels undriven. Shortened waveforms can leave faint residue and, with long uninterrupted use, may stress the panel; the limits above bound that exposure.
 - **Outcome.** At the end of the device session the owner picks which profile to keep on the device itself. A trial profile rated clean becomes a selectable setting; otherwise only Stock remains visible.
 
 ## 7. Checkpoint flow, rereading and saved state
@@ -427,7 +427,7 @@ The orchestrator publishes a GitHub release containing everything the session ne
 4. **Confirm.** The script prints the flash plan and asks the owner to type a confirmation phrase. This is the point of no return for Onyx's bootloader.
 5. **Flash.** `session.ps1 flash` writes only the offsets in the plan, verifies each, and refuses any image whose hash differs from the plan.
 6. **First boot.** `session.ps1 monitor` starts logging serial output to a file. The owner confirms the home screen appears and copies the `sd-card/` files across by Wi-Fi transfer or card reader.
-7. **Prove the update path.** With the cable still attached, install `update.bin` from the SD card through Settings and confirm the device reboots into it (it now runs from the second slot). Record the serial log.
+7. **Prove the update path (optional).** With the cable still attached, install `update.bin` from the SD card through Settings and confirm the device reboots into it (it now runs from the second slot). Record the serial log.
 8. **Display benchmark.** From the Device test menu, run the sweep (below) for the stock profile and each trial profile, rating each when asked.
 9. **Guided acceptance.** Run the on-device walk-through of the PRD criteria, tapping pass or fail at each step.
 10. **Choose a profile.** Pick the display profile to keep.
@@ -552,7 +552,7 @@ The orchestrator splits these further where a task would exceed one focused pull
 | D1 | DisplayProfile on device: stock profile, clearing policy, timing capture | Builds; simulator backend unchanged |
 | D2 | Trial profiles A to D with safety limits | Trials A to C disabled on SSD2677 path; off by default; unit test on limits |
 | D3 | DeviceTestActivity: sweep, ratings, guided acceptance, results files | Full sweep runs in the simulator and writes valid results |
-| D4 | `picco_2slot` target, size gate, updates enabled on two-slot only | Image under budget; update menu hidden on single-slot table |
+| D4 | `picco_2slot` target, size gate, updates enabled on two-slot only | Image under budget; update menu hidden on single-slot table; Wi-Fi updater points at this repo's releases |
 | D5 | `session.ps1`, flash plan, offset guard, dry run, restore | Guard tests pass; dry run prints only planned offsets |
 | D6 | `DEVICE_SESSION.md` and the results-issue template | Checklist reviewed against section 10 step by step |
 | A1 | Full acceptance run in the simulator and release of the device kit | Report maps each PRD criterion to passing evidence |
@@ -622,7 +622,7 @@ The largest risk is the combination the owner chose knowingly: one device sessio
 | --- | --- | --- | --- |
 | Flash goes wrong in the only session | Low to medium | Device unusable until restored | Two matching backups before any write; offset guard; dry run; `restore` command; optional early read-only backup |
 | The generic Arduino bootloader does not boot this unit (security eFuses, flash type or voltage) | Low | Device does not boot until restored | Identify-step eFuse and header checks; same bootloader already runs upstream's other ESP32-S3 octal-PSRAM boards; restore from backup over ROM download mode |
-| Stock refresh is far slower than 240 WPM needs | High | Default pace delivers about 100 to 111 WPM single-word | Expected and handled by the PRD's slowdown; two words per update offered; trial profiles |
+| Stock refresh is far slower than 240 WPM needs | High | Default pace delivers about 100 to 125 WPM single-word | Expected and handled by the PRD's slowdown; two words per update offered; trial profiles |
 | No trial waveform is clean, or the unit has the SE0400NQW47 panel (only Stock and Trial D available) | Medium | No fast setting in v1 | Stock stays default; outcome recorded; no further waveform work in v1 |
 | Shortened waveforms stress the panel | Low | Residue or long-term wear | Off by default; bounded runs; clearing refreshes; owner chooses whether to keep one |
 | Word and page mapping in CrossPoint's engine is harder than assumed | Low (spike S1) | Delays M4 and M5 | Spike S1 found an exact mapping through CrossPoint's visible-text offsets with no layout changes, so the paragraph-level fallback is not needed. The remaining risk is the word pass counting offsets differently from the renderer, guarded by a host parity test (R3). |
