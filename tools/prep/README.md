@@ -56,7 +56,7 @@ data = load_checkpoints("rsvp/checkpoints.json")  # parsed dict, or raises Check
 
 ## Words
 
-A word is what the firmware's WordIndex calls a word. The rules are **`docs/spikes/S1-word-stream.md` section 5 ("What a word is")**, the contract between `lib/WordIndex` and these tools; this README does not restate them. `words.py` implements them once, and `extract`, `build` and the fixture generator's self-check all use it. Rule-by-rule tests are in `tests/test_words.py`, including a parity test that feeds the C++ prototype's worked example (`test/spike_word_stream/fixture_s1.xhtml`) through the Python pass.
+A word is what the firmware's WordIndex calls a word. The rules are **`docs/spikes/S1-word-stream.md` section 5 ("What a word is")**, the contract between `lib/WordIndex` and these tools; this README does not restate them. `words.py` implements them once, and `extract`, `build` and the fixture generator's self-check all use it. Rule-by-rule tests are in `tests/test_words.py`, including a parity test that feeds the worked example of spike S1's C++ prototype (`fixtures/words/fixture_s1.xhtml`; the prototype itself was removed in task R3) through the Python pass. `test/word_index` checks the same file against `lib/WordIndex`.
 
 One decision goes beyond section 5: the words of a footnote or endnote body (an element whose `epub:type` has the token `footnote`, `endnote` or `endnotes`, or whose `role` has `doc-footnote`, `doc-endnote` or `doc-endnotes`) stay in the stream and form a `NOTE` region. RSVP passes over it; page view shows it.
 

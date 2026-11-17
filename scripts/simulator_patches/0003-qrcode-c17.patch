@@ -1,0 +1,61 @@
+Compile ricmoo/QRCode as C17, for GCC 15
+
+Applied by scripts/patch_simulator.py after 0002. Task H1 (#72).
+
+run_simulator.py (the simulator library's build script): QRCode's C dialect
+  ricmoo/QRCode 0.0.1 is a registry dependency of [env:simulator]
+  (platformio.project.ini lib_deps), not part of the simulator library. Its
+  src/qrcode.h does `typedef unsigned char bool;` (with `false` and `true`
+  constants) when compiled as C. GCC 15 compiles C as C23 by default, where
+  bool is a keyword, so qrcode.c fails to compile ("'bool' cannot be defined
+  via 'typedef'") on Ubuntu 26.04 / GitHub's ubuntu-latest. GCC 13 (Ubuntu
+  24.04) defaults to gnu17 and is unaffected, as is the device toolchain.
+  qrcode.h itself cannot be patched by this mechanism: patch_simulator.py
+  only patches the simulator's own git checkout, pinned by commit, while
+  QRCode is an unpacked registry archive. The simulator's build script
+  already adjusts other libraries' builders (the GfxRenderer screen text
+  hook), so the fix goes there: QRCode's builder alone gets -std=gnu17 in
+  its CFLAGS. Our own files and every other library keep the compiler's
+  default dialect. Libraries in libdeps are created in sorted name order,
+  so "QRCode" exists when the "simulator" library's script runs; if it is
+  not found the script says so and the build goes on unchanged.
+
+diff --git a/run_simulator.py b/run_simulator.py
+index 3e23c3a..1633187 100644
+--- a/run_simulator.py
++++ b/run_simulator.py
+@@ -19,6 +19,9 @@ Handles two things automatically when this lib is included as a lib_dep:
+    drawText() reports its strings to the simulator (CROSSPOINT_SIM_SCREEN_TEXT).
+    The firmware checkout is not modified.
+ 
++5. Compiles the QRCode library's C files as C17 (-std=gnu17). Its qrcode.h
++   typedefs bool, which C23 (the default C dialect of GCC 15) rejects.
++
+ This file can be loaded more than once in the same PlatformIO process:
+ - once from this library's `library.json` build hook
+ - again indirectly when a consuming firmware repo adds the separate
+@@ -108,6 +111,24 @@ def _add_screen_text_hook():
+ _add_screen_text_hook()
+ 
+ 
++# --- C dialect of ricmoo/QRCode ---
++
++def _qrcode_c17():
++    from SCons.Script import DefaultEnvironment
++
++    # QRCode's qrcode.h has `typedef unsigned char bool;` for C, an error in C23,
++    # which GCC 15 uses by default. Compile that library alone as C17. Libraries
++    # in libdeps are created in name order, so QRCode's builder exists here.
++    for lb in DefaultEnvironment().get("__PIO_LIB_BUILDERS", None) or []:
++        if os.path.basename(lb.path) == "QRCode":
++            lb.env.AppendUnique(CFLAGS=["-std=gnu17"])
++            return
++    print("Simulator: QRCode library not found; its C dialect is not set")
++
++
++_qrcode_c17()
++
++
+ # --- run_simulator custom target ---
+ 
+ def _run_simulator(source, target, env):

@@ -15,7 +15,7 @@ The prototype runs the real `ChapterHtmlSlimParser` on the host at two layouts, 
 ## How to read this document
 
 - Every `path:line` refers to the pinned upstream commit `490813ff` (`docs/BASE.md`). `lib/`, `src/`, `test/` and `platformio.ini` on `main` are byte-identical to it (`git diff --stat 490813ff HEAD -- lib src test platformio.ini` prints nothing).
-- **Verified by running**: the host prototype (`test/spike_word_stream/`, section 7) and the 924 existing host tests. **Read only**: everything about the device (SD timing, heap, expat memory), the reader activity's behaviour at run time, and the partial-build paths, which the prototype does not exercise.
+- **Verified by running**: the host prototype (`test/spike_word_stream/`, since removed; section 7) and the 924 existing host tests. **Read only**: everything about the device (SD timing, heap, expat memory), the reader activity's behaviour at run time, and the partial-build paths, which the prototype does not exercise.
 
 ## 1. How an EPUB chapter becomes pages today
 
@@ -143,7 +143,7 @@ One file per chapter: `/.crosspoint/epub_<hash>/rsvp/<spineIndex>.wix`. It lives
 
 Flags (1 byte): `SENT_END`, `PARA_END`, `LINE_END`, `NONPROSE`, `NOTEREF`, `HEADING`, `BYTE_SPLIT` (section 5).
 
-Measured with the prototype's size model (`estimateFormatSize`, `test/spike_word_stream/WordStreamSpike.cpp:385-`):
+Measured with the prototype's size model (`estimateFormatSize`, `test/spike_word_stream/WordStreamSpike.cpp:385-`, removed in task R3; section 7):
 
 | Chapter | Words | File | Per word | Blocks (largest) |
 | --- | --- | --- | --- | --- |
@@ -216,7 +216,7 @@ The fallback is not needed.
 
 ## 5. What a word is
 
-This is the contract between `lib/WordIndex` and the Python preparation tool. Only the word sequence (texts, in order) must match. Flags are firmware-defined and listed for task R3's expected-output file. The prototype implements these rules (`test/spike_word_stream/WordStreamSpike.cpp`), and `fixture_s1.xhtml` with its expected list in `SpikeWordStreamTest.cpp:274-` is a worked example.
+This is the contract between `lib/WordIndex` and the Python preparation tool. Only the word sequence (texts, in order) must match. Flags are firmware-defined and listed for task R3's expected-output file. The prototype implemented these rules (`test/spike_word_stream/WordStreamSpike.cpp`, removed in task R3; section 7), and `fixture_s1.xhtml` (now `fixtures/words/fixture_s1.xhtml`) with its expected list in `SpikeWordStreamTest.cpp:274-` is a worked example.
 
 **Input text**
 
@@ -285,7 +285,7 @@ CSS, including `display:none` and inline `style`, is ignored on purpose (section
 
 ## 7. Prototype
 
-**Throwaway**, in `test/spike_word_stream/`. It is a standalone CMake project and is not wired into `test/CMakeLists.txt`, so it changes no upstream file and adds nothing to the suite. Contents:
+**Throwaway**, in `test/spike_word_stream/`. It is a standalone CMake project and is not wired into `test/CMakeLists.txt`, so it changes no upstream file and adds nothing to the suite. **Removed** in task R3 (commit `f1e7405e`), when `lib/WordIndex` replaced it; the files and the command below are as they were at commit `f1e7405e^`. Only its worked example is kept, moved to `fixtures/words/fixture_s1.xhtml` (task H1), where `test/word_index` and `tools/prep/tests/test_words.py` read it. Contents:
 
 - `WordStreamSpike.{h,cpp}`: the word pass.
 - `SpikeLinkStubs.cpp`: link stubs adapted from `test/chapter_html_slim_parser/ParserLinkStubs.cpp`, with real entities and hyphenation.

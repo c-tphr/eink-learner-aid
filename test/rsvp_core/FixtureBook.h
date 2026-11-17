@@ -11,7 +11,8 @@
 //   - TABLE and CODE words are not handed out; the last prose word before a TABLE, CODE or IMAGE
 //     marker carries TOKEN_NON_PROSE_FOLLOWS, which is where the reader pauses;
 //   - NOTE words are skipped silently: no flag, no stop;
-//   - TOKEN_PARAGRAPH_END from the PARA_END flag runs;
+//   - TOKEN_PARAGRAPH_END from the PARA_END and LINE_END (word before <br>) flag runs, as
+//     lib/WordIndex's IndexWordSource sets it;
 //   - TOKEN_SECTION_END (and TOKEN_CHECKPOINT when the draft has a checkpoint for the section) on
 //     the last prose word before each section's end anchor, sections[].end - 1 in the fixture.
 // A document whose every word lies in a NOTE region (the fixture's endnotes document) gives an
@@ -240,8 +241,10 @@ inline std::vector<OwnedToken> chapterTokens(const testjson::Value& document) {
   const auto& words = requireArray(document, "words", href);
   const std::vector<bool> skipped = fixtureSkippedWords(document);
   std::vector<bool> paragraphEnd(words.size(), false);
-  for (const auto& run : fixtureFlagRuns(document, "PARA_END")) {
-    for (size_t w = run.first; w < run.second; ++w) paragraphEnd[w] = true;
+  for (const char* flag : {"PARA_END", "LINE_END"}) {
+    for (const auto& run : fixtureFlagRuns(document, flag)) {
+      for (size_t w = run.first; w < run.second; ++w) paragraphEnd[w] = true;
+    }
   }
 
   std::vector<OwnedToken> tokens;

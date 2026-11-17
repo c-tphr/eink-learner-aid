@@ -535,7 +535,7 @@ TEST(WordRules, TokenizePlainText) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// The C++ prototype's worked example (test/spike_word_stream/fixture_s1.xhtml), as
+// The C++ prototype's worked example (fixtures/words/fixture_s1.xhtml), as
 // tools/prep/tests/test_words.py checks it.
 
 namespace {

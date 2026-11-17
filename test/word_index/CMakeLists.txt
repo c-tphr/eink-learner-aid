@@ -46,7 +46,7 @@ add_custom_target(WordIndexTestData DEPENDS ${WIX_DATA_DIR}/sources.txt)
 
 set(WIX_TEST_DEFINITIONS
   WIX_DATA_DIR="${WIX_DATA_DIR}"
-  WIX_SPIKE_FIXTURE="${REPO_ROOT}/test/spike_word_stream/fixture_s1.xhtml"
+  WIX_SPIKE_FIXTURE="${REPO_ROOT}/fixtures/words/fixture_s1.xhtml"
   RSVP_REPO_ROOT="${REPO_ROOT}"
   RSVP_TEST_DIR="${REPO_ROOT}/test/rsvp_core"
 )
