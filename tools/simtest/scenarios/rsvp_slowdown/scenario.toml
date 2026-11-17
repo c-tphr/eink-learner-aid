@@ -11,6 +11,8 @@
 # every 10 ms, so on an idle machine a slot is about 600-620 ms (97-100 WPM). The lower bound, 75.0,
 # allows 200 ms of extra lateness per word on a loaded CI runner. Accepted: 75.0 to 101.9.
 #
+# A left-edge swipe then leaves to page view (S4 row 12's touch alternative).
+#
 # The word frame is shot when the simulator backend reports word 2 ("Room") presented (update 3 of this
 # run: the pause screen and Play used clearing refreshes); it then stays for the modelled 540 ms.
 description = "Slowdown at a modelled 540 ms update: delivered WPM below the 240 target, about 100, every word once and in order"
@@ -64,6 +66,10 @@ steps = [
   { screen_has = "240 WPM target · " },
   { screen_has = " actual | The Lamp Room · chapter " },
   { shot = "pause_slowed" },
+  { swipe = [4, 400, 300, 400], note = "a left-edge swipe (Back) is Page view (S4 row 12)" },
+  { wait_log = "\\[RSVP\\] leave to=page-view ch=1 word=1[34] offset=\\d+" },
+  { wait_log = "Rendered page in" },
+  { screen_has = "The Lamp Room | 1/5" },
   { compare = "pause_entry" },
   { compare = "frame_room" },
   { compare = "pause_slowed", mask = [[0, 0, 480, 50], [0, 124, 480, 72]] },
