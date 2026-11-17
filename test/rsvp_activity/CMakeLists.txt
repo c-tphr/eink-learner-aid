@@ -3,11 +3,13 @@
 # (src/reading/): index store decisions, page/word hand-over and sentence stepping, on real indexes
 # of the fixture book built by lib/WordIndex. Test inputs come from test/word_index's data step.
 # Task R4b adds the pace settings and the state-file rules (src/reading/RsvpValues, BookStateRules),
-# which use lib/CheckpointCore's state codec.
+# which use lib/CheckpointCore's state codec. Task R5 adds the non-prose item lookup and the pause on a
+# display timeout, driven through the real scheduler and lib/DisplayProfileCore's device timing logic.
 
 set(RSVP_CORE_DIR ${REPO_ROOT}/lib/RsvpCore)
 set(WORD_INDEX_DIR ${REPO_ROOT}/lib/WordIndex)
 set(CHECKPOINT_CORE_DIR ${REPO_ROOT}/lib/CheckpointCore)
+set(DISPLAY_PROFILE_DIR ${REPO_ROOT}/lib/DisplayProfileCore)
 set(RSVP_ACTIVITY_SOURCES
   ${REPO_ROOT}/src/controls/ControlMap.cpp
   ${REPO_ROOT}/src/controls/ControlGesture.cpp
@@ -24,6 +26,7 @@ add_executable(RsvpActivityTest
   WordBandTest.cpp
   ReadingHelpersTest.cpp
   RsvpSettingsTest.cpp
+  DisplayTimeoutTest.cpp
   ${RSVP_ACTIVITY_SOURCES}
   ${REPO_ROOT}/test/word_index/WordIndexTestSupport.cpp
   ${WORD_INDEX_DIR}/WordIndexFormat.cpp
@@ -39,6 +42,19 @@ add_executable(RsvpActivityTest
   ${RSVP_CORE_DIR}/WordClassifier.cpp
   ${RSVP_CORE_DIR}/FocusLetter.cpp
   ${RSVP_CORE_DIR}/SentenceStep.cpp
+  ${RSVP_CORE_DIR}/Pacing.cpp
+  ${RSVP_CORE_DIR}/FrameBuilder.cpp
+  ${RSVP_CORE_DIR}/ClearingPolicy.cpp
+  ${RSVP_CORE_DIR}/DeliveredWpmMeter.cpp
+  ${RSVP_CORE_DIR}/WordOrderAudit.cpp
+  ${RSVP_CORE_DIR}/Scheduler.cpp
+  ${DISPLAY_PROFILE_DIR}/DisplayProfiles.cpp
+  ${DISPLAY_PROFILE_DIR}/DisplayStats.cpp
+  ${DISPLAY_PROFILE_DIR}/DisplayTiming.cpp
+  ${DISPLAY_PROFILE_DIR}/DisplayBackend.cpp
+  ${DISPLAY_PROFILE_DIR}/ProfileDisplaySink.cpp
+  ${DISPLAY_PROFILE_DIR}/PanelRecords.cpp
+  ${DISPLAY_PROFILE_DIR}/TimedBackend.cpp
   ${CHECKPOINT_CORE_DIR}/BookState.cpp
   ${CHECKPOINT_CORE_DIR}/GradeTable.cpp
   ${CHECKPOINT_CORE_DIR}/StateCodec.cpp
@@ -55,6 +71,7 @@ target_include_directories(RsvpActivityTest PRIVATE
   ${RSVP_CORE_DIR}
   ${WORD_INDEX_DIR}
   ${CHECKPOINT_CORE_DIR}
+  ${DISPLAY_PROFILE_DIR}
   ${REPO_ROOT}/lib/expat
   ${REPO_ROOT}/lib/Epub
   ${REPO_ROOT}/lib/Utf8

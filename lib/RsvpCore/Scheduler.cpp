@@ -51,6 +51,13 @@ void Scheduler::resetSession() {
   if (activeOpen) lastOperationMs = clock.nowMs();
 }
 
+void Scheduler::continueSession(const DeliveredWpmMeter& meter, const WordOrderAudit& audit,
+                                const bool afterNonProse) {
+  wpmMeter = meter;
+  wordAudit = audit;
+  skipAfterNonProse = afterNonProse;
+}
+
 void Scheduler::extendActive(const uint32_t operationStart) {
   if (activeOpen) {
     wpmMeter.addActiveMs(operationStart - lastOperationMs);

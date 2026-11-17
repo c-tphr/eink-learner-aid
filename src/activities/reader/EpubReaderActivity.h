@@ -20,6 +20,10 @@
 #include "ReaderToolbarUi.h"
 #include "components/OptionPopup.h"
 
+namespace rsvpentry {
+struct HandOff;
+}
+
 class EpubReaderActivity final : public ReaderActivity {
   std::shared_ptr<Epub> epub;
   std::unique_ptr<Epub::SyncMetadata> vocabularyMetadata;
@@ -180,9 +184,14 @@ class EpubReaderActivity final : public ReaderActivity {
   int bookPercentFor(const ChapterPosition& position) const;
   void openReaderMenu();
   // RSVP builds: push speed reading at the page on screen (src/activities/rsvp/RsvpLaunch.h);
-  // `resume`: the book opened in RSVP mode, at its saved word.
-  void openSpeedRead(bool resume = false);
+  // `resume`: the book opened in RSVP mode, at its saved word; `after`: Continue after an item.
+  void openSpeedRead(bool resume = false, std::shared_ptr<rsvpentry::HandOff> after = nullptr);
   bool resumeSpeedRead = false;  // set by loadBook() from the book's state file
+  // RSVP builds: RSVP stopped at an image, table or code block; once its page is shown, the banner
+  // opens over it (showSpeedReadItem()).
+  std::shared_ptr<rsvpentry::HandOff> speedReadItem;
+  unsigned long speedReadItemRenderMs = 0;
+  void showSpeedReadItem();
   // Toolbar reader menu (see Overlay above).
   bool usesToolbarMenu() const;
   void openOverlay(Overlay target);

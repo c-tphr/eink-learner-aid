@@ -261,6 +261,92 @@ TEST(EntryRule, ResumingTakesTheSavedWordWhateverThePage) {
   EXPECT_STREQ(reading::entryFromName(reading::EntryFrom::Resumed), "resumed");
 }
 
+// --- Non-prose items (task R5) ---
+
+TEST(NonProseItem, EachFixtureStopFindsItsItem) {
+  // The stops of the fixture (fixture.expected.json): the figure in chapter 1 (IMAGE at 108), the
+  // table in chapter 2 (161-203) and the code block in chapter 3 (116-141).
+  struct Case {
+    const char* zipPath;
+    uint32_t lastShown;
+    uint32_t next;
+    uint8_t kind;
+    uint32_t wordStart;
+    uint32_t wordEnd;
+  };
+  const Case cases[] = {{CHAPTER_1, 107, 108, wordindex::MARKER_IMAGE, 108, 108},
+                        {CHAPTER_2, 160, 203, wordindex::MARKER_TABLE, 161, 203},
+                        {CHAPTER_3, 115, 141, wordindex::MARKER_CODE, 116, 141}};
+  for (const Case& c : cases) {
+    SCOPED_TRACE(c.zipPath);
+    OpenIndex ix(c.zipPath);
+    // The source flags the last word before the item and hands out the first prose word after it.
+    wordindex::IndexWordSource source(ix.reader);
+    ASSERT_TRUE(source.seek(c.lastShown));
+    rsvp::Token token;
+    ASSERT_TRUE(source.peek(token));
+    EXPECT_NE(token.flags & rsvp::TOKEN_NON_PROSE_FOLLOWS, 0);
+    source.advance();
+    EXPECT_EQ(source.position(), c.next);
+
+    wordindex::Marker m;
+    ASSERT_TRUE(reading::itemBefore(ix.reader, c.lastShown + 1, source.position(), m));
+    EXPECT_EQ(m.kind, c.kind);
+    EXPECT_EQ(m.wordStart, c.wordStart);
+    EXPECT_EQ(m.wordEnd, c.wordEnd);
+    // Page view shows the page holding the item's start; it lies after the last word shown.
+    uint32_t lastEnd = 0;
+    ASSERT_TRUE(ix.reader.wordStart(c.lastShown, lastEnd));
+    EXPECT_GT(m.offsetStart, lastEnd);
+  }
+  EXPECT_STREQ(reading::itemKindName(wordindex::MARKER_IMAGE), "image");
+  EXPECT_STREQ(reading::itemKindName(wordindex::MARKER_TABLE), "table");
+  EXPECT_STREQ(reading::itemKindName(wordindex::MARKER_CODE), "code");
+}
+
+TEST(NonProseItem, FootnoteBodiesAreNotItems) {
+  // Chapter 1 ends with its footnote body (NOTE, words 427-450): playback passes over it, and it is
+  // never an item to show.
+  OpenIndex ix(CHAPTER_1);
+  wordindex::Marker m;
+  EXPECT_FALSE(reading::itemBefore(ix.reader, 427, ix.reader.wordCount(), m));
+  EXPECT_FALSE(reading::itemBefore(ix.reader, 109, 426, m)) << "nothing between the figure and the note";
+}
+
+TEST(NonProseItem, LeadingRunAndItemsInsideNotes) {
+  // A chapter that opens with an image directly followed by a table, then prose, a footnote holding an
+  // image, and more prose. Words: x (0, TABLE) | Alpha beta. (1-2) | Fig ure (3-4, NOTE) | Gamma. (5)
+  wixtest::Built built = wixtest::buildIndex(
+      wixtest::xhtml("<figure><img src=\"a.png\" alt=\"\"/></figure><table><tr><td>x</td></tr></table>"
+                     "<p>Alpha beta.</p><aside epub:type=\"footnote\"><p>Fig<img src=\"n.png\" alt=\"\"/>ure</p></aside>"
+                     "<p>Gamma.</p>"));
+  ASSERT_EQ(built.status, wordindex::BuildStatus::Ok);
+  wordindex::WordIndexReader reader;
+  ASSERT_EQ(reader.open(built.file), ReadStatus::Ok);
+  ASSERT_EQ(reader.wordCount(), 6u);
+  wordindex::IndexWordSource source(reader);
+  EXPECT_EQ(source.position(), 1u) << "RSVP never starts inside the leading items";
+  wordindex::Marker m;
+  ASSERT_TRUE(reading::itemBefore(reader, 0, source.position(), m));
+  EXPECT_EQ(m.kind, wordindex::MARKER_IMAGE) << "one banner for the run, at its first item";
+  EXPECT_EQ(m.wordStart, 0u);
+  // The image inside the footnote is no item: nothing stops between "beta." and "Gamma.".
+  EXPECT_FALSE(reading::itemBefore(reader, 3, 5, m));
+}
+
+TEST(EntryRule, EnteringAtATablePageStartsAfterTheTable) {
+  // S4 section 13: entering RSVP from a page that starts inside an item starts after it.
+  OpenIndex ix(CHAPTER_2);
+  wordindex::Marker table;
+  ASSERT_TRUE(reading::itemBefore(ix.reader, 161, 203, table));
+  const reading::EntryChoice c =
+      reading::chooseEntry(ix.reader, 2, table.offsetStart, reading::NO_PAGE_END, reading::SavedWord{}, false);
+  wordindex::IndexWordSource source(ix.reader);
+  ASSERT_TRUE(source.seek(c.word));
+  EXPECT_EQ(source.position(), 203u);
+  EXPECT_STREQ(reading::entryFromName(reading::EntryFrom::Continued), "continue");
+}
+
 TEST(Position, ChapterPercent) {
   EXPECT_EQ(reading::chapterPercent(0, 400), 0);
   EXPECT_EQ(reading::chapterPercent(200, 400), 50);

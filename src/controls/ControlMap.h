@@ -82,6 +82,10 @@ Act resolve(Ctx ctx, Ev ev, const KeyRoles& roles = KEYS);
 
 // 4. Screens: items in focus order with their touch zones (portrait 480x800 logical pixels).
 enum class Item : uint8_t {
+  // The non-prose banner over page view (task R5; S4 rows 15-16).
+  Continue,
+  Stay,
+  // The RSVP pause screen.
   Exit,
   Menu,
   PageView,
@@ -107,6 +111,14 @@ struct Screen {
   uint8_t count;
   uint8_t defaultIndex;
 };
+
+// The non-prose banner over page view (task R5; S4 rows 15-16 and section 2): Continue, the default,
+// then Stay.
+inline constexpr Zone BANNER_ZONES[] = {
+    {Item::Continue, 16, 688, 264, 72, false},
+    {Item::Stay, 304, 688, 160, 72, false},
+};
+inline constexpr Screen BANNER{BANNER_ZONES, static_cast<uint8_t>(sizeof(BANNER_ZONES) / sizeof(BANNER_ZONES[0])), 0};
 
 // The RSVP pause screen (S4 section 2): R4a's rows, then the WPM and words-per-update steppers and the
 // two save buttons (S4 rows 6-11). The four steppers repeat while held.

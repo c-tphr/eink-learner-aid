@@ -239,6 +239,72 @@ TEST(Scheduler, ResumingAfterNonProseAcceptsSkippedIndexes) {
   EXPECT_EQ(rig.scheduler.audit().wordsDrawn(), 11u);
 }
 
+TEST(Scheduler, AContinuedSessionMatchesPlayingOnAtTheNonProseStop) {
+  // Task R5: RSVP closes at a non-prose stop to show the item in page view, and a new scheduler
+  // carries the session on after it. Meter and audit must end exactly as if play() had been called
+  // at the stop, and the time spent viewing the item is not active time.
+  auto tokens = plainWords(6);
+  tokens[5].flags |= rsvp::TOKEN_NON_PROSE_FOLLOWS;
+  for (uint32_t i = 10; i < 15; ++i) tokens.push_back({"after" + std::to_string(i), i, 0});
+
+  Rig reference(tokens, 120);
+  reference.scheduler.play();
+  ASSERT_EQ(rsvptest::runUntilHalt(reference.scheduler, reference.clock).stops, rsvp::STOP_NON_PROSE);
+  reference.clock.advance(45000);  // viewing the item
+  reference.scheduler.play();
+  ASSERT_EQ(rsvptest::runUntilHalt(reference.scheduler, reference.clock).stops, rsvp::STOP_CHAPTER_END);
+
+  Rig first(tokens, 120);
+  first.scheduler.play();
+  ASSERT_EQ(rsvptest::runUntilHalt(first.scheduler, first.clock).stops, rsvp::STOP_NON_PROSE);
+  ASSERT_EQ(first.source.consumed(), 6u);
+  const rsvp::DeliveredWpmMeter meterAtStop = first.scheduler.meter();
+  const rsvp::WordOrderAudit auditAtStop = first.scheduler.audit();
+
+  Rig second(tokens, 120, 0, first.clock.now + 45000);
+  second.source.seek(6);  // the first word after the item
+  second.scheduler.reposition();
+  second.scheduler.continueSession(meterAtStop, auditAtStop, true);
+  second.scheduler.play();
+  ASSERT_EQ(rsvptest::runUntilHalt(second.scheduler, second.clock).stops, rsvp::STOP_CHAPTER_END);
+
+  const rsvp::WordOrderAudit& a = second.scheduler.audit();
+  EXPECT_TRUE(a.inOrder());
+  EXPECT_EQ(a.wordsDrawn(), 11u);
+  EXPECT_EQ(a.segments(), 1u) << "one run across the hand-over";
+  EXPECT_EQ(a.skippedWords(), 4u) << "the item's own indexes, 6 to 9";
+  EXPECT_EQ(a.wordsDrawn(), reference.scheduler.audit().wordsDrawn());
+  EXPECT_EQ(a.skippedWords(), reference.scheduler.audit().skippedWords());
+
+  const rsvp::MeterStats& m = second.scheduler.meter().stats();
+  const rsvp::MeterStats& r = reference.scheduler.meter().stats();
+  EXPECT_EQ(m.wordsShown, r.wordsShown);
+  EXPECT_EQ(m.updates, r.updates);
+  // The new scheduler's pacing starts without the old one's sub-millisecond remainder, so a hold
+  // after the item can round 1 ms differently; the 45 s on the item are not active time either way.
+  EXPECT_NEAR(static_cast<double>(m.activeMs), static_cast<double>(r.activeMs), 1.0);
+  EXPECT_LT(m.activeMs, 45000u);
+  EXPECT_NEAR(second.scheduler.meter().deliveredWpmTenths(), reference.scheduler.meter().deliveredWpmTenths(), 1);
+}
+
+TEST(Scheduler, AContinuedSessionWithoutTheNonProseFlagReportsTheJumpAsAGap) {
+  auto tokens = plainWords(6);
+  tokens[5].flags |= rsvp::TOKEN_NON_PROSE_FOLLOWS;
+  for (uint32_t i = 10; i < 15; ++i) tokens.push_back({"after" + std::to_string(i), i, 0});
+  Rig first(tokens);
+  first.scheduler.play();
+  ASSERT_EQ(rsvptest::runUntilHalt(first.scheduler, first.clock).stops, rsvp::STOP_NON_PROSE);
+
+  Rig second(tokens);
+  second.source.seek(6);
+  second.scheduler.reposition();
+  second.scheduler.continueSession(first.scheduler.meter(), first.scheduler.audit(), false);
+  second.scheduler.play();
+  rsvptest::runUntilHalt(second.scheduler, second.clock);
+  EXPECT_FALSE(second.scheduler.audit().inOrder());
+  EXPECT_EQ(second.scheduler.audit().gaps(), 1u);
+}
+
 TEST(Scheduler, PauseRequestedDuringARefreshTakesEffectBeforeTheNextFrame) {
   Rig rig(plainWords(100), 540);
   rig.display.duringShow = [&](size_t frame) {

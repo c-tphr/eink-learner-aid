@@ -761,6 +761,11 @@ void EpubReaderActivity::loop() {
     openSpeedRead(true);
     return;
   }
+  // RSVP builds: the page of the item RSVP stopped at has been drawn since the hand-over.
+  if (speedReadItem && lastRenderCompleteMs != speedReadItemRenderMs) {
+    showSpeedReadItem();
+    return;
+  }
 
   // The radio stopped for a chapter build: once the render task has let go of the lock, that page
   // is on screen; once the build tick below has finished the chapter, no parser is left alive and
@@ -1397,8 +1402,8 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
   }
 }
 
-void EpubReaderActivity::openSpeedRead(const bool resume) {
-  if (!RSVP_FEATURE_ENABLED || !epub || !section || isAtEndOfBook()) return;
+void EpubReaderActivity::openSpeedRead(const bool resume, std::shared_ptr<rsvpentry::HandOff> after) {
+  if (!RSVP_FEATURE_ENABLED || !epub || !section || (isAtEndOfBook() && !after)) return;
   rsvpentry::Entry entry;
   entry.spineIndex = currentSpineIndex;
   entry.pageStartOffset = currentPageVisibleOffset.value_or(0);
@@ -1407,6 +1412,7 @@ void EpubReaderActivity::openSpeedRead(const bool resume) {
                               .value_or(entry.pageEndOffset);
   }
   entry.resume = resume;
+  entry.after = std::move(after);
   auto handOff = std::make_shared<rsvpentry::HandOff>();
   handOff->saveReaderProgress = [this](const int spine, const uint32_t offset) {
     const auto page =
@@ -1425,12 +1431,48 @@ void EpubReaderActivity::openSpeedRead(const bool resume) {
       onGoHome();
       return;
     }
+    if (handOff->then == Then::ShowItem) {
+      speedReadItem = handOff;
+      speedReadItemRenderMs = lastRenderCompleteMs;
+    }
     ProgressChangeResult position;
     position.spineIndex = handOff->spineIndex;
     position.hasVisibleTextOffset = true;
     position.visibleTextOffset = handOff->visibleTextOffset;
     applyProgressChange(position);
     if (handOff->then == Then::ReaderMenu) openReaderMenu();
+  });
+}
+
+void EpubReaderActivity::showSpeedReadItem() {
+  auto handOff = std::move(speedReadItem);
+  speedReadItem.reset();
+  // An image-only page starts at the same offset as the page after it: show the first one.
+  const auto first = section && currentSpineIndex == handOff->spineIndex
+                         ? section->getPageForVisibleTextOffset(handOff->visibleTextOffset, true)
+                         : std::nullopt;
+  if (first && *first != section->currentPage) {
+    {
+      RenderLock lock;
+      section->currentPage = *first;
+    }
+    speedReadItem = std::move(handOff);
+    speedReadItemRenderMs = lastRenderCompleteMs;
+    requestUpdate();
+    return;
+  }
+  auto banner = rsvpentry::createItemBanner(renderer, mappedInput, epub, handOff);
+  if (!banner) return;
+  startActivityForResult(std::move(banner), [this, handOff](const ActivityResult&) {
+    using Then = rsvpentry::HandOff::Then;
+    if (handOff->then == Then::Continue) {
+      openSpeedRead(false, handOff);
+    } else if (handOff->then == Then::ShowItem) {
+      speedReadItem = handOff;  // the page under the banner was lost: draw it, then the banner again
+      speedReadItemRenderMs = lastRenderCompleteMs;
+    } else if (handOff->pageTurn != 0) {
+      pageTurn(handOff->pageTurn > 0);
+    }
   });
 }
 

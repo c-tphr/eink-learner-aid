@@ -24,6 +24,7 @@
 #include "reading/ChapterWordIndex.h"
 #include "reading/RsvpPosition.h"
 #include "reading/RsvpValues.h"
+#include "reading/UpdateTimeoutWatch.h"
 
 class Epub;
 
@@ -43,9 +44,10 @@ class RsvpActivity final : public Activity {
   void prepareForSleep() override;
 
  private:
-  enum class Phase : uint8_t { Loading, Paused, Playing };
+  // Leaving: handed over to page view at a non-prose item; the main task finishes the activity.
+  enum class Phase : uint8_t { Loading, Paused, Playing, Leaving };
   // The one-line note on the pause screen.
-  enum class Note : uint8_t { None, ItemSkipped, EndOfBook, ChapterFailed };
+  enum class Note : uint8_t { None, EndOfBook, ChapterFailed, DisplayTimeout };
   // What the status line starts with: "Paused", or the outcome of a save button.
   enum class Status : uint8_t { Paused, SavedDefault, SavedBook, SaveFailed };
 
@@ -79,10 +81,14 @@ class RsvpActivity final : public Activity {
 
   // --- Render task (holding the RenderLock) ---
   void load();
+  void loadContinued();
   reading::SavedWord loadState();
   void startPlayback();
   void stepOnce();
   void enterPause(Note note, const char* reason);
+  // Hands over to page view at the image, table or code block that starts at or after word `from`
+  // (README.md, "Non-prose items"). `afterStop`: reached by a STOP_NON_PROSE stop.
+  void showItem(uint32_t from, bool afterStop);
   void advanceChapter();
   bool openChapter(int spineIndex);
   void drawPauseScreen(bool clearing);
@@ -138,6 +144,7 @@ class RsvpActivity final : public Activity {
   std::atomic<uint32_t> wakeAtMs{0};
   std::atomic<uint32_t> lastLoopMs{0};
   std::atomic<bool> guardRestartPending{false};
+  std::atomic<bool> leavePending{false};  // Phase::Leaving: finish() on the next main-loop pass
 
   // Pause-screen state: written by the main task under the RenderLock, read by the render task.
   int focus = 0;
@@ -151,6 +158,8 @@ class RsvpActivity final : public Activity {
   bool readerProgressSaved = false;
   bool needClear = true;
   bool playbackScreenShown = false;  // render task only: the guides are on screen
+  reading::UpdateTimeoutWatch timeoutWatch;  // render task only
+  bool timeoutPause = false;                 // render task only: the pause asked for is a timeout's
   char statusLine[160] = {};         // render task only: the pause screen's first line, also logged
 };
 
