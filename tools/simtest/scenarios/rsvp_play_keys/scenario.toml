@@ -3,7 +3,8 @@
 # reader), so no other key is ever pressed. DOWN turns to chapter 1, page 1; a 0.9 s DOWN hold enters
 # RSVP ("Page turn long press: Speed read", the feature builds' default); a DOWN hold activates Play;
 # frames 0, 1, 2, ... in order; UP pauses (any key, on its press edge); two short UP presses move the
-# highlight Play -> << sentence -> Page view; an UP hold activates Page view.
+# highlight Play -> << sentence -> Page view; an UP hold activates Page view. Then a page turn, a
+# second entry (the stored word index is reused), four UP presses to Exit and an UP hold leaves the book.
 description = "RSVP by Up/Down only: hold enters, hold plays, any key pauses, short presses move, hold selects Page view"
 
 env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
@@ -52,6 +53,25 @@ steps = [
   { shot = "page_view" },
   { press = "DOWN", note = "the reader works as before: the held UP's release turned nothing" },
   { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { press = "DOWN", hold_ms = 900, note = "enter again, from page 2: the stored index is valid and reused" },
+  { wait_log = "\\[RSVP\\] Index open spine=1 words=451 \\(valid\\)" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=108 " },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceBack" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=PageView" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=Menu" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=Exit" },
+  { press = "UP", note = "no wrap: Exit stays highlighted" },
+  { wait_log = "\\[CTL\\] Pause focus=Exit" },
+  { press = "UP", hold_ms = 900, note = "hold: Exit (S4 row 14: Up x4, hold)" },
+  { wait_log = "\\[CTL\\] Pause select=Exit" },
+  { wait_log = "\\[RSVP\\] leave to=exit ch=1 word=108 offset=\\d+" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1", note = "the reader saves the position's page and goes Home" },
+  { wait_log = "Entering activity: Home" },
   { quit = true },
   { expect_file = ".crosspoint/epub_*/progress.bin", hex_prefix = "0100 0100" },
   { compare = "pause_entry" },
