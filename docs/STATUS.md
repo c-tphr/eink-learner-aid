@@ -1,19 +1,40 @@
 # Project status
 
-The orchestrator keeps this file current. A new session should be able to resume from this file, the GitHub issues and the pull requests alone.
+The agent keeps this file current. A new session should be able to resume from this file, `docs/AGENT_GUIDE.md`, the GitHub issues and the pull requests alone.
 
 ## Where we are
 
-_Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before this update carry dates that ran up to two days ahead of the calendar; their order is right._
+_Updated 2026-11-17 (calendar date). Entries under "Last decisions" dated 2026-11-18 to 2026-11-20 were written earlier, with dates that ran ahead of the calendar; their order is right._
 
-- **Milestones:** M0 to M7 complete. The device kit is the draft release **v2.0.1** (`docs/ACCEPTANCE.md`, "The release"). **M8 waits for the owner's device session.**
-- **Merged since the last update:** A1's acceptance report (PR #109); the release workflow ran twice on `main` at `2e1aadbc` (check run, then the draft release).
-- **Assigned, in progress:** nothing. No implementer is running.
-- **Next:** when the owner attaches results to issue #110 ("Device session results"): #40 A2. Validate the results files (`python -m piccoflash.results validate`, from `tools/device`), record real display timings in `docs/device/picco-timings.json`, set defaults (display profile, clearing limits), fix what the session found and ship it as an SD-card update (a new release with a higher version: 2.0.2 or above), and publish the final report.
+- **Direction changed by the owner (2026-11-17).** The owner flashed the Picco with release 2.0.1 and tried it: books load (also over Wi-Fi file transfer) and checkpoints in a prepared book work as intended, but RSVP reading is a poor experience on the e-ink screen. **RSVP is discontinued.** The project continues with checkpoints only, and the RSVP features and everything added only for them are to be removed (plan below).
+- **One agent.** The two-agent model has ended. One agent plans, implements, verifies and merges: `docs/AGENT_GUIDE.md`.
+- **Built so far:** milestones M0 to M7, under the old model. `main` still holds the product with RSVP; the device runs draft release **v2.0.1**.
+- **In progress:** nothing. No other agent is running.
+- **Next:** the removal plan below, step 1, once the owner has seen the plan and says go.
 - **Blockers:** none.
-- **Waiting on the owner:**
-  1. The device session: download the kit from the draft release v2.0.1 (sign in to see drafts), follow `docs/DEVICE_SESSION.md`, and return the results in issue #110. Steps 1 to 3 are read-only and can be done first on their own day.
-  2. Optional: publish the draft release (only needed for Wi-Fi updates later), try the simulator in a Codespace (`docs/SIMULATOR.md`), and run `/prep-book` once in a local Claude Code session to see the checker's guard pass (`docs/PREPARING_BOOKS.md`).
+- **Waiting on the owner:** a go-ahead for the removal plan. Nothing else. The formal device session is cancelled: #40 (A2) is closed as not planned, and #110 is now "Device use: results and problems", the place for anything the owner notices on the device.
+
+## Removal plan (RSVP and what was added only for it)
+
+Tracked in issue #113. Presented to the owner on 2026-11-17; not started. Each step is one pull request that leaves `main` building, with green CI. The owner's seven decisions are under "Last decisions".
+
+**Stays:** checkpoints in page view (`lib/CheckpointCore`, `src/activities/checkpoint`, `src/reading` session, loader and state file), the word index that maps a section's end to a page (`lib/WordIndex`), the control map as far as checkpoint screens and the reread bar use it (`src/controls`), the two-slot layout and updates (`lib/UpdatePolicy`, `src/update`), the preparation workflow (`tools/prep`, `/prep-book`, `prep-checker`), the flashing tool (`tools/device`: identify, backup, flash, restore), the simulator and scenario harness, CI and the release workflow.
+
+**Goes:** RSVP reading (`lib/RsvpCore`, `src/activities/rsvp`, the position and value helpers for it in `src/reading`), the whole Device test menu (`src/activities/devicetest`: Controls check, benchmark, clearing refresh, guided acceptance and its twelve steps, Choose a profile, `/rsvp-bench/` results), display profiles and trial waveforms (`lib/DisplayProfileCore`, `src/display`, `HalDisplay::setCustomLut`, simulator patch 0004), the RSVP settings, menu rows and strings, the results schema and validator in `tools/device`, the device-session checklist and results issue template, the spike notes and evidence that are about RSVP only.
+
+**File formats do not change:** inside a prepared book `rsvp/checkpoints.json`, the anchors `rsvp-<sid>-start|end` and the manifest id `rsvp-checkpoints`; on the device `<book>.rsvp-state.json`. Existing prepared books and saved grades keep working. A saved `mode: "rsvp"` is read as page view; saved `overrides` are ignored.
+
+| Step | Pull request | What it does | Proof |
+| --- | --- | --- | --- |
+| 0 | Instructions (this one) | Single-agent model in `AGENTS.md`, `docs/AGENT_GUIDE.md`, plan section 11; this plan recorded | CI |
+| 1 | Checkpoints stand alone | Every `cp_*` scenario reworked to page view only, with new page-view versions where a behaviour was shown only through RSVP (reread, restore, skip, grades). `CheckpointActivity` draws with the reader's own refresh instead of a display profile. Reread is page view only: the list becomes "Back to the question / Keep reading". No removal yet | All four checkpoint criteria pass in scenarios that never enter RSVP |
+| 2 | Remove RSVP reading | Delete `src/activities/rsvp`, `lib/RsvpCore`, `RsvpPosition`, `RsvpValues`, `IndexWordSource`, the "Speed read" menu row, the long-press "Speed read" option and its seeding, the RSVP settings, strings, scenarios and host tests. `ReadingSession`, the trigger rules and the restore rules lose their RSVP branches. A device whose long-press setting says "Speed read" falls back to upstream's default | Host tests, scenarios, `x4pro` unchanged, size report |
+| 3 | Remove the Device test menu and display profiles | Delete `src/activities/devicetest`, `src/display`, `lib/DisplayProfileCore`, the `HalDisplay` pass-through, simulator patch 0004 (and 0002 if nothing else needs it), the Settings rows, strings, scenarios and tests. `tools/device` loses the results schema and validator; the flashing commands stay | As step 2, plus the flashing-tool tests on Linux and Windows |
+| 4 | Rename code-level names | Flag `CROSSPOINT_RSVP` to `CROSSPOINT_CHECKPOINTS`, `src/RsvpFeature.h`, `docs/ARCHITECTURE-RSVP.md`, log tags, test folder names, release notes text. No file-format name changes | Builds, scenarios, a test that the format names are unchanged |
+| 5 | Documents | Rewrite `docs/PRD.md` and `docs/PLAN.md` for the checkpoint-only product; rewrite `docs/ACCEPTANCE.md`; replace the device checklist by a short install and update page (flash, SD update, restore); trim `docs/BASE.md`, `README.md`, `docs/SIMULATOR.md`, `docs/CI.md`, `docs/RELEASING.md`; delete the spike notes, evidence and pictures that are about RSVP only (git history keeps them) | Document tests, link check |
+| 6 | Release 2.1.0 | Draft release from the release workflow; the owner installs `update.bin` through Settings > System > SD Card Firmware Update and uses the device. Close #113; #110 stays open for the owner's reports | Workflow run, asset hashes in `docs/ACCEPTANCE.md` |
+
+Risks to watch: the update from 2.0.1 to 2.1.0 must keep the owner's settings file readable (removed settings are skipped, not misread) and their saved grades; the page-view checkpoint hook must behave exactly as now once the RSVP branches are gone (step 1 pins it before anything is deleted); document tests read plan sections 7 and 10 and the checklist, so each is changed together with its test.
 
 ## Last decisions
 
@@ -75,6 +96,9 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 - 2026-11-20: All six PRD criteria are mapped to passing evidence in `docs/ACCEPTANCE.md`; criterion 5 stays open until the device session.
 - 2026-11-20: A1: all six PRD criteria mapped to passing evidence (`docs/ACCEPTANCE.md`); criterion 5 is open until the device session. The kit is a draft release because cloud sessions cannot create, edit or delete releases except through the workflow; publishing is the owner's step. The results issue is #110.
 
+- 2026-11-17 (calendar date): **The owner's device results.** Identify, backup and flash worked with kit 2.0.1 (the first flash attempt failed only because it was run from the repository instead of the kit folder; the tool now says so, PR #111). Books load, also over Wi-Fi file transfer. A prepared book's checkpoint shows and takes answers as the owner expects. No results files were attached.
+- 2026-11-17: **The owner's decisions on the new direction.** (1) RSVP is discontinued and removed, with everything added only for it, including the twelve-step device flow. (2) One agent from now on; it merges its own pull requests after green CI and its own checks. (3) The whole Device test menu goes. (4) Code-level names are renamed away from "rsvp"; names inside prepared books and the state file's name stay, so existing books and grades keep working. (5) The PRD and the plan are rewritten and RSVP-only documents and evidence deleted; the owner does not review the rewrite first and gets a summary. (6) No formal device session: #40 and the benchmark parts of #110 are closed, the owner uses the device and reports problems, and the simulator scenarios are the formal proof of the checkpoint criteria. (7) The next version is 2.1.0 as a draft release that the owner installs from the SD card.
+
 ## Issue map
 
 | ID | Issue | Milestone | State |
@@ -122,7 +146,8 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 | A0 | #37 | M6 | merged |
 | P5 | #38 | M7 | merged |
 | A1 | #39 | M7 | done (acceptance report, draft release v2.0.1, results issue #110) |
-| A2 | #40 | M8 | open |
+| A2 | #40 | M8 | closed, not planned (no device benchmark; RSVP discontinued) |
+| Removal | #113 | M8 | open (RSVP and Device test menu removed; release 2.1.0) |
 | H1 | #72 | M7 | merged (housekeeping) |
 | P7 | #75 | M7 | merged |
 | P8 | #84 | M7 | merged (guard probe for `/prep-book`) |
@@ -136,7 +161,7 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 - Cloud builds: run `./scripts/cloud-setup.sh` first in every session (about 3 minutes from empty caches, seconds afterwards). A plain `pio run` on empty caches fails with `CERTIFICATE_VERIFY_FAILED` because pioarduino replaces the CA settings; worse, its `idf_tools.py` falls back to unverified downloads, which the setup script treats as a failure. Building a `custom_sdkconfig` environment (upstream `default`) in the same core directory triggers a reinstall that hits the TLS problem again; re-run the setup script. `picco` builds in about 5.5 minutes: flash 5,449,518 B of the 7,431,782 B two-slot budget, RAM 34.4%.
 - Upload hazard confirmed by `pio run -e picco -t envdump`: `UPLOADERFLAGS` holds 0x0, 0x8000 and 0xe000 images although `FLASH_EXTRA_IMAGES` is empty.
 - Host suite on `main`: 1,567 tests. Python: `tools/prep` 708 tests, `tools/device` and `scripts/tests` 353 together, `tools/simtest` 125 plus 49 scenarios. Project CI (`.github/workflows/project-ci.yml`, `docs/CI.md`) runs all of them plus the `picco`, `picco_2slot`, `x4pro` and simulator builds on every pull request; read its result with `gh api repos/c-tphr/eink-learner-aid/commits/<sha>/check-runs`.
-- The session disk is small: finished implementers' working copies keep build output under `.claude/worktrees/agent-*/.pio` and `build`; delete those folders (not the working copies of running tasks) when `df` shows little free space.
+- The session disk is small: delete build output (`.pio/build/<env>`, `build/`, `.cache`, and the same folders in old working copies under `.claude/worktrees/agent-*/`) when `df` shows little free space.
 - Simulator: `pio run -e simulator_picco` applies `scripts/simulator_patches/` automatically; headless run: `xvfb-run -a .pio/build/simulator_picco/program` with `CROSSPOINT_SIM_INPUT_SCRIPT="0:WAIT:Entering activity: Home;1500:SHOT:home;2500:QUIT"` (SHOT writes a BMP at the given path).
 - Upstream renderer quirks found by the parity test (not ours, not fixed): the last word of a table caption is never drawn; rows of a grid table split across pages are drawn line by line. Neither affects RSVP positions or anchors.
 - The flash tool has never run on Windows or on a device; `docs/DEVICE_EARLY_CHECK.md` is the first real run. Never post backups or `.bin` blobs: the repo is public.
@@ -144,13 +169,13 @@ _Updated 2026-11-18. Entries below dated 2026-11-18 or 2026-11-19 from before th
 - The cloud VM pauses when the session is idle, so wall-clock durations are unreliable; scripts time with `/proc/uptime`.
 - Network: all ten allowlisted hosts and the five upstream repos respond; no host refused so far. F2's smoke test gives the complete list.
 - Pushing `task/<n>-<slug>` branches works. Merged branches are not deleted (setting is off and sessions cannot delete branches).
-- Implementers' working copies live under `.claude/worktrees/` (ignored locally through `.git/info/exclude`).
+- Working copies from the two-agent model live under `.claude/worktrees/` (ignored locally through `.git/info/exclude`).
 
 ## How to resume
 
-1. Read this file, then `docs/PLAN.md` (the Change log at its top lists what the spikes changed).
-2. List open issues and open pull requests. Validate any open pull request yourself (check out the branch, re-run its acceptance commands, read Project CI's checks), then pick the next issue whose dependencies are merged.
+1. Read `docs/AGENT_GUIDE.md`, then this file, then the parts of `docs/PLAN.md` your next step touches (the Change log at its top lists what changed since the first version).
+2. List open issues and open pull requests. An open pull request from an earlier session is yours to finish: check out its branch, re-run its acceptance commands, read Project CI's checks, then merge or fix it.
 3. Run `./scripts/cloud-setup.sh` before any `pio` command.
-4. After a container restart, background implementers are stopped but their working copies under `.claude/worktrees/agent-*/` survive: check `git status` in each, and resume the implementer with a message, or commit and push its work-in-progress yourself. Ask implementers to push work-in-progress early.
+4. After a container restart, background jobs are gone but pushed branches survive. Old working copies under `.claude/worktrees/agent-*/` are left over from the two-agent model and can be ignored (they are excluded through `.git/info/exclude`).
 5. The preparation checker is the `prep-checker` agent (`.claude/agents/prep-checker.md`); in a cloud session its guard hook does not run, so `save-check` refuses its result (issue #75). Do not work around the guard.
 6. Release runs: start `release-kit.yml` on `main` with the GitHub tool for running workflows (`gh api` cannot reach Actions paths), `publish=false` first. Read job results from the commit's check runs.

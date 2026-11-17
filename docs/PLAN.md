@@ -33,11 +33,16 @@ Nov 16, 2026 · @Christopher
 
 - Section 10, step 7: the plan named the two settings "Side button layout" and "Short power button". The screens say Settings > Controls > Side buttons > Layout and Settings > Controls > Power button > Short click. The step now uses the screens' words, as `docs/DEVICE_SESSION.md` does.
 
+**2026-11-17 (calendar date; this entry is the newest, and earlier entries carry dates that ran up to three days ahead).** One agent, and the end of RSVP (the owner's instruction after flashing the device and trying it). **Section 1 changes: the "Agents" row.**
+
+- The owner flashed the Picco with release 2.0.1. Books load, also over Wi-Fi file transfer, and checkpoints in a prepared book work as intended. RSVP reading is a poor experience on the e-ink screen, so the owner has discontinued it: the RSVP features and everything added only to support them, including the Device test menu and the twelve-step device session, are to be removed, and the project continues with checkpoints only. Until that removal is merged, sections 1 to 10 and 13 still describe the product as built, RSVP included; they are rewritten as part of the removal. `docs/STATUS.md` holds the removal plan's state.
+- Sections 1 and 11: one agent now does all the work (plans, implements, verifies, merges). The two-agent model (an orchestrator assigning issues to implementers and validating their pull requests) has ended. The rules are in `docs/AGENT_GUIDE.md`, which replaces `docs/IMPLEMENTER_GUIDE.md`; the operating rules in section 11 are rewritten to match. The agent merges its own pull requests once CI is green and its own checks pass (the owner's decision).
+
 ## 1. Summary and confirmed decisions
 
 The reader is built as a public fork of mainline CrossPoint: RSVP works on any EPUB, and checkpoints come from prepared EPUBs that carry their own prompt data. This plan turns the v1 PRD into work that a Fable 5.2 orchestrator can split into GitHub issues for Opus 5.5 implementers. Everything is developed and verified in a simulator, then proven on the physical Picco in one final hands-on session.
 
-The decisions below came from the interview on 16 Nov 2026 and are fixed inputs. The orchestrator must not reopen them without asking the project owner.
+The decisions below came from the interview on 16 Nov 2026 and are fixed inputs. The agent must not reopen them without asking the project owner. (The owner changed the "Agents" row on 2026-11-17 and has discontinued RSVP; see the Change log.)
 
 | Topic | Decision |
 | --- | --- |
@@ -58,7 +63,7 @@ The decisions below came from the interview on 16 Nov 2026 and are fixed inputs.
 | RSVP presentation | Each word is aligned on a fixed focus letter. Longer holds at punctuation count toward WPM. |
 | Test books | A tiny synthetic fixture for automated tests, plus one short public-domain nonfiction title run through the full preparation workflow. |
 | Repo | Public, personal project, no plan to merge upstream. The repo is c-tphr/eink-learner-aid. |
-| Agents | Claude Code cloud sessions. The orchestrator turns this plan into GitHub issues, validates each pull request and merges it without waiting for the owner. |
+| Agents | One agent in a Claude Code cloud session plans, implements, verifies and merges each change, without waiting for the owner (`docs/AGENT_GUIDE.md`). Until 2026-11-17 an orchestrator assigned issues to implementer sessions and validated their pull requests; milestones M0 to M7 were built that way. |
 | Network allowlist | Build, test and official documentation sites. Community sites stay blocked. |
 
 ## 2. What is known about the Picco, and what is not
@@ -496,7 +501,7 @@ The scripts are exercised before the session by a dry-run mode that prints the e
 
 ## 11. Orchestration and work breakdown
 
-Fable 5.2 (effort: high) leads: it turns this plan into GitHub issues, assigns each to an Opus 5.5 (effort: high) implementer session, re-runs the acceptance checks itself on the resulting pull request, and merges or sends it back. It continues until every issue is validated, then hands the device kit to the owner.
+One agent does the work: it turns the plan into GitHub issues, implements each change, checks it against its acceptance commands, and merges it. Milestones M0 to M7 below were built under the earlier two-agent model (a Fable 5.2 orchestrator that assigned each issue to an Opus 5.5 implementer session and validated the pull request itself); the owner ended that model on 2026-11-17. The standing rules are in `docs/AGENT_GUIDE.md`.
 
 ### Before the agents start (owner)
 
@@ -507,14 +512,14 @@ Fable 5.2 (effort: high) leads: it turns this plan into GitHub issues, assigns e
 
 ### Operating rules
 
-1. **One issue, one branch, one pull request.** Branch `task/<issue number>-<slug>`; the pull request body says `Closes #<n>`.
-2. **Issue contents.** Goal, links to the plan sections it implements, in-scope and out-of-scope, acceptance checks as runnable commands, evidence required, dependencies.
-3. **Implementer's definition of done.** All acceptance checks pass locally; CI is green; tests were added with the change; the pull request lists what was run and attaches outputs or screenshots; no unrelated edits.
-4. **Independent validation.** The orchestrator checks out the branch in its own session, runs the acceptance commands again, reads the diff against the plan, and for user-facing work opens the simulator screenshots. It does not rely on the implementer's report.
-5. **Rework.** A failed validation gets a comment listing each failed check with its output, the label `needs-rework`, and reassignment. The same issue stays open until it passes.
-6. **Merging.** The orchestrator squash-merges validated pull requests into `main` without waiting for the owner. The one exception is the base import (F1, pull request #42), merged with a merge commit to keep upstream history.
-7. **Escalation.** The orchestrator stops and asks the owner only for: a decision this plan fixes as owner-decided, a blocked network host, anything that changes scope, or two consecutive failed reworks on one issue.
-8. **Plan changes.** Findings from spikes that change the design are written back to `docs/PLAN.md` by pull request, with the reason, before dependent issues start.
+1. **One agent.** The agent does not hand implementation, review or validation to other agents or sessions. The `prep-checker` agent of the preparation workflow (section 8) is part of the product and stays.
+2. **One change, one branch, one pull request.** The pull request body says `Closes #<n>` when there is an issue, and follows the template.
+3. **Issue contents.** Goal, links to the plan sections it implements, in-scope and out-of-scope, acceptance checks as runnable commands, evidence required, dependencies.
+4. **Definition of done.** All acceptance checks pass on the final tree, run by the agent with their real output in the pull request; CI is green on the final commit; tests were added with the change; no unrelated edits.
+5. **Self-check before merging.** Nobody else validates the work, so the agent reads its own diff against the plan as a reviewer would and, for user-facing work, opens the simulator screenshots. The full list is "Before you merge" in `docs/AGENT_GUIDE.md`.
+6. **Merging.** The agent squash-merges into `main` without waiting for the owner, and only on green CI, documents included. It then tells the owner what merged and what was not verified. (The base import, F1, pull request #42, was merged with a merge commit to keep upstream history.)
+7. **Escalation.** The agent stops and asks the owner only for: a decision in section 1 or the PRD, a blocked network host, anything that changes scope, anything that publishes outside the repository or cannot be undone, or an approach that has failed twice.
+8. **Plan changes.** Findings that change the design are written back to `docs/PLAN.md` by pull request, with the reason, before work that depends on them.
 
 ### Constraints of the cloud environment
 

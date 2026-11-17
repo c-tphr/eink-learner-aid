@@ -1,6 +1,6 @@
 Closes #<issue number>
 
-<!-- One issue, one branch (task/<n>-<slug>), one pull request: docs/IMPLEMENTER_GUIDE.md. Title: "<task id>: <title>". -->
+<!-- One change, one branch, one pull request: docs/AGENT_GUIDE.md ("Before you merge"). -->
 
 ## What changed
 
