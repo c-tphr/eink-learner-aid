@@ -14,6 +14,7 @@ This is a fork of the CrossPoint e-reader firmware for the BOOX Picco (ESP32-S3,
 4. **Add, don't rewrite.** New code goes in the directories named in plan section 4. Edits to upstream files are limited to registration points and must be listed in your pull request.
 5. **Stay in scope.** No unrelated edits, no drive-by refactors, no upstream syncs.
 6. If the plan states a fact that the code contradicts, do not silently follow either. Report it; the orchestrator corrects the plan by pull request.
+7. **Never work around a refusal.** If the session's safety checks refuse a command (a permission prompt, the worktree guard, a blocked network host), do not reword it, copy the script somewhere else, or wrap it to get past the check. Run the plain form the message asks for (one simple command, from your working copy). If that is refused too, stop that step and report the exact refusal. Example: the worktree guard can refuse a command that names a path under `.github/` together with pipes or redirections; run the script as one plain command on its own line (`bash .github/scripts/check-format.sh`), and if that is refused as well, report it and rely on the CI job that runs the same script.
 
 ## Workflow
 
