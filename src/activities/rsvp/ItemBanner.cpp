@@ -68,8 +68,10 @@ void ItemBanner::onEnter() {
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
   handOff->then = rsvpentry::HandOff::Then::None;
   handOff->pageTurn = 0;
-  LOG_DBG("RSVP", "banner kind=%s ch=%d word=%lu item_offset=%lu", reading::itemKindName(handOff->item.kind), handOff->spineIndex,
-          static_cast<unsigned long>(handOff->item.nextWord), static_cast<unsigned long>(handOff->visibleTextOffset));
+  LOG_DBG("RSVP", "banner kind=%s ch=%d word=%lu item_offset=%lu activity_bytes=%u hand_off_bytes=%u",
+          reading::itemKindName(handOff->item.kind), handOff->spineIndex,
+          static_cast<unsigned long>(handOff->item.nextWord), static_cast<unsigned long>(handOff->visibleTextOffset),
+          static_cast<unsigned>(sizeof(ItemBanner)), static_cast<unsigned>(sizeof(rsvpentry::HandOff)));
   controlInput.restartGuard();
   drawRequest();
 }

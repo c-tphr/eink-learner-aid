@@ -6,8 +6,8 @@
 # ("Figure 1. Gannet Rock light, seen from the landing stage."), word 118 the next sentence.
 #
 # Run 1. RSVP from page 1, eight sentence steps to 101, Play at 60 WPM: playback stops by itself before
-# the image (position 108, saved). A bottom-edge swipe (Home gesture) goes Home; the reader's own
-# progress moves to page 2, where word 108 is. Reopening the book from Home opens RSVP by itself at
+# the image (position 108, saved) and page view shows page 2, which holds the image and word 108, with
+# the non-prose banner (task R5). A bottom-edge swipe (Home gesture) on the banner goes Home. Reopening the book from Home opens RSVP by itself at
 # word 108 (the state file says RSVP mode). Play; after the frame of word 110 a touch pauses, so the
 # next word is 111 (60 WPM leaves about a second for the touch), and the pause saves it. SIGKILL.
 # Run 2. Restart: the firmware reopens the book at boot (the seeded /.crosspoint/state.json still says
@@ -55,9 +55,9 @@ steps = [
   { wait_log = "\\[RSVP\\] play ch=1 word=101 wpm=60 words_per_update=1" },
   { wait_log = "\\[RSVP\\] pause reason=non-prose ch=1 word=108 target=60 ", timeout_ms = 30000 },
   { wait_log = "\\[RSVP\\] position saved reason=non-prose ch=1 word=108 mode=rsvp ok=1" },
-  { wait_log = "\\[CTL\\] Pause armed" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1", note = "the reader's own progress: page 2, the image's page, which holds word 108" },
+  { wait_log = "\\[CTL\\] Banner armed" },
   { swipe = [240, 780, 240, 300], note = "bottom-edge swipe: the Home gesture" },
-  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1", note = "the reader's own progress: page 2, which holds word 108" },
   { wait_log = "Entering activity: Home" },
   { wait_log = "No known cover image for thumbnail", note = "Home has finished loading the card" },
   { press = "ENTER", note = "reopen the book from its card" },
