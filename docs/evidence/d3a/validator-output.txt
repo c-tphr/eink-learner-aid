@@ -1,0 +1,3 @@
+OK ../../docs/evidence/d3a/devicetest_sweep-0001-bench.json: benchmark run 1, ended-by-owner, panel simulator, 21 C, profiles: stock done; trial-a skipped-part-way from word-band; trial-b done; trial-c not-run (ended-by-owner); trial-d not-run (ended-by-owner)
+OK ../../docs/evidence/d3a/devicetest_sweep_keys-0001-bench.json: benchmark run 1, ended-by-owner, panel simulator, 21 C, profiles: stock done; trial-a skipped-part-way from playback-240-1; trial-b done; trial-c not-run (ended-by-owner); trial-d not-run (ended-by-owner)
+OK ../../docs/evidence/d3a/devicetest_controls-0001-controls.json: controls check run 1, complete, 8 events (up_pressed, up_held, down_pressed, down_held, confirm_pressed, power_clicked, touched)

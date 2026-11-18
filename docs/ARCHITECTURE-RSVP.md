@@ -15,7 +15,7 @@ The project's firmware code sits beside upstream CrossPoint, not inside it (`doc
 | `src/controls/` | ControlMap | The single binding table (key roles, timings, event-to-action bindings, touch zones) and the input adapter (`docs/spikes/S4-control-map.md`, section 7) | R4a (#21), C3a (#93, checkpoint screens), C4, D3a |
 | `src/activities/checkpoint/` | CheckpointActivity | Prompt, reveal, grade, reread choice, skip; opened by ReadingSession when a checkpoint fires | C3a (done), C3 (#27), C4 |
 | `src/display/` | DisplayProfile | Millisecond clock, simulator backend (modelled timing), device backend (the stock and trial profiles' refreshes, timed), a temporary simulator self-test | E3 (done), D1 (done), D2 (done) |
-| `src/activities/devicetest/` | DeviceTestActivity | Benchmark sweep, ratings, guided acceptance, results files | D3a (#32), D3b |
+| `src/activities/devicetest/` | DeviceTestActivity | Device test menu, Controls check, display benchmark sweep and ratings, results files under `/rsvp-bench/` (since D3a; portable parts host-tested in `test/device_test`); guided acceptance and profile choice | D3a (done), D3b |
 | `lib/UpdatePolicy/` | (two-slot build) | Self-update slot policy and the Wi-Fi updater's release source, asset name and version rule. Portable, host-tested (`test/update_policy`) | D4 (done) |
 | `src/update/` | (two-slot build) | Reads the running partition table through ESP-IDF and gates the update menus, the boot recovery picker and every update write; points the Wi-Fi updater at this repository | D4 (done) |
 | `src/RsvpFeature.h` | (all) | The feature flag test, below | F4 |
@@ -69,6 +69,10 @@ Registration points so far:
 | `src/network/FirmwareFlasher.cpp` | `update_gate::mayWriteUpdateSlot` before the SD update erases the next slot | D4 |
 | `src/network/OtaUpdater.cpp` | Release URL, asset name and version rule through `update_gate`; `selfUpdateAllowed` before checking; `mayWriteUpdateSlot` before `esp_ota_begin` | D4 |
 | `test/CMakeLists.txt` | `add_subdirectory(update_policy)` | D4 |
+| `test/CMakeLists.txt` | `add_subdirectory(device_test)` | D3a |
+| `src/activities/settings/SettingsActivity.h/.cpp` | `SettingAction::DeviceTest`; `#include "activities/devicetest/DeviceTestLaunch.h"`; the row "Device test" first in Settings > Display when `devicetest::AVAILABLE`; its case opens `devicetest::create()` | D3a |
+| `src/CrossPointSettings.h`, `src/SettingsList.cpp` | `rsvpDisplayProfile` (the trial display profiles' byte, `TrialUnlock.h`), persisted only, inside the existing `#if CROSSPOINT_RSVP_ENABLED` blocks | D3a |
+| `lib/I18n/translations/english.yaml` | The device test screens' `STR_DT_*` strings | D3a |
 
 ## Simulator
 

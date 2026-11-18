@@ -37,6 +37,7 @@ enum class SettingAction {
   ControlsSide,
   ControlsTouch,
   About,
+  DeviceTest,  // RSVP builds only (src/activities/devicetest/DeviceTestLaunch.h)
 };
 
 struct SettingInfo {

@@ -1,0 +1,78 @@
+# The Controls check (task D3a; docs/spikes/S4-control-map.md section 7; plan section 10, step 7).
+# Settings > Display > Device test is reached through upstream's lists, which need ENTER (Confirm) or
+# touch on the Picco (S4 section 4.4). On our screens: a hold chooses "Controls check"; then every
+# input is recorded with its raw HalGPIO index, its logical buttons, its role and its hold time: Up
+# short, Down held 0.9 s (a hold), ENTER (Confirm), a power click, a tap, a swipe and the left-edge
+# Back swipe. A 3.5 s hold of Up alone leaves (the exit that needs no touch and no second key). A
+# second check is left by a tap on Finish (the exit that needs no key). Both files must validate.
+description = "Controls check: keys, power click, touch and gestures recorded; left by a 3 s hold, then by Finish"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "5", CROSSPOINT_SIM_CLEAR_MS = "10" } }
+
+steps = [
+  { wait_screen = "Browse Files | Library | File Transfer | Settings" },
+  { press = "DOWN" },
+  { press = "DOWN" },
+  { press = "DOWN", note = "Settings is the fourth Home entry" },
+  { press = "ENTER" },
+  { wait_screen = "Settings | dev-simulator | System" },
+  { press = "DOWN", note = "Display is the second section" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "ENTER" },
+  { wait_screen = "Display | Device test" },
+  { shot = "settings_display", note = "the one feature-only row, first in Display" },
+  { press = "ENTER" },
+  { wait_log = "\\[DTS\\] screen menu focus=0 refresh=clear" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=menu" },
+  { shot = "menu" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Controls check (the default row)" },
+  { wait_log = "\\[DTS\\] controls start run=1 file=/rsvp-bench/0001-controls.json side_layout=prev-next short_power=ignore" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=controls", note = "after the hold that opened it is released" },
+  { press = "UP", hold_ms = 120 },
+  { wait_log = "\\[DTS\\] controls event n=1 key BTN_UP \\(4\\) -> Up PageBack NavPrevious, prev, \\d+ ms, short" },
+  { press = "DOWN", hold_ms = 900 },
+  { wait_log = "\\[DTS\\] controls event n=2 key BTN_DOWN \\(5\\) -> Down PageForward NavNext, next, \\d+ ms, hold" },
+  { press = "ENTER" },
+  { wait_log = "\\[DTS\\] controls event n=3 key BTN_CONFIRM \\(1\\) -> Confirm, confirm, \\d+ ms, short" },
+  { press = "POWER" },
+  { wait_log = "\\[DTS\\] controls event n=4 key BTN_POWER \\(6\\) -> Power, none, \\d+ ms, short" },
+  { tap = [240, 400] },
+  { wait_log = "\\[DTS\\] controls event n=5 touch tap 240,400" },
+  { swipe = [400, 300, 120, 300] },
+  { wait_log = "\\[DTS\\] controls event n=6 touch swipe-left 400,300" },
+  { swipe = [2, 500, 300, 500] },
+  { wait_log = "\\[DTS\\] controls event n=7 touch back-gesture" },
+  { wait_log = "\\[DTS\\] saved file=/rsvp-bench/0001-controls.json bytes=\\d+ events=7 status=running ok=1", note = "written once the owner pauses" },
+  { shot = "controls_events", note = "drawn before the write; not compared: it shows measured hold times" },
+  { press = "UP", hold_ms = 3500, note = "one key alone: a 3 s hold leaves" },
+  { wait_log = "\\[DTS\\] controls event n=8 key BTN_UP \\(4\\) -> Up PageBack NavPrevious, prev, 3\\d\\d\\d ms, exit-hold" },
+  { wait_log = "\\[DTS\\] controls end run=1 events=8 status=complete" },
+  { wait_log = "\\[DTS\\] screen menu focus=0 refresh=clear" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=menu", note = "the exit hold's release is swallowed" },
+
+  { tap = [240, 108], note = "touch only: the Controls check row" },
+  { wait_log = "\\[DTS\\] controls start run=2 file=/rsvp-bench/0002-controls.json" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=controls" },
+  { tap = [100, 200] },
+  { wait_log = "\\[DTS\\] controls event n=1 touch tap 100,200" },
+  { tap = [240, 708], note = "Finish" },
+  { wait_log = "\\[DTS\\] controls event n=2 touch tap 240,708" },
+  { wait_log = "\\[DTS\\] controls end run=2 events=2 status=complete" },
+  { wait_log = "\\[DTS\\] screen menu" },
+  { quit = true },
+
+  { expect_schema = "rsvp-bench/0001-controls.json", schema = "tools/device/schema/rsvp-bench.schema.json" },
+  { expect_schema = "rsvp-bench/0002-controls.json", schema = "tools/device/schema/rsvp-bench.schema.json" },
+  { expect_json = "rsvp-bench/0001-controls.json", pointer = "/status", equals = "complete" },
+  { expect_json = "rsvp-bench/0001-controls.json", pointer = "/summary", equals = { up_pressed = true, up_held = true, down_pressed = true, down_held = true, confirm_pressed = true, power_clicked = true, touched = true } },
+  { expect_json = "rsvp-bench/0001-controls.json", pointer = "/events/1/kind", equals = "hold" },
+  { expect_json = "rsvp-bench/0001-controls.json", pointer = "/events/1/raw_name", equals = "BTN_DOWN" },
+  { expect_json = "rsvp-bench/0001-controls.json", pointer = "/events/1/logical", equals = ["Down", "PageForward", "NavNext"] },
+  { expect_json = "rsvp-bench/0001-controls.json", pointer = "/events/3/raw", equals = 6 },
+  { expect_json = "rsvp-bench/0001-controls.json", pointer = "/events/6/kind", equals = "back-gesture" },
+  { expect_json = "rsvp-bench/0001-controls.json", pointer = "/events/7/kind", equals = "exit-hold" },
+  { expect_json = "rsvp-bench/0002-controls.json", pointer = "/events/1/x", equals = 240 },
+  { expect_no_file = "rsvp-bench/*.tmp" },
+  { compare = "settings_display" },
+  { compare = "menu" },
+]

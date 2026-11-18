@@ -33,6 +33,7 @@
 #include "SilentRestart.h"
 #include "StatusBarSettingsActivity.h"
 #include "TextSettingsActivity.h"
+#include "activities/devicetest/DeviceTestLaunch.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
 #include "components/UITheme.h"
@@ -139,6 +140,7 @@ void SettingsActivity::rebuildSettings() {
   addAction(SettingsSection::General, StrId::STR_LANGUAGE, SettingAction::Language);
   addAction(SettingsSection::General, StrId::STR_KEYBOARD_LAYOUTS, SettingAction::KeyboardLayouts);
   addAction(SettingsSection::Reader, StrId::STR_TEXT_SETTINGS, SettingAction::TextSettings);
+  if (devicetest::AVAILABLE) addAction(SettingsSection::Display, StrId::STR_DT_DEVICE_TEST, SettingAction::DeviceTest);
   addAction(SettingsSection::Reader, StrId::STR_MANAGE_FONTS, SettingAction::DownloadFonts);
   if (section == SettingsSection::Controls) {
     if (controlsGroup == ControlsGroup::Root) {
@@ -525,6 +527,10 @@ void SettingsActivity::toggleSelectedSetting() {
         } else {
           LOG_ERR("SETTINGS", "OOM: AboutActivity");
         }
+        break;
+      case SettingAction::DeviceTest:
+        if (auto activity = devicetest::create(renderer, mappedInput))
+          startActivityForResult(std::move(activity), nullptr);
         break;
       case SettingAction::None:
         // Do nothing
