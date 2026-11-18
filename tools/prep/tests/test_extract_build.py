@@ -71,7 +71,7 @@ def test_one_word_pass():
 def test_extract_writes_the_work_folder(workdir):
     names = sorted(str(p.relative_to(workdir)) for p in workdir.rglob("*") if p.is_file())
     assert names == ["source.json", "structure.json", "text/d01-title.txt", "text/d02-chapter-1.txt",
-                     "text/d03-chapter-2.txt", "text/d04-chapter-3.txt"]
+                     "text/d03-chapter-2.txt", "text/d04-chapter-3.txt", "text/d05-endnotes.txt"]
     source = json.loads((workdir / "source.json").read_text(encoding="utf-8"))
     assert source["source_file"] == "fixture.epub"
     assert source["source_sha256"] == hashlib.sha256(FIXTURE.read_bytes()).hexdigest() == EXPECTED["epub_sha256"]
@@ -83,7 +83,13 @@ def test_extract_writes_the_work_folder(workdir):
         ("The Lamp Room", "text/chapter-1.xhtml", 1, "d02-p001"),
         ("The Fog Season", "text/chapter-2.xhtml", 1, "d03-p001"),
         ("The Keeper's Log", "text/chapter-3.xhtml", 1, "d04-p001"),
+        ("Notes", "text/endnotes.xhtml", 1, None),  # no reading-stream block to point at
     ]
+    endnotes = source["spine"][4]
+    assert (endnotes["blocks"], endnotes["first_paragraph"], endnotes["footnote_blocks"]) == (0, None, 3)
+    text = (workdir / "text" / "d05-endnotes.txt").read_text(encoding="utf-8")
+    assert "# No reading-stream blocks; 3 footnote blocks." in text
+    assert "[d05-n002] footnote, 14 words, note fn2, id en-n002\nMost of this light" in text
 
 
 def test_extract_is_deterministic(workdir, tmp_path):

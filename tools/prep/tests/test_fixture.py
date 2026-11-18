@@ -160,9 +160,17 @@ def _mid_chapter(root, element):
 
 def test_every_content_type_is_present_mid_chapter():
     zf, base, _, manifest, _ = opf_info()
-    found = {"figure": 0, "table": 0, "pre": 0, "br": 0, "pagebreak": 0}
+    found = {"figure": 0, "table": 0, "pre": 0, "br": 0, "pagebreak": 0, "endnote links": 0}
     forms = []
-    for href, root in spine_documents()[1:]:
+    # The endnotes document, last in the spine: one endnotes section holding a heading and one endnote per note.
+    endnotes_href, endnotes_root = spine_documents()[-1]
+    assert endnotes_href == gen.C.ENDNOTES["href"]
+    sections = list(endnotes_root.find(f"{XHTML}body"))
+    assert [(s.tag, s.get(EPUB_TYPE), s.get("role")) for s in sections] == [
+        (f"{XHTML}section", "endnotes", "doc-endnotes")]
+    endnotes = {li.get("id"): li for li in sections[0].iter(f"{XHTML}li") if li.get(EPUB_TYPE) == "endnote"}
+    assert sorted(endnotes) == ["fn2", "fn3"]
+    for href, root in spine_documents()[1:-1]:
         body = root.find(f"{XHTML}body")
         for figure in body.findall(f"{XHTML}figure"):
             img = figure.find(f"{XHTML}img")
@@ -189,7 +197,14 @@ def test_every_content_type_is_present_mid_chapter():
                 found["pagebreak"] += 1
         notes = {a.get("id"): a for a in body.findall(f"{XHTML}aside") if a.get(EPUB_TYPE) == "footnote"}
         for a in body.iter(f"{XHTML}a"):
-            assert a.get("href").startswith("#") and a.get("href")[1:] in notes
+            # A mark links to an aside in its own chapter or to an endnote in the endnotes document.
+            target, _, fragment = a.get("href").partition("#")
+            if target:
+                assert posixpath.normpath(posixpath.join(posixpath.dirname(href), target)) == gen.C.ENDNOTES["href"]
+                assert fragment in endnotes, a.get("href")
+                found["endnote links"] += 1
+            else:
+                assert fragment in notes
             inner_sup = a.find(f"{XHTML}sup")
             parent_sup = any(a in list(s) for s in body.iter(f"{XHTML}sup"))
             if a.get(EPUB_TYPE) == "noteref":
@@ -200,13 +215,16 @@ def test_every_content_type_is_present_mid_chapter():
                 forms.append("link-sup")
         if notes:  # footnotes sit after the last body block
             assert list(body)[-len(notes) :] == list(notes.values())
-    assert found == {"figure": 1, "table": 1, "pre": 1, "br": 2, "pagebreak": 1}
+    assert found == {"figure": 1, "table": 1, "pre": 1, "br": 2, "pagebreak": 1, "endnote links": 2}
     assert forms == ["noteref", "sup-link", "link-sup"]
 
 
 def test_block_ids_are_numbered_in_document_order():
     for href, root in spine_documents():
         ids = [el.get("id") for el in _body_blocks(root)]
+        if href == gen.C.ENDNOTES["href"]:
+            assert ids == []  # its only body child is the endnotes section: no reading-stream block
+            continue
         prefix = ids[0].split("-")[0]
         assert ids == [f"{prefix}-p{n:03d}" for n in range(1, len(ids) + 1)], href
 
@@ -277,9 +295,11 @@ def test_expected_paragraph_refs_follow_spine_position_and_block_order():
         main = [b for b in doc["blocks"] if b["kind"] != "footnote"]
         assert [b["paragraph"] for b in main] == by_href[doc["href"]]
         notes = [b for b in doc["blocks"] if b["kind"] == "footnote"]
-        prefix = by_href[doc["href"]][0].split("-")[0]
+        prefix = refs.document_prefix(doc["spine_index"], len(EXPECTED["documents"]))
         assert [b["paragraph"] for b in notes] == [f"{prefix}-n{n:03d}" for n in range(1, len(notes) + 1)]
-        assert [p for f in doc["footnotes"] for p in f["paragraphs"]] == [b["paragraph"] for b in notes]
+        # Every note paragraph belongs to its note; the endnotes heading belongs to the endnotes section only.
+        assert [p for f in doc["footnotes"] for p in f["paragraphs"]] == [b["paragraph"] for b in notes
+                                                                          if b["note"] in gen.C.FOOTNOTES]
     assert by_href["text/chapter-1.xhtml"][5] == "d02-p006"
 
 
@@ -312,12 +332,19 @@ def test_expected_non_prose_text_and_footnotes_match_the_xhtml():
                     in expected["markers"]
             elif b["kind"] == "footnote":
                 assert block_words == el.text.split()
-        asides = [a for a in root.find(f"{XHTML}body") if a.tag == f"{XHTML}aside"]
-        assert [a.get("id") for a in asides] == [f["id"] for f in expected["footnotes"]]
+        bodies = [a for a in root.find(f"{XHTML}body") if a.tag == f"{XHTML}aside"]
+        bodies += [li for li in root.iter(f"{XHTML}li") if li.get(EPUB_TYPE) == "endnote"]
+        assert [a.get("id") for a in bodies] == [f["id"] for f in expected["footnotes"]]
+        regions = [m for m in expected["markers"] if m["kind"] == "NOTE"]
         for note in expected["footnotes"]:
-            assert {"kind": "NOTE", "start": note["start"], "end": note["end"]} in expected["markers"]
+            # An aside is its own NOTE region; an endnote lies inside its document's one NOTE region.
+            assert any(m["start"] <= note["start"] < note["end"] <= m["end"] for m in regions)
+            own_region = {"kind": "NOTE", "start": note["start"], "end": note["end"]} in regions
+            assert own_region == (href != gen.C.ENDNOTES["href"])
+        if href == gen.C.ENDNOTES["href"]:
+            assert regions == [{"kind": "NOTE", "start": 0, "end": expected["word_count"]}]  # every word is a note word
         for ref in expected["noterefs"]:
-            links = [a for a in root.iter(f"{XHTML}a") if a.get("href") == f"#{ref['note']}"]
+            links = [a for a in root.iter(f"{XHTML}a") if a.get("href") == ref["href"]]
             assert len(links) == 1 and "".join(links[0].itertext()) == ref["mark"]
             assert expected["words"][ref["word"]] != ref["mark"]  # the mark is not a word
 

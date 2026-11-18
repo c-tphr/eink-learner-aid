@@ -327,7 +327,8 @@ The file (format `rsvp-fixture-expected`, `version` 2, `rules_version` 1):
 | `.flags` | Each flag (`PARA_END`, `LINE_END`, `NONPROSE`, `NOTEREF`, `HEADING`, `BYTE_SPLIT`) mapped to the `[start, end)` runs of word indexes that carry it. No `SENT_END`: the firmware decides sentence ends |
 | `.markers` | In document order, `{kind, start, end}`: `IMAGE` (`start == end`, the index of the next word), `TABLE`, `CODE` and `NOTE` as `[start, end)` |
 | `.blocks` | Every block `prep extract` numbers, main series then footnote series: `paragraph` (`d02-p004`), `id` (XHTML id), `kind`, `element`, `first_word`, `word_count`, plus the source data of figures (`image_href`, `alt`, `caption`), tables (`caption`, `header`, `rows`) and code (`lines`) |
-| `.noterefs` | Each footnote mark: `note`, `mark` (its text), `form` (`noteref`, `sup-link` or `link-sup` markup), `block`, `word` (the word with its `NOTEREF` flag) |
+| `.noterefs` | Each footnote mark: `note`, `mark` (its text), `form` (`noteref`, `sup-link` or `link-sup` markup), `href` (`#fn1`, or `endnotes.xhtml#fn2` for an endnote in another document), `block`, `word` (the word with its `NOTEREF` flag) |
+| `.footnotes` (endnotes document) | The endnotes document (`text/endnotes.xhtml`, last in the spine) is one NOTE region over all its words, with no reading-stream block; its `footnotes` give each endnote's `[start, end)` inside that region. A firmware reader hands RsvpCore no word from it |
 | `.footnotes` | Each footnote body: `id`, `mark`, its `NOTE` region `start`/`end`, its `paragraphs` |
 | `.inline_elements`, `.page_breaks` | Where the `em`/`strong` words and the page-break marker sit |
 | `sections[]` | Per draft section: `start` and `end` (the word indexes of its anchors), `word_count` (`end - start`, what `prep build` writes), first and last paragraph, anchor names, first and last word text |

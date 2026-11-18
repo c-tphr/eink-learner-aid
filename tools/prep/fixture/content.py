@@ -281,8 +281,9 @@ CHAPTERS = [
 
 # Footnote bodies, keyed by the id used in ``[^...]`` marks. Each body is a
 # list of paragraphs. Marks are numbered 1, 2, 3 ... in order of first
-# reference across the book, and the note is placed in an
-# <aside epub:type="footnote"> at the end of the chapter that references it.
+# reference across the book. A note listed in ENDNOTES["notes"] is placed in
+# the endnotes document; any other note in an <aside epub:type="footnote"> at
+# the end of the chapter that references it.
 FOOTNOTES = {
     "fn1": [
         "Lenses of this kind were first built in the 1820s. They are made in rings so that the glass "
@@ -298,6 +299,22 @@ FOOTNOTES = {
 #   sup-link  <sup><a href="#fn2">2</a></sup>
 #   link-sup  <a href="#fn3"><sup>3</sup></a>
 NOTE_FORMS = {"fn1": "noteref", "fn2": "sup-link", "fn3": "link-sup"}
+
+# The endnotes document, last in the spine (Standard Ebooks style): one
+# <section epub:type="endnotes"> holding a heading and one <li epub:type="endnote">
+# per note. Every word of it is in a NOTE region, and it has no reading-stream
+# block, so the draft neither covers nor excludes it. Chapter 2's notes live
+# here, so section s0004 (checkpoint c0002) still ends its chapter; chapter 1's
+# note stays in an in-chapter aside after s0002, which has no checkpoint.
+ENDNOTES = {
+    "href": "text/endnotes.xhtml",
+    "role": "endnotes",
+    "prefix": "en",
+    "title": "Notes",
+    "heading": "Notes",
+    "notes": ["fn2", "fn3"],
+    "blocks": [],
+}
 
 # Deliberate word-rule cases: (case, block id, the exact word, flags it must carry).
 # The generator fails if the word is not a word of that block or lacks a flag.

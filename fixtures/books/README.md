@@ -8,7 +8,7 @@ A tiny made-up book by the made-up author Mara Ellery Quill, used by automated t
 
 | File | What it is |
 | --- | --- |
-| `fixture.epub` | The original (unprepared) EPUB 3: title page plus three chapters, nav document and NCX. Every zip entry is stored (no compression) with a fixed timestamp, so the bytes do not depend on the zlib build. |
+| `fixture.epub` | The original (unprepared) EPUB 3: title page, three chapters and an endnotes document, nav document and NCX. Every zip entry is stored (no compression) with a fixed timestamp, so the bytes do not depend on the zlib build. |
 | `fixture.draft.json` | The draft a drafter session would write for it (plan section 8, step 2): sections as ranges of `prep extract` paragraph references, excluded front matter, checkpoints with cited paragraphs. Schema: `tools/prep/schema/draft.schema.json`, documented in `tools/prep/README.md`. |
 | `fixture.expected.json` | Ground truth for other layers, including the firmware's WordIndex tests, computed from the generator's content model (not by parsing the EPUB) and cross-checked against the preparation tools' word pass: each spine document's whole word stream, word flags, IMAGE/TABLE/CODE/NOTE markers, blocks with their paragraph references, footnote marks, and every draft section's `[start, end)` word range. Word rules version 1 (`docs/spikes/S1-word-stream.md` section 5 plus NOTE regions); its `rules` member explains each part. |
 | `README.md` | This file. |
@@ -21,7 +21,7 @@ python3 tools/prep/fixture/generate.py --check  # exit 1 if a committed file is 
 python3 -m pytest tools/prep -q                 # includes tools/prep/tests/test_fixture.py
 ```
 
-`fixture.epub` SHA-256: `6adf04106f6e00142f3f19a92b64f835c8c1afb15afa985d61b434115a363b01`.
+`fixture.epub` SHA-256: `9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c`.
 
 ### Documents and word counts
 
@@ -31,8 +31,9 @@ Words are counted as the firmware will count them: every word of the document, i
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | `text/title.xhtml` | front-matter | Title page | d01-p001 to d01-p003 (fm-p001 to fm-p003) | 20 | 20 |
 | 2 | `text/chapter-1.xhtml` | chapter | The Lamp Room | d02-p001 to d02-p010 (c1-p001 to c1-p010) | 451 | 427 |
-| 3 | `text/chapter-2.xhtml` | chapter | The Fog Season | d03-p001 to d03-p013 (c2-p001 to c2-p013) | 641 | 566 |
+| 3 | `text/chapter-2.xhtml` | chapter | The Fog Season | d03-p001 to d03-p013 (c2-p001 to c2-p013) | 608 | 566 |
 | 4 | `text/chapter-3.xhtml` | chapter | The Keeper's Log | d04-p001 to d04-p008 (c3-p001 to c3-p008) | 321 | 296 |
+| 5 | `text/endnotes.xhtml` | endnotes | Notes | none; footnote blocks d05-n001 to d05-n003 (en-n001 to en-n003) | 34 | 0 |
 
 ### Sections and checkpoints (from the draft)
 
@@ -44,17 +45,19 @@ Words are counted as the firmware will count them: every word of the document, i
 | s0004 The visitor from the mainland | `text/chapter-2.xhtml` | d03-p008 to d03-p013 | 297 `[311, 608)` | yes | c0002, 3 prompts |
 | s0005 The keeper's log | `text/chapter-3.xhtml` | d04-p001 to d04-p008 | 321 `[0, 321)` | yes | none |
 
-`text/title.xhtml` (d01-p001 to d01-p003) is excluded front matter. Footnote bodies after a chapter's last section are in no section.
+`text/title.xhtml` (d01-p001 to d01-p003) is excluded front matter. Footnote bodies after a chapter's last section are in no section. `text/endnotes.xhtml` has no reading-stream block (all its words are one NOTE region), so the draft neither covers nor excludes it.
+
+The book has both note forms on purpose: chapter 1's note body is an in-chapter `<aside>` after a section without a checkpoint (s0002), and chapter 2's notes are endnotes in their own document, so the multi-prompt checkpoint's section (s0004) still ends its chapter, as it does in most real prepared books.
 
 ### Content inventory
 
 | Content | Document | Block | Words or position |
 | --- | --- | --- | --- |
 | Image | `text/chapter-1.xhtml` | d02-p004 (c1-p004) | `<figure>` with `<img>` of `images/gannet-rock.png` (120x160 1-bit PNG, alt text, never a word) and `<figcaption>` (prose words); IMAGE marker at word 108 `[108, 118)` |
-| Footnote 1 | `text/chapter-1.xhtml` | d02-p005 (c1-p005) | `<sup><a epub:type="noteref" role="doc-noteref" href="#fn1">`: NOTEREF on word 183 ("one."); body `<aside epub:type="footnote" id="fn1">` at chapter end, NOTE region `[427, 451)` |
+| Footnote 1 | `text/chapter-1.xhtml` | d02-p005 (c1-p005) | `<sup><a epub:type="noteref" role="doc-noteref" href="#fn1">`: NOTEREF on word 183 ("one."); body `<aside epub:type="footnote" id="fn1">` at the chapter end, NOTE region `[427, 451)` |
 | Table | `text/chapter-2.xhtml` | d03-p005 (c2-p005) | `<table>` with caption, header row and 3 body rows; TABLE region `[161, 203)` |
-| Footnote 2 | `text/chapter-2.xhtml` | d03-p010 (c2-p010) | `<sup><a href="#fn2">` (no epub:type): NOTEREF on word 454 ("disturbed."); body `<aside epub:type="footnote" id="fn2">` at chapter end, NOTE region `[608, 622)` |
-| Footnote 3 | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | `<a href="#fn3"><sup>` (no epub:type): NOTEREF on word 591 ("engine."); body `<aside epub:type="footnote" id="fn3">` at chapter end, NOTE region `[622, 641)` |
+| Footnote 2 | `text/chapter-2.xhtml` | d03-p010 (c2-p010) | `<sup><a href="endnotes.xhtml#fn2">` (no epub:type): NOTEREF on word 454 ("disturbed."); body `<li epub:type="endnote" id="fn2">` in `text/endnotes.xhtml`, words `[1, 15)` of its NOTE region |
+| Footnote 3 | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | `<a href="endnotes.xhtml#fn3"><sup>` (no epub:type): NOTEREF on word 591 ("engine."); body `<li epub:type="endnote" id="fn3">` in `text/endnotes.xhtml`, words `[15, 34)` of its NOTE region |
 | `<em>` word | `text/chapter-2.xhtml` | d03-p011 (c2-p011) | "not" is in word 464 ("not,") |
 | `<strong>` word | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | "never" is in word 580 ("never") |
 | Code | `text/chapter-3.xhtml` | d04-p004 (c3-p004) | `<pre><code>`, 6 lines; CODE region `[116, 141)` |

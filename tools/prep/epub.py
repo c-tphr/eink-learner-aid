@@ -439,7 +439,7 @@ def _segment(body: Element) -> tuple[list[_Raw], list[_Raw]]:
         if is_invisible(el) or is_noteref(el):
             return
         target = notes if note is not None else main
-        if note is None and is_footnote_container(el):
+        if is_footnote_container(el):  # the innermost body names the note (an endnote in its section)
             note = el
             target = notes
         note_id = note.get("id") if note is not None else None

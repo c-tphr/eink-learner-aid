@@ -4,7 +4,7 @@
   "rules_version": 1,
   "generated_by": "tools/prep/fixture/generate.py",
   "epub": "fixture.epub",
-  "epub_sha256": "6adf04106f6e00142f3f19a92b64f835c8c1afb15afa985d61b434115a363b01",
+  "epub_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
   "rules": {
     "source": "Words follow docs/spikes/S1-word-stream.md section 5 ('What a word is'), the contract between lib/WordIndex and the preparation tools, plus one decision beyond it: footnote and endnote bodies are NOTE regions. tools/prep/words.py implements the rules; this file is derived independently from the generator's content model and cross-checked against that word pass.",
     "rules_version": "rules_version counts changes to these word rules. Any change that can move a word index raises it, and the firmware's WordIndex rulesVersion should carry the same number.",
@@ -14,7 +14,8 @@
     "flags": "'flags' maps each flag to the [start, end) runs of word indexes that carry it. PARA_END: last word before the start or end of a block element other than br and img, and the document's last word. LINE_END: last word before a br. NONPROSE: inside the outermost table or pre. HEADING: inside h1-h6. NOTEREF: see text_in_no_word. BYTE_SPLIT: cut at 255 bytes. There is no sentence-end flag: the firmware (lib/RsvpCore) decides sentence ends.",
     "markers": "'markers' in document order: IMAGE (an img outside any table or pre, zero words long, at the index of the next word), TABLE (outermost table), CODE (outermost pre) and NOTE (a footnote or endnote body: epub:type footnote, endnote or endnotes, or role doc-footnote, doc-endnote or doc-endnotes; RSVP passes over it, page view shows it), each as [start, end).",
     "blocks": "'blocks' lists every block prep extract numbers, in document order: 'paragraph' is the reference a draft cites (tools/prep/refs.py: 'd' and the 1-based spine position, '-p' and the block number; footnote paragraphs '-n' and their own count), 'id' the XHTML id, 'kind' as in structure.json, and 'first_word' and 'word_count' the block's words [first_word, first_word + word_count).",
-    "noterefs": "'noterefs' lists every footnote reference mark with its text ('mark'), its markup form and 'word', the index of the word that carries its NOTEREF flag.",
+    "noterefs": "'noterefs' lists every footnote reference mark with its text ('mark'), its markup form, its 'href' (a fragment for an in-chapter note, the endnotes document plus fragment for an endnote) and 'word', the index of the word that carries its NOTEREF flag.",
+    "endnotes": "The last spine document holds endnotes: one <section epub:type='endnotes'>, so all its words are one NOTE region and it has no reading-stream block; 'footnotes' gives each endnote's [start, end) inside it.",
     "sections": "A section's start anchor (<span id='rsvp-<id>-start'>) sits at word index 'start' (the number of words started before it) and its end anchor at 'end'; the section's words are [start, end) and 'word_count' is end - start, the number prep build writes to checkpoints.json. Footnote bodies that follow a chapter's last section are outside every section."
   },
   "documents": [
@@ -746,6 +747,7 @@
           "note": "fn1",
           "mark": "1",
           "form": "noteref",
+          "href": "#fn1",
           "block": "c1-p005",
           "word": 183
         }
@@ -770,7 +772,7 @@
       "zip_path": "OEBPS/text/chapter-2.xhtml",
       "role": "chapter",
       "title": "The Fog Season",
-      "word_count": 641,
+      "word_count": 608,
       "words": [
         "The",
         "Fog",
@@ -1379,40 +1381,7 @@
         "put",
         "out",
         "the",
-        "lamp.",
-        "Most",
-        "of",
-        "this",
-        "light",
-        "comes",
-        "from",
-        "single-celled",
-        "plankton",
-        "that",
-        "glow",
-        "when",
-        "they",
-        "are",
-        "shaken.",
-        "Oars",
-        "weigh",
-        "little",
-        "and",
-        "never",
-        "run",
-        "out",
-        "of",
-        "fuel,",
-        "so",
-        "many",
-        "small",
-        "boats",
-        "carried",
-        "a",
-        "pair",
-        "as",
-        "a",
-        "spare."
+        "lamp."
       ],
       "flags": {
         "PARA_END": [
@@ -1503,14 +1472,6 @@
           [
             607,
             608
-          ],
-          [
-            621,
-            622
-          ],
-          [
-            640,
-            641
           ]
         ],
         "LINE_END": [
@@ -1556,16 +1517,6 @@
           "kind": "TABLE",
           "start": 161,
           "end": 203
-        },
-        {
-          "kind": "NOTE",
-          "start": 608,
-          "end": 622
-        },
-        {
-          "kind": "NOTE",
-          "start": 622,
-          "end": 641
         }
       ],
       "blocks": [
@@ -1697,24 +1648,6 @@
           "element": "p",
           "first_word": 548,
           "word_count": 60
-        },
-        {
-          "paragraph": "d03-n001",
-          "id": "c2-n001",
-          "kind": "footnote",
-          "element": "p",
-          "first_word": 608,
-          "word_count": 14,
-          "note": "fn2"
-        },
-        {
-          "paragraph": "d03-n002",
-          "id": "c2-n002",
-          "kind": "footnote",
-          "element": "p",
-          "first_word": 622,
-          "word_count": 19,
-          "note": "fn3"
         }
       ],
       "noterefs": [
@@ -1722,6 +1655,7 @@
           "note": "fn2",
           "mark": "2",
           "form": "sup-link",
+          "href": "endnotes.xhtml#fn2",
           "block": "c2-p010",
           "word": 454
         },
@@ -1729,30 +1663,12 @@
           "note": "fn3",
           "mark": "3",
           "form": "link-sup",
+          "href": "endnotes.xhtml#fn3",
           "block": "c2-p013",
           "word": 591
         }
       ],
-      "footnotes": [
-        {
-          "id": "fn2",
-          "mark": "2",
-          "start": 608,
-          "end": 622,
-          "paragraphs": [
-            "d03-n001"
-          ]
-        },
-        {
-          "id": "fn3",
-          "mark": "3",
-          "start": 622,
-          "end": 641,
-          "paragraphs": [
-            "d03-n002"
-          ]
-        }
-      ],
+      "footnotes": [],
       "inline_elements": [
         {
           "element": "em",
@@ -2243,6 +2159,135 @@
           "word": 248
         }
       ]
+    },
+    {
+      "spine_index": 5,
+      "href": "text/endnotes.xhtml",
+      "zip_path": "OEBPS/text/endnotes.xhtml",
+      "role": "endnotes",
+      "title": "Notes",
+      "word_count": 34,
+      "words": [
+        "Notes",
+        "Most",
+        "of",
+        "this",
+        "light",
+        "comes",
+        "from",
+        "single-celled",
+        "plankton",
+        "that",
+        "glow",
+        "when",
+        "they",
+        "are",
+        "shaken.",
+        "Oars",
+        "weigh",
+        "little",
+        "and",
+        "never",
+        "run",
+        "out",
+        "of",
+        "fuel,",
+        "so",
+        "many",
+        "small",
+        "boats",
+        "carried",
+        "a",
+        "pair",
+        "as",
+        "a",
+        "spare."
+      ],
+      "flags": {
+        "PARA_END": [
+          [
+            0,
+            1
+          ],
+          [
+            14,
+            15
+          ],
+          [
+            33,
+            34
+          ]
+        ],
+        "LINE_END": [],
+        "NONPROSE": [],
+        "NOTEREF": [],
+        "HEADING": [
+          [
+            0,
+            1
+          ]
+        ],
+        "BYTE_SPLIT": []
+      },
+      "markers": [
+        {
+          "kind": "NOTE",
+          "start": 0,
+          "end": 34
+        }
+      ],
+      "blocks": [
+        {
+          "paragraph": "d05-n001",
+          "id": "en-n001",
+          "kind": "footnote",
+          "element": "h1",
+          "first_word": 0,
+          "word_count": 1,
+          "note": "endnotes"
+        },
+        {
+          "paragraph": "d05-n002",
+          "id": "en-n002",
+          "kind": "footnote",
+          "element": "p",
+          "first_word": 1,
+          "word_count": 14,
+          "note": "fn2"
+        },
+        {
+          "paragraph": "d05-n003",
+          "id": "en-n003",
+          "kind": "footnote",
+          "element": "p",
+          "first_word": 15,
+          "word_count": 19,
+          "note": "fn3"
+        }
+      ],
+      "noterefs": [],
+      "footnotes": [
+        {
+          "id": "fn2",
+          "mark": "2",
+          "start": 1,
+          "end": 15,
+          "paragraphs": [
+            "d05-n002"
+          ]
+        },
+        {
+          "id": "fn3",
+          "mark": "3",
+          "start": 15,
+          "end": 34,
+          "paragraphs": [
+            "d05-n003"
+          ]
+        }
+      ],
+      "inline_elements": [],
+      "page_breaks": []
     }
   ],
   "sections": [

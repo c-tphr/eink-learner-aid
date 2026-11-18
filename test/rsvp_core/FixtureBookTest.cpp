@@ -62,6 +62,8 @@ std::string nextText(const CaseWord& w) {
   return w.position + 1 < w.tokens.size() ? w.tokens[w.position + 1].text : std::string();
 }
 
+constexpr const char* ENDNOTES_HREF = "text/endnotes.xhtml";
+
 // A document with every member FixtureBook.h reads missing, for the loud-failure test below.
 const testjson::Value& documentWithoutMembers() {
   static const testjson::Value document = [] {
@@ -111,7 +113,7 @@ TEST(FixtureBook, ReaderFailsLoudlyOnAMissingMember) {
 TEST(FixtureBook, TokensFollowTheExpectedFile) {
   const std::set<std::string> withCheckpoint = rsvptest::fixtureSectionsWithCheckpoint();
   const auto& documents = rsvptest::requireArray(expected(), "documents", "fixture.expected.json");
-  ASSERT_EQ(documents.size(), 4u);
+  ASSERT_EQ(documents.size(), 5u);  // title page, chapters 1 to 3, endnotes
   for (size_t d = 0; d < documents.size(); ++d) {
     const auto& document = documents[d];
     const std::string& href = rsvptest::requireString(document, "href", "document");
@@ -173,6 +175,24 @@ TEST(FixtureBook, TokensFollowTheExpectedFile) {
     for (const auto& t : tokens) found += sectionEnds.count(t.wordIndex);
     EXPECT_EQ(found, sectionEnds.size());
   }
+}
+
+// The endnotes document is one NOTE region: chapterTokens() hands RsvpCore an empty list for it,
+// without a failure, and a source built on it ends the chapter at once.
+TEST(FixtureBook, EndnotesDocumentHandsRsvpCoreNoWords) {
+  const auto& document = documentFor(ENDNOTES_HREF);
+  const auto& words = rsvptest::requireArray(document, "words", ENDNOTES_HREF);
+  ASSERT_GT(words.size(), 0u);
+  const auto markers = rsvptest::fixtureMarkers(document);
+  ASSERT_EQ(markers.size(), 1u);
+  EXPECT_EQ(markers[0].kind, "NOTE");
+  EXPECT_EQ(markers[0].start, 0u);
+  EXPECT_EQ(markers[0].end, words.size());
+  const auto tokens = chapterTokens(document);
+  EXPECT_TRUE(tokens.empty());
+  rsvptest::VectorSource source(tokens);
+  rsvp::Token token;
+  EXPECT_FALSE(source.peek(token));
 }
 
 TEST(FixtureBook, TokenCasesAreClassifiedAsDocumented) {
@@ -278,12 +298,16 @@ TEST(FixtureBook, ChaptersGroupWithoutCrossingBoundaries) {
   const std::set<std::string> withCheckpoint = rsvptest::fixtureSectionsWithCheckpoint();
 
   const auto& documents = rsvptest::requireArray(expected(), "documents", "fixture.expected.json");
-  ASSERT_EQ(documents.size(), 4u);
+  ASSERT_EQ(documents.size(), 5u);  // title page, chapters 1 to 3, endnotes
   for (size_t d = 0; d < documents.size(); ++d) {
     const auto& document = documents[d];
     const std::string& href = rsvptest::requireString(document, "href", "document");
     const auto tokens = chapterTokens(document);
-    ASSERT_FALSE(tokens.empty()) << href;
+    if (tokens.empty()) {
+      // Only a document whose every word is a footnote body gives RsvpCore nothing to play.
+      EXPECT_EQ(href, ENDNOTES_HREF);
+      continue;
+    }
 
     // Expected stops, from the expected file rather than from the tokens: a checkpoint at the last
     // word of every section that has one, a non-prose stop before every image, table and code block.

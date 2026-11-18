@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import posixpath
 import re
 import struct
 import sys
@@ -107,8 +108,11 @@ RULES = {
     "draft cites (tools/prep/refs.py: 'd' and the 1-based spine position, '-p' and the block number; footnote "
     "paragraphs '-n' and their own count), 'id' the XHTML id, 'kind' as in structure.json, and 'first_word' and "
     "'word_count' the block's words [first_word, first_word + word_count).",
-    "noterefs": "'noterefs' lists every footnote reference mark with its text ('mark'), its markup form and "
-    "'word', the index of the word that carries its NOTEREF flag.",
+    "noterefs": "'noterefs' lists every footnote reference mark with its text ('mark'), its markup form, its "
+    "'href' (a fragment for an in-chapter note, the endnotes document plus fragment for an endnote) and 'word', the "
+    "index of the word that carries its NOTEREF flag.",
+    "endnotes": "The last spine document holds endnotes: one <section epub:type='endnotes'>, so all its words are one "
+    "NOTE region and it has no reading-stream block; 'footnotes' gives each endnote's [start, end) inside it.",
     "sections": "A section's start anchor (<span id='rsvp-<id>-start'>) sits at word index 'start' (the number of "
     "words started before it) and its end anchor at 'end'; the section's words are [start, end) and 'word_count' "
     "is end - start, the number prep build writes to checkpoints.json. Footnote bodies that follow a chapter's "
@@ -178,7 +182,20 @@ def source_words(text: str) -> list[str]:
 
 
 def _documents() -> list[dict[str, Any]]:
-    return [C.FRONT_MATTER, *C.CHAPTERS]
+    return [C.FRONT_MATTER, *C.CHAPTERS, C.ENDNOTES]
+
+
+def _note_home(note_id: str) -> str | None:
+    """The href of the endnotes document when the note's body lives there; None for an in-chapter note."""
+    return C.ENDNOTES["href"] if note_id in C.ENDNOTES["notes"] else None
+
+
+def _note_href(note_id: str, from_href: str) -> str:
+    """The href of a footnote mark in document `from_href`: a fragment, or the endnotes document plus fragment."""
+    home = _note_home(note_id)
+    if home is None or home == from_href:
+        return f"#{note_id}"
+    return posixpath.relpath(home, posixpath.dirname(from_href) or ".") + f"#{note_id}"
 
 
 class _Stream:
@@ -254,36 +271,53 @@ def build_model() -> list[dict[str, Any]]:
                 raise ValueError(f"unknown block element {element!r}")
             block.update(first_word=first, word_count=len(stream) - first)
             doc["blocks"].append(block)
-        note_index = 0
-        note_total = sum(len(C.FOOTNOTES[n]) for n in doc["notes"])
-        for note_id in doc["notes"]:
+        note_blocks: list[dict[str, Any]] = doc["note_blocks"]
+
+        def note_block(element: str, note_id: str | None, words: list[str], *flags: str) -> dict[str, Any]:
+            first = len(stream)
+            stream.add(words, *flags)
+            stream.flag_last("PARA_END")
+            block = {"id": f"{src['prefix']}-n{len(note_blocks) + 1:03d}", "element": element, "kind": "footnote",
+                     "note": note_id, "first_word": first, "word_count": len(stream) - first}
+            note_blocks.append(block)
+            return block
+
+        if "notes" in src:
+            # The endnotes document: one NOTE region, the whole <section epub:type="endnotes">.
+            doc["notes"] = list(src["notes"])
             region = stream.open("NOTE")
-            paragraphs = []
-            for text in C.FOOTNOTES[note_id]:
-                note_index += 1
-                first = len(stream)
-                stream.add(source_words(text))
-                stream.flag_last("PARA_END")
-                block = {
-                    "id": f"{src['prefix']}-n{note_index:03d}",
-                    "paragraph": refs.paragraph_ref(spine_index, len(sources), note_index, note_total, refs.NOTE),
-                    "element": "p",
-                    "kind": "footnote",
-                    "note": note_id,
-                    "first_word": first,
-                    "word_count": len(stream) - first,
-                }
-                doc["note_blocks"].append(block)
-                paragraphs.append(block["paragraph"])
+            note_block("h1", "endnotes", source_words(src["heading"]), "HEADING")  # note: the section's id
+            for note_id in doc["notes"]:
+                if note_id not in note_numbers:
+                    raise ValueError(f"endnote {note_id!r} is referenced by no chapter before the endnotes")
+                start = len(stream)
+                ids = [note_block("p", note_id, source_words(text))["id"] for text in C.FOOTNOTES[note_id]]
+                doc["footnotes"].append({"id": note_id, "mark": str(note_numbers[note_id]), "start": start,
+                                         "end": len(stream), "paragraphs": ids})
             stream.close(region)
-            doc["footnotes"].append({"id": note_id, "mark": str(note_numbers[note_id]), "start": region["start"],
-                                     "end": region["end"], "paragraphs": paragraphs})
+        else:
+            # In-chapter footnotes: one <aside epub:type="footnote"> (a NOTE region) per note, at the chapter end.
+            for note_id in doc["notes"]:
+                region = stream.open("NOTE")
+                ids = [note_block("p", note_id, source_words(text))["id"] for text in C.FOOTNOTES[note_id]]
+                stream.close(region)
+                doc["footnotes"].append({"id": note_id, "mark": str(note_numbers[note_id]), "start": region["start"],
+                                         "end": region["end"], "paragraphs": ids})
+        by_id = {}
+        for number, block in enumerate(note_blocks, start=1):
+            block["paragraph"] = refs.paragraph_ref(spine_index, len(sources), number, len(note_blocks), refs.NOTE)
+            by_id[block["id"]] = block["paragraph"]
+        for note in doc["footnotes"]:
+            note["paragraphs"] = [by_id[i] for i in note["paragraphs"]]
         docs.append(doc)
     unused = set(C.FOOTNOTES) - set(note_numbers)
     if unused:
         raise ValueError(f"footnotes never referenced: {sorted(unused)}")
+    homes = [n for d in docs for n in d["notes"]]
+    if sorted(homes) != sorted(C.FOOTNOTES):
+        raise ValueError("every footnote body must be placed exactly once")
     for doc in docs:
-        doc["note_numbers"] = {n: note_numbers[n] for n in doc["notes"]}
+        doc["note_numbers"] = dict(note_numbers)
     return docs
 
 
@@ -350,8 +384,9 @@ def _prose_words(doc, stream: _Stream, block, note_numbers) -> None:
         word = word_at(line, offset)
         stream.flags[word].add("NOTEREF")
         doc["noterefs"].append({"note": value, "mark": str(note_numbers[value]), "form": C.NOTE_FORMS[value],
-                                "block": block_id, "word": word})
-        doc["notes"].append(value)
+                                "href": _note_href(value, doc["href"]), "block": block_id, "word": word})
+        if _note_home(value) is None:
+            doc["notes"].append(value)
     for element, line, start, end in spans:
         inside = source_words(lines[line][start:end])
         if inside != [lines[line][start:end]]:
@@ -410,18 +445,18 @@ def _css_href(doc_href: str) -> str:
     return "../" * doc_href.count("/") + "style.css"
 
 
-def _note_mark(note_id: str, number: int) -> str:
+def _note_mark(note_id: str, number: int, href: str) -> str:
     form = C.NOTE_FORMS[note_id]
     if form == "noteref":
-        return f'<sup><a epub:type="noteref" role="doc-noteref" href="#{note_id}">{number}</a></sup>'
+        return f'<sup><a epub:type="noteref" role="doc-noteref" href="{href}">{number}</a></sup>'
     if form == "sup-link":
-        return f'<sup><a href="#{note_id}">{number}</a></sup>'
+        return f'<sup><a href="{href}">{number}</a></sup>'
     if form == "link-sup":
-        return f'<a href="#{note_id}"><sup>{number}</sup></a>'
+        return f'<a href="{href}"><sup>{number}</sup></a>'
     raise ValueError(f"unknown footnote mark form {form!r}")
 
 
-def _inline_xhtml(segments, note_numbers) -> str:
+def _inline_xhtml(segments, note_numbers, doc_href) -> str:
     out = []
     for kind, value in segments:
         if kind == "text":
@@ -434,7 +469,7 @@ def _inline_xhtml(segments, note_numbers) -> str:
             out.append(f'<span epub:type="pagebreak" role="doc-pagebreak" id="page{value}" '
                        f'aria-label="{value}">{value}</span>')
         else:
-            out.append(_note_mark(value, note_numbers[value]))
+            out.append(_note_mark(value, note_numbers[value], _note_href(value, doc_href)))
     return "".join(out)
 
 
@@ -450,7 +485,7 @@ def render_document(doc: dict[str, Any]) -> str:
     for block in doc["blocks"]:
         element, block_id = block["element"], block["id"]
         if element in PROSE_ELEMENTS:
-            inner = _inline_xhtml(block["segments"], doc["note_numbers"])
+            inner = _inline_xhtml(block["segments"], doc["note_numbers"], doc["href"])
             lines.append(f'<{element} id="{block_id}">{inner}</{element}>')
         elif element == "figure":
             p = block["payload"]
@@ -472,13 +507,21 @@ def render_document(doc: dict[str, Any]) -> str:
         elif element == "pre":
             code = "\n".join(esc(line) for line in block["payload"])
             lines.append(f'<pre id="{block_id}"><code>{code}</code></pre>')
-    note_index = 0
-    for note_id in doc["notes"]:
-        lines.append(f'<aside epub:type="footnote" role="doc-footnote" id="{note_id}">')
-        for paragraph in C.FOOTNOTES[note_id]:
-            note_index += 1
-            lines.append(f'<p id="{doc["prefix"]}-n{note_index:03d}">{esc(paragraph)}</p>')
-        lines.append("</aside>")
+    ids = iter(b["id"] for b in doc["note_blocks"])
+    if doc["role"] == "endnotes":
+        lines += ['<section epub:type="endnotes" role="doc-endnotes" id="endnotes">',
+                  f'<h1 id="{next(ids)}">{esc(C.ENDNOTES["heading"])}</h1>', "<ol>"]
+        for note_id in doc["notes"]:
+            # No role="doc-endnote": DPUB-ARIA deprecates it and EPUBCheck warns (RSC-017).
+            lines.append(f'<li epub:type="endnote" id="{note_id}">')
+            lines += [f'<p id="{next(ids)}">{esc(paragraph)}</p>' for paragraph in C.FOOTNOTES[note_id]]
+            lines.append("</li>")
+        lines += ["</ol>", "</section>"]
+    else:
+        for note_id in doc["notes"]:
+            lines.append(f'<aside epub:type="footnote" role="doc-footnote" id="{note_id}">')
+            lines += [f'<p id="{next(ids)}">{esc(paragraph)}</p>' for paragraph in C.FOOTNOTES[note_id]]
+            lines.append("</aside>")
     lines += ["</body>", "</html>", ""]
     return "\n".join(lines)
 
@@ -523,7 +566,7 @@ def render_opf(docs) -> str:
 
 
 def render_nav(docs) -> str:
-    chapters = [d for d in docs if d["role"] == "chapter"]
+    chapters = [d for d in docs if d["role"] in ("chapter", "endnotes")]
     toc = [f'<li><a href="{d["href"]}">{esc(d["title"])}</a></li>' for d in chapters]
     return "\n".join(
         [
@@ -553,7 +596,7 @@ def render_nav(docs) -> str:
 
 
 def render_ncx(docs) -> str:
-    chapters = [d for d in docs if d["role"] == "chapter"]
+    chapters = [d for d in docs if d["role"] in ("chapter", "endnotes")]
     points = []
     for order, d in enumerate(chapters, start=1):
         points += [
@@ -1009,7 +1052,8 @@ def build_readme(docs, expected) -> str:
         "",
         "| File | What it is |",
         "| --- | --- |",
-        "| `fixture.epub` | The original (unprepared) EPUB 3: title page plus three chapters, nav document and NCX. "
+        "| `fixture.epub` | The original (unprepared) EPUB 3: title page, three chapters and an endnotes document, "
+        "nav document and NCX. "
         "Every zip entry is stored (no compression) with a fixed timestamp, so the bytes do not depend on the "
         "zlib build. |",
         "| `fixture.draft.json` | The draft a drafter session would write for it (plan section 8, step 2): sections "
@@ -1043,11 +1087,16 @@ def build_readme(docs, expected) -> str:
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for i, doc in enumerate(docs, start=1):
-        first, last = doc["blocks"][0], doc["blocks"][-1]
         skipped = {n for m in doc["markers"] if m["kind"] != "IMAGE" for n in range(m["start"], m["end"])}
+        if doc["blocks"]:
+            first, last = doc["blocks"][0], doc["blocks"][-1]
+            paragraphs = f"{first['paragraph']} to {last['paragraph']} ({first['id']} to {last['id']})"
+        else:
+            first, last = doc["note_blocks"][0], doc["note_blocks"][-1]
+            paragraphs = (f"none; footnote blocks {first['paragraph']} to {last['paragraph']} "
+                          f"({first['id']} to {last['id']})")
         out.append(
-            f"| {i} | `{doc['href']}` | {doc['role']} | {doc['title']} | "
-            f"{first['paragraph']} to {last['paragraph']} ({first['id']} to {last['id']}) | {len(doc['words'])} | "
+            f"| {i} | `{doc['href']}` | {doc['role']} | {doc['title']} | {paragraphs} | {len(doc['words'])} | "
             f"{len(doc['words']) - len(skipped)} |"
         )
     out += [
@@ -1069,7 +1118,13 @@ def build_readme(docs, expected) -> str:
         "",
         f"`{C.EXCLUDED[0]['chapter_href']}` ({to_ref[C.EXCLUDED[0]['first_paragraph']]} to "
         f"{to_ref[C.EXCLUDED[0]['last_paragraph']]}) is excluded front matter. Footnote bodies after a chapter's last "
-        "section are in no section.",
+        "section are in no section. "
+        f"`{C.ENDNOTES['href']}` has no reading-stream block (all its words are one NOTE region), so the draft neither "
+        "covers nor excludes it.",
+        "",
+        "The book has both note forms on purpose: chapter 1's note body is an in-chapter `<aside>` after a section "
+        "without a checkpoint (s0002), and chapter 2's notes are endnotes in their own document, so the multi-prompt "
+        "checkpoint's section (s0004) still ends its chapter, as it does in most real prepared books.",
         "",
         "### Content inventory",
         "",
@@ -1077,9 +1132,9 @@ def build_readme(docs, expected) -> str:
         "| --- | --- | --- | --- |",
     ]
     mark_markup = {
-        "noteref": '`<sup><a epub:type="noteref" role="doc-noteref" href="#{n}">`',
-        "sup-link": '`<sup><a href="#{n}">` (no epub:type)',
-        "link-sup": '`<a href="#{n}"><sup>` (no epub:type)',
+        "noteref": '`<sup><a epub:type="noteref" role="doc-noteref" href="{h}">`',
+        "sup-link": '`<sup><a href="{h}">` (no epub:type)',
+        "link-sup": '`<a href="{h}"><sup>` (no epub:type)',
     }
     for doc in docs:
         by_block = {b["id"]: b for b in doc["blocks"]}
@@ -1099,13 +1154,19 @@ def build_readme(docs, expected) -> str:
             out.append(f"| {block['kind'].capitalize()} | `{doc['href']}` | {block['paragraph']} ({block['id']}) | "
                        f"{detail} `[{first}, {end})` |")
         for ref in doc["noterefs"]:
-            note = next(f for f in doc["footnotes"] if f["id"] == ref["note"])
+            home = next(d for d in docs if any(f["id"] == ref["note"] for f in d["footnotes"]))
+            note = next(f for f in home["footnotes"] if f["id"] == ref["note"])
             paragraph = by_block[ref["block"]]["paragraph"]
+            if home is doc:
+                body = (f"body `<aside epub:type=\"footnote\" id=\"{ref['note']}\">` at the chapter end, NOTE "
+                        f"region `[{note['start']}, {note['end']})`")
+            else:
+                body = (f"body `<li epub:type=\"endnote\" id=\"{ref['note']}\">` in `{home['href']}`, words "
+                        f"`[{note['start']}, {note['end']})` of its NOTE region")
             out.append(
                 f"| Footnote {ref['mark']} | `{doc['href']}` | {paragraph} ({ref['block']}) | "
-                f"{mark_markup[ref['form']].format(n=ref['note'])}: NOTEREF on word {ref['word']} "
-                f"(\"{doc['words'][ref['word']]}\"); body `<aside epub:type=\"footnote\" id=\"{ref['note']}\">` at "
-                f"chapter end, NOTE region `[{note['start']}, {note['end']})` |"
+                f"{mark_markup[ref['form']].format(n=ref['note'], h=ref['href'])}: NOTEREF on word {ref['word']} "
+                f"(\"{doc['words'][ref['word']]}\"); {body} |"
             )
         for item in doc["inline"]:
             out.append(

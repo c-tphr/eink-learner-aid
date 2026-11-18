@@ -14,6 +14,8 @@
 //   - TOKEN_PARAGRAPH_END from the PARA_END flag runs;
 //   - TOKEN_SECTION_END (and TOKEN_CHECKPOINT when the draft has a checkpoint for the section) on
 //     the last prose word before each section's end anchor, sections[].end - 1 in the fixture.
+// A document whose every word lies in a NOTE region (the fixture's endnotes document) gives an
+// empty list: RsvpCore has nothing to play there. Callers that play documents must handle it.
 //
 // Every member read here is required: a missing member or a value of the wrong type is a test
 // failure, never a silent zero.
