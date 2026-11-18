@@ -189,6 +189,14 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
     emit(SettingInfo::Enum(StrId::STR_LONG_PRESS_BEHAVIOR, &CrossPointSettings::longPressButtonBehavior,
                            std::move(longPressValues), "longPressButtonBehavior", StrId::STR_CAT_CONTROLS));
   }
+#if CROSSPOINT_RSVP_ENABLED
+  // RSVP global defaults: persisted only, set by "Save as default" on the RSVP pause screen.
+  emit(SettingInfo::Value(StrId::STR_RSVP_WPM, &CrossPointSettings::rsvpWpmTens, {6, 100, 2}, "rsvpWpmTens")
+           .withWebHidden());
+  emit(SettingInfo::Value(StrId::STR_RSVP_WORDS_PER_UPDATE, &CrossPointSettings::rsvpWordsPerUpdate, {1, 4, 1},
+                          "rsvpWordsPerUpdate")
+           .withWebHidden());
+#endif
   emit(buildLongPressMenuSetting());
   // Double-click power frontlight shortcut only exists on the X4 Pro.
   if (BoardConfig::isX4Pro()) emit(buildDoublePowerButtonSetting());

@@ -177,6 +177,98 @@ TEST(Position, PageViewGoesToTheWordsStartAndRoundTrips) {
   EXPECT_EQ(offset, last.start);
 }
 
+// --- Where RSVP opens (task R4b) ---
+
+namespace {
+
+uint32_t startOf(wordindex::WordIndexReader& reader, const uint32_t word) {
+  wordindex::WordInfo w;
+  EXPECT_TRUE(reader.word(word, w));
+  return w.start;
+}
+
+reading::SavedWord savedAt(const int chapter, const uint32_t word) {
+  reading::SavedWord saved;
+  saved.valid = true;
+  saved.chapter = chapter;
+  saved.word = word;
+  return saved;
+}
+
+}  // namespace
+
+TEST(EntryRule, WithoutASavedWordThePageDecides) {
+  OpenIndex ix(CHAPTER_1);
+  const uint32_t pageStart = startOf(ix.reader, 108);
+  const reading::EntryChoice c =
+      reading::chooseEntry(ix.reader, 1, pageStart, startOf(ix.reader, 200), reading::SavedWord{}, false);
+  EXPECT_EQ(c.word, 108u);
+  EXPECT_EQ(c.from, reading::EntryFrom::Page);
+}
+
+TEST(EntryRule, ASavedWordOnThePageShownIsKept) {
+  // Page view after RSVP shows the page holding the saved word; entering again from that page starts
+  // at that word, not at the page's first one.
+  OpenIndex ix(CHAPTER_1);
+  const uint32_t pageStart = startOf(ix.reader, 108);
+  const uint32_t pageEnd = startOf(ix.reader, 200);
+  for (const uint32_t word : {108u, 109u, 150u, 199u}) {
+    const reading::EntryChoice c = reading::chooseEntry(ix.reader, 1, pageStart, pageEnd, savedAt(1, word), false);
+    EXPECT_EQ(c.word, word);
+    EXPECT_EQ(c.from, reading::EntryFrom::Saved);
+  }
+  // The chapter's last page (no next page): every later word of the chapter is on it.
+  const reading::EntryChoice last =
+      reading::chooseEntry(ix.reader, 1, pageStart, reading::NO_PAGE_END, savedAt(1, 426), false);
+  EXPECT_EQ(last.word, 426u);
+  EXPECT_EQ(last.from, reading::EntryFrom::Saved);
+}
+
+TEST(EntryRule, ASavedWordOffThePageIsIgnored) {
+  OpenIndex ix(CHAPTER_1);
+  const uint32_t pageStart = startOf(ix.reader, 108);
+  const uint32_t pageEnd = startOf(ix.reader, 200);
+  // Before the page (the reader paged on), on the next page (the reader paged back), another chapter,
+  // past the chapter's words (a stale file).
+  const reading::SavedWord cases[] = {savedAt(1, 107), savedAt(1, 0), savedAt(1, 200), savedAt(1, 300),
+                                      savedAt(2, 150), savedAt(1, ix.reader.wordCount())};
+  for (const reading::SavedWord& saved : cases) {
+    const reading::EntryChoice c = reading::chooseEntry(ix.reader, 1, pageStart, pageEnd, saved, false);
+    EXPECT_EQ(c.word, 108u) << saved.chapter << ":" << saved.word;
+    EXPECT_EQ(c.from, reading::EntryFrom::Page);
+  }
+}
+
+TEST(EntryRule, AWordStraddlingThePageEndBelongsToThisPage) {
+  // A page break inside word 199: it starts on this page, so it is this page's; the next page's entry
+  // word is also 199 (its end is past that page's start), so both pages accept it.
+  OpenIndex ix(CHAPTER_1);
+  wordindex::WordInfo w;
+  ASSERT_TRUE(ix.reader.word(199, w));
+  const uint32_t pageStart = startOf(ix.reader, 108);
+  const uint32_t pageBreak = w.start + 1;
+  EXPECT_EQ(reading::chooseEntry(ix.reader, 1, pageStart, pageBreak, savedAt(1, 199), false).word, 199u);
+  EXPECT_EQ(reading::chooseEntry(ix.reader, 1, pageBreak, reading::NO_PAGE_END, savedAt(1, 199), false).word, 199u);
+  EXPECT_EQ(reading::chooseEntry(ix.reader, 1, pageStart, pageBreak, savedAt(1, 200), false).word, 108u);
+}
+
+TEST(EntryRule, ResumingTakesTheSavedWordWhateverThePage) {
+  // The book opened in RSVP mode: the reader's page may be stale (power lost after a pause).
+  OpenIndex ix(CHAPTER_1);
+  const reading::EntryChoice c = reading::chooseEntry(ix.reader, 1, 0, startOf(ix.reader, 108), savedAt(1, 300), true);
+  EXPECT_EQ(c.word, 300u);
+  EXPECT_EQ(c.from, reading::EntryFrom::Resumed);
+  // At most the chapter's end.
+  EXPECT_EQ(reading::chooseEntry(ix.reader, 1, 0, reading::NO_PAGE_END, savedAt(1, 999999), true).word,
+            ix.reader.wordCount());
+  // Nothing saved for this chapter: the page decides.
+  const reading::EntryChoice none =
+      reading::chooseEntry(ix.reader, 1, 0, reading::NO_PAGE_END, reading::SavedWord{}, true);
+  EXPECT_EQ(none.word, 0u);
+  EXPECT_EQ(none.from, reading::EntryFrom::Page);
+  EXPECT_STREQ(reading::entryFromName(reading::EntryFrom::Resumed), "resumed");
+}
+
 TEST(Position, ChapterPercent) {
   EXPECT_EQ(reading::chapterPercent(0, 400), 0);
   EXPECT_EQ(reading::chapterPercent(200, 400), 50);

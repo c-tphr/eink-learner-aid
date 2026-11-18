@@ -16,6 +16,7 @@
 #include "activities/reader/ReaderUtils.h"
 #include "controls/ControlMap.h"
 #include "fontIds.h"
+#include "reading/BookStateFile.h"
 
 namespace {
 
@@ -49,6 +50,13 @@ constexpr int16_t HINT_H = 48;
 constexpr int16_t BORDER = 2;
 constexpr int NEXT_WORDS_MAX = 12;
 
+// Stepper glyphs (drawn, not text, so the screen text of a row stays its value).
+constexpr int16_t GLYPH_LENGTH = 24;
+constexpr int16_t GLYPH_WIDTH = 4;
+
+static_assert(reading::RSVP_WPM_TENS_DEFAULT == 24, "CrossPointSettings::rsvpWpmTens default");
+static_assert(reading::RSVP_DEFAULTS.wordsPerUpdate == 1, "CrossPointSettings::rsvpWordsPerUpdate default");
+
 // The render task has not seen the main loop for this long: another screen covers RSVP (a push does
 // not call onExit()). Playback pauses rather than run unseen.
 constexpr uint32_t COVERED_MS = 1500;
@@ -69,8 +77,25 @@ const char* itemLabel(const Item item) {
       return tr(STR_RSVP_PLAY);
     case Item::SentenceForward:
       return tr(STR_RSVP_SENTENCE_FORWARD);
+    case Item::SaveDefault:
+      return tr(STR_RSVP_SAVE_DEFAULT);
+    case Item::SaveBook:
+      return tr(STR_RSVP_SAVE_BOOK);
+    case Item::WpmDown:
+    case Item::WpmUp:
+    case Item::WordsDown:
+    case Item::WordsUp:
+      return nullptr;  // a drawn minus or plus
   }
   return "";
+}
+
+const char* modeName(const checkpoint::ReadingMode mode) {
+  return mode == checkpoint::ReadingMode::Rsvp ? "rsvp" : "page";
+}
+
+reading::RsvpValues globalDefaults() {
+  return {reading::wpmFromTens(SETTINGS.rsvpWpmTens), reading::clampWordsPerUpdate(SETTINGS.rsvpWordsPerUpdate)};
 }
 
 }  // namespace
@@ -78,25 +103,36 @@ const char* itemLabel(const Item item) {
 namespace rsvpentry {
 
 std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& input, std::shared_ptr<Epub> epub,
-                                 const int spineIndex, const uint32_t pageStartOffset,
-                                 std::shared_ptr<HandOff> handOff) {
-  // One screen-lifetime object (about 5.4 KB: scheduler and frame, index reader, sentence window).
-  auto activity = makeUniqueNoThrow<RsvpActivity>(renderer, input, std::move(epub), spineIndex, pageStartOffset,
-                                                  std::move(handOff));
+                                 const Entry& entry, std::shared_ptr<HandOff> handOff) {
+  // One screen-lifetime object (about 5.5 KB: scheduler and frame, index reader, sentence window).
+  auto activity = makeUniqueNoThrow<RsvpActivity>(renderer, input, std::move(epub), entry, std::move(handOff));
   if (!activity) LOG_ERR("RSVP", "OOM: RSVP activity (%u bytes)", static_cast<unsigned>(sizeof(RsvpActivity)));
   return activity;
+}
+
+bool openedInRsvp(const Epub& epub) {
+  // 78 KB while the file is read (BookStateFile.h), freed on return.
+  auto state = makeUniqueNoThrow<checkpoint::BookState>();
+  if (!state) return false;
+  const reading::StateLoad load = reading::loadBookState(epub.getPath(), reading::NO_BOOK_SHA256, *state);
+  const bool rsvp = state->hasPosition && state->position.mode == checkpoint::ReadingMode::Rsvp;
+  if (load.source != reading::StateSource::Missing) {
+    LOG_DBG("RSVP", "book state %s mode=%s ch=%u word=%lu", reading::stateSourceName(load.source),
+            state->hasPosition ? modeName(state->position.mode) : "none", state->position.position.chapter,
+            static_cast<unsigned long>(state->position.position.word));
+  }
+  return rsvp;
 }
 
 }  // namespace rsvpentry
 
 RsvpActivity::RsvpActivity(GfxRenderer& renderer, MappedInputManager& input, std::shared_ptr<Epub> epub,
-                           const int spineIndex, const uint32_t pageStartOffset,
-                           std::shared_ptr<rsvpentry::HandOff> handOff)
+                           const rsvpentry::Entry& entry, std::shared_ptr<rsvpentry::HandOff> handOff)
     : Activity("Rsvp", renderer, input),
       epub(std::move(epub)),
       handOff(std::move(handOff)),
-      spine(spineIndex),
-      pageStartOffset(pageStartOffset),
+      spine(entry.spineIndex),
+      entry(entry),
       backend(displayprofile::firmwareBackend(renderer)),
       sink(backend, painter),
       scheduler(source, clock, sink, &RsvpActivity::fits, this),
@@ -119,8 +155,6 @@ void RsvpActivity::onEnter() {
     band.lineHeight[i] = static_cast<int16_t>(renderer.getLineHeight(BAND_FONTS[i]));
   }
 
-  scheduler.setWpm(RsvpDefaults::WPM);
-  scheduler.setWordsPerFrame(RsvpDefaults::WORDS_PER_UPDATE);
   scheduler.setClearingLimits(backend.info().clearing);
   lastLoopMs.store(static_cast<uint32_t>(millis()));
   controlInput.restartGuard();
@@ -129,14 +163,24 @@ void RsvpActivity::onEnter() {
 
 void RsvpActivity::onExit() {
   Activity::onExit();
+  // The caller holds the RenderLock. Leaving by an item has saved already (savePosition() skips the
+  // same place); the Home gesture and sleep did not return to the reader, so its progress is saved too.
+  if (phase.load() != Phase::Loading) {
+    savePosition(checkpoint::ReadingMode::Rsvp, "home");
+    if (handOff->then == rsvpentry::HandOff::Then::None) saveReaderProgress();
+  }
   playing.store(false);
   index.close();
   ReaderUtils::applyOrientation(renderer, SETTINGS.orientation);
 }
 
 void RsvpActivity::prepareForSleep() {
-  // Called under the RenderLock: no step is running. R4b saves the position here.
+  // Called under the RenderLock: no step is running. The device may not wake into this screen (a
+  // power-off from sleep), so the position and the reader's page are saved now.
+  if (phase.load() == Phase::Loading) return;
   if (phase.load() == Phase::Playing) scheduler.requestPause();
+  savePosition(checkpoint::ReadingMode::Rsvp, "sleep");
+  saveReaderProgress();
 }
 
 bool RsvpActivity::handleHomeGesture() {
@@ -193,16 +237,51 @@ bool RsvpActivity::openChapter(const int spineIndex) {
   return true;
 }
 
+reading::SavedWord RsvpActivity::loadState() {
+  reading::SavedWord saved;
+  const reading::RsvpValues global = globalDefaults();
+  // 78 KB while the file is read (BookStateFile.h), freed on return. Without it RSVP still opens, with
+  // the global defaults at the page's first word.
+  auto state = makeUniqueNoThrow<checkpoint::BookState>();
+  if (!state) {
+    LOG_ERR("RSVP", "OOM: book state (%u bytes)", static_cast<unsigned>(sizeof(checkpoint::BookState)));
+    values = global;
+  } else {
+    const reading::StateLoad load = reading::loadBookState(epub->getPath(), reading::NO_BOOK_SHA256, *state);
+    values = reading::resolveValues(&state->overrides, global);
+    if (state->hasPosition) {
+      saved.valid = true;
+      saved.chapter = state->position.position.chapter;
+      saved.word = state->position.position.word;
+    }
+    LOG_DBG("RSVP",
+            "state %s book_wpm=%u book_words=%u default_wpm=%u default_words=%u wpm=%u words_per_update=%u "
+            "position=%s ch=%d word=%lu",
+            reading::stateSourceName(load.source), state->overrides.hasWpm ? state->overrides.wpm : 0,
+            state->overrides.hasWordsPerUpdate ? state->overrides.wordsPerUpdate : 0, global.wpm,
+            global.wordsPerUpdate, values.wpm, values.wordsPerUpdate,
+            state->hasPosition ? modeName(state->position.mode) : "none", saved.chapter,
+            static_cast<unsigned long>(saved.word));
+  }
+  scheduler.setWpm(values.wpm);
+  scheduler.setWordsPerFrame(values.wordsPerUpdate);
+  return saved;
+}
+
 void RsvpActivity::load() {
   scheduler.resetSession();
   focus = controls::PAUSE.defaultIndex;
+  const reading::SavedWord saved = loadState();
+  if (entry.resume && saved.valid && saved.chapter < epub->getSpineItemsCount()) spine = saved.chapter;
   if (openChapter(spine)) {
-    const uint32_t word = reading::entryWord(index.reader(), pageStartOffset);
-    source.seek(word);
+    const reading::EntryChoice choice = reading::chooseEntry(index.reader(), spine, entry.pageStartOffset,
+                                                             entry.pageEndOffset, saved, entry.resume);
+    source.seek(choice.word);
     scheduler.reposition();
-    LOG_DBG("RSVP", "enter ch=%d page_offset=%lu word=%lu chapter_words=%lu activity_bytes=%u", spine,
-            static_cast<unsigned long>(pageStartOffset), static_cast<unsigned long>(source.position()),
-            static_cast<unsigned long>(index.reader().wordCount()), static_cast<unsigned>(sizeof(RsvpActivity)));
+    LOG_DBG("RSVP", "enter ch=%d page_offset=%lu word=%lu chapter_words=%lu activity_bytes=%u from=%s", spine,
+            static_cast<unsigned long>(entry.pageStartOffset), static_cast<unsigned long>(source.position()),
+            static_cast<unsigned long>(index.reader().wordCount()), static_cast<unsigned>(sizeof(RsvpActivity)),
+            reading::entryFromName(choice.from));
   } else {
     note = Note::ChapterFailed;
     LOG_ERR("RSVP", "enter ch=%d failed: no word index", spine);
@@ -214,6 +293,7 @@ void RsvpActivity::load() {
 
 void RsvpActivity::startPlayback() {
   note = Note::None;
+  status = Status::Paused;
   if (!playbackScreenShown) {
     paintPlaybackScreen();
     backend.clear();
@@ -264,6 +344,7 @@ void RsvpActivity::enterPause(const Note pauseNote, const char* reason) {
   focus = controls::PAUSE.defaultIndex;
   logPause(reason);
   drawPauseScreen(true);  // the clearing refresh that ends playback carries the pause screen
+  savePosition(checkpoint::ReadingMode::Rsvp, reason);
   phase.store(Phase::Paused);
   guardRestartPending.store(true);
 }
@@ -302,6 +383,8 @@ void RsvpActivity::advanceChapter() {
   scheduler.reposition();
   LOG_DBG("RSVP", "chapter ch=%d word=%lu chapter_words=%lu", spine, static_cast<unsigned long>(source.position()),
           static_cast<unsigned long>(index.reader().wordCount()));
+  // Once per chapter during playback, so a power loss costs at most the chapter read so far.
+  savePosition(checkpoint::ReadingMode::Rsvp, "chapter");
   // An image, table or code block before the first prose word cannot be flagged by the source.
   wordindex::Marker marker;
   const uint8_t nonProse = wordindex::kindBit(wordindex::MARKER_IMAGE) | wordindex::kindBit(wordindex::MARKER_TABLE) |
@@ -332,13 +415,24 @@ void RsvpActivity::drawPauseScreen(const bool clearing) {
           controls::itemName(controls::PAUSE.zones[focus].item), clearing ? "clear" : "update", statusLine);
 }
 
-void RsvpActivity::paintButton(const int i, const char* label) {
+void RsvpActivity::paintButton(const int i) {
   const controls::Zone& z = controls::PAUSE.zones[i];
   const bool focused = i == focus;
   if (focused) {
     renderer.fillRect(z.x, z.y, z.w, z.h, true);
   } else {
     renderer.drawRect(z.x, z.y, z.w, z.h, BORDER, true);
+  }
+  const char* label = itemLabel(z.item);
+  if (label == nullptr) {
+    // A stepper: a minus, or a plus.
+    const int cx = z.x + z.w / 2;
+    const int cy = z.y + z.h / 2;
+    renderer.fillRect(cx - GLYPH_LENGTH / 2, cy - GLYPH_WIDTH / 2, GLYPH_LENGTH, GLYPH_WIDTH, !focused);
+    if (z.item == Item::WpmUp || z.item == Item::WordsUp) {
+      renderer.fillRect(cx - GLYPH_WIDTH / 2, cy - GLYPH_LENGTH / 2, GLYPH_WIDTH, GLYPH_LENGTH, !focused);
+    }
+    return;
   }
   const int width = renderer.getTextWidth(UI_12_FONT_ID, label);
   const int x = z.x + (z.w - width) / 2;
@@ -353,14 +447,28 @@ void RsvpActivity::paintPauseScreen() {
   const int smallHeight = renderer.getLineHeight(UI_10_FONT_ID);
   char line[160];
 
-  // Status: target and delivered WPM, then the position.
+  // Status: "Paused" or a save's outcome, the target and delivered WPM, then the position.
+  const char* lead = tr(STR_RSVP_PAUSED);
+  switch (status) {
+    case Status::SavedDefault:
+      lead = tr(STR_RSVP_SAVED_DEFAULT);
+      break;
+    case Status::SavedBook:
+      lead = tr(STR_RSVP_SAVED_BOOK);
+      break;
+    case Status::SaveFailed:
+      lead = tr(STR_RSVP_SAVE_FAILED);
+      break;
+    case Status::Paused:
+      break;
+  }
   const uint32_t tenths = scheduler.meter().deliveredWpmTenths();
   if (tenths == 0) {
-    snprintf(statusLine, sizeof(statusLine), "%s · %u %s · -- %s", tr(STR_RSVP_PAUSED), scheduler.wpm(),
-             tr(STR_RSVP_WPM_TARGET), tr(STR_RSVP_WPM_ACTUAL));
+    snprintf(statusLine, sizeof(statusLine), "%s · %u %s · -- %s", lead, scheduler.wpm(), tr(STR_RSVP_WPM_TARGET),
+             tr(STR_RSVP_WPM_ACTUAL));
   } else {
-    snprintf(statusLine, sizeof(statusLine), "%s · %u %s · %lu %s", tr(STR_RSVP_PAUSED), scheduler.wpm(),
-             tr(STR_RSVP_WPM_TARGET), static_cast<unsigned long>((tenths + 5) / 10), tr(STR_RSVP_WPM_ACTUAL));
+    snprintf(statusLine, sizeof(statusLine), "%s · %u %s · %lu %s", lead, scheduler.wpm(), tr(STR_RSVP_WPM_TARGET),
+             static_cast<unsigned long>((tenths + 5) / 10), tr(STR_RSVP_WPM_ACTUAL));
   }
   renderer.drawText(UI_10_FONT_ID, MARGIN, STATUS_Y, statusLine);
 
@@ -402,9 +510,9 @@ void RsvpActivity::paintPauseScreen() {
   renderer.drawCenteredText(UI_12_FONT_ID, NEXT_WORDS_Y + (NEXT_WORDS_H - renderer.getLineHeight(UI_12_FONT_ID)) / 2,
                             next);
 
-  for (int i = 0; i < controls::PAUSE.count; ++i) paintButton(i, itemLabel(controls::PAUSE.zones[i].item));
+  for (int i = 0; i < controls::PAUSE.count; ++i) paintButton(i);
 
-  // Settings shown without steppers (R4b adds them in these rows).
+  // The values between their steppers.
   const int rowText = (SETTING_ROW_H - renderer.getLineHeight(UI_12_FONT_ID)) / 2;
   snprintf(line, sizeof(line), "%u %s", scheduler.wpm(), tr(STR_RSVP_WPM));
   renderer.drawCenteredText(UI_12_FONT_ID, WPM_ROW_Y + rowText, line);
@@ -599,6 +707,18 @@ void RsvpActivity::activate(const Item item) {
     case Item::Exit:
       leave(rsvpentry::HandOff::Then::ExitBook);
       return;
+    case Item::WpmDown:
+    case Item::WpmUp:
+    case Item::WordsDown:
+    case Item::WordsUp:
+      stepValue(item);
+      return;
+    case Item::SaveDefault:
+      saveAsDefault();
+      return;
+    case Item::SaveBook:
+      saveForBook();
+      return;
   }
 }
 
@@ -615,10 +735,88 @@ void RsvpActivity::stepSentence(const bool forward) {
       scheduler.reposition();
       note = Note::None;
     }
+    status = Status::Paused;
     LOG_DBG("RSVP", "sentence %s ch=%d from=%lu to=%lu", forward ? "forward" : "back", spine,
             static_cast<unsigned long>(from), static_cast<unsigned long>(source.position()));
   }
   requestUpdate();
+}
+
+void RsvpActivity::stepValue(const Item item) {
+  {
+    RenderLock lock;  // the scheduler belongs to the render task; the values take effect at the next Play
+    if (item == Item::WpmDown || item == Item::WpmUp) {
+      values.wpm = reading::stepWpm(values.wpm, item == Item::WpmUp);
+      scheduler.setWpm(values.wpm);
+    } else {
+      values.wordsPerUpdate = reading::stepWordsPerUpdate(values.wordsPerUpdate, item == Item::WordsUp);
+      scheduler.setWordsPerFrame(values.wordsPerUpdate);
+    }
+    status = Status::Paused;
+    LOG_DBG("RSVP", "values wpm=%u words_per_update=%u", values.wpm, values.wordsPerUpdate);
+  }
+  requestUpdate();
+}
+
+void RsvpActivity::saveAsDefault() {
+  // The values are written only by this task, so reading them needs no lock.
+  SETTINGS.rsvpWpmTens = reading::wpmToTens(values.wpm);
+  SETTINGS.rsvpWordsPerUpdate = values.wordsPerUpdate;
+  const bool ok = SETTINGS.saveToFile();
+  LOG_DBG("RSVP", "saved default wpm=%u words_per_update=%u ok=%d", reading::wpmFromTens(SETTINGS.rsvpWpmTens),
+          SETTINGS.rsvpWordsPerUpdate, ok ? 1 : 0);
+  {
+    RenderLock lock;
+    status = ok ? Status::SavedDefault : Status::SaveFailed;
+  }
+  requestUpdate();
+}
+
+void RsvpActivity::saveForBook() {
+  const checkpoint::Overrides overrides = reading::overridesFor(values);
+  const bool ok = reading::editBookState(
+      epub->getPath(), reading::NO_BOOK_SHA256,
+      [](checkpoint::BookState& state, const void* context) {
+        state.overrides = *static_cast<const checkpoint::Overrides*>(context);
+      },
+      &overrides);
+  LOG_DBG("RSVP", "saved book wpm=%u words_per_update=%u ok=%d", overrides.wpm, overrides.wordsPerUpdate,
+          ok ? 1 : 0);
+  {
+    RenderLock lock;
+    status = ok ? Status::SavedBook : Status::SaveFailed;
+  }
+  requestUpdate();
+}
+
+void RsvpActivity::savePosition(const checkpoint::ReadingMode mode, const char* reason) {
+  if (!index.isOpen()) return;
+  checkpoint::Place place;
+  place.position.chapter = static_cast<uint16_t>(spine);
+  place.position.word = source.position();
+  place.mode = mode;
+  if (positionSaved && place == savedPlace) return;
+  const bool ok = reading::editBookState(
+      epub->getPath(), reading::NO_BOOK_SHA256,
+      [](checkpoint::BookState& state, const void* context) {
+        state.hasPosition = true;
+        state.position = *static_cast<const checkpoint::Place*>(context);
+      },
+      &place);
+  if (ok) {
+    positionSaved = true;
+    savedPlace = place;
+  }
+  LOG_DBG("RSVP", "position saved reason=%s ch=%d word=%lu mode=%s ok=%d", reason, spine,
+          static_cast<unsigned long>(place.position.word), modeName(mode), ok ? 1 : 0);
+}
+
+void RsvpActivity::saveReaderProgress() {
+  if (readerProgressSaved || !handOff->saveReaderProgress || !index.isOpen()) return;
+  uint32_t offset = 0;
+  if (!reading::pageViewOffset(index.reader(), source.position(), offset)) return;
+  handOff->saveReaderProgress(spine, offset);
+  readerProgressSaved = true;
 }
 
 void RsvpActivity::leave(const rsvpentry::HandOff::Then then) {
@@ -629,11 +827,15 @@ void RsvpActivity::leave(const rsvpentry::HandOff::Then then) {
     handOff->then = then;
     handOff->spineIndex = spine;
     handOff->visibleTextOffset = offset;
-    LOG_DBG("RSVP", "leave to=%s ch=%d word=%lu offset=%lu",
-            then == rsvpentry::HandOff::Then::PageView     ? "page-view"
-            : then == rsvpentry::HandOff::Then::ReaderMenu ? "menu"
-                                                           : "exit",
-            spine, static_cast<unsigned long>(source.position()), static_cast<unsigned long>(offset));
+    const char* to = then == rsvpentry::HandOff::Then::PageView     ? "page-view"
+                     : then == rsvpentry::HandOff::Then::ReaderMenu ? "menu"
+                                                                    : "exit";
+    LOG_DBG("RSVP", "leave to=%s ch=%d word=%lu offset=%lu", to, spine, static_cast<unsigned long>(source.position()),
+            static_cast<unsigned long>(offset));
+    // Exit keeps the book in RSVP for its next opening (S4 row 14); page view and the menu do not.
+    savePosition(then == rsvpentry::HandOff::Then::ExitBook ? checkpoint::ReadingMode::Rsvp
+                                                            : checkpoint::ReadingMode::Page,
+                 to);
   }
   finish();
 }

@@ -8,6 +8,7 @@
 
 #include <cstdint>
 
+#include "RsvpFeature.h"
 #include "util/HomeButtonInput.h"
 #include "util/PowerButtonInput.h"
 
@@ -352,6 +353,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t hideBatteryPercentage = HIDE_NEVER;
   // Long-press page turn button behavior
   uint8_t longPressButtonBehavior = OFF;
+#if CROSSPOINT_RSVP_ENABLED
+  // RSVP global defaults, saved from the pause screen (src/reading/RsvpValues.h): WPM in tens, 6 to 100.
+  uint8_t rsvpWpmTens = 24;
+  uint8_t rsvpWordsPerUpdate = 1;
+#endif
   // Long-press Confirm function in EPUB reader (cycles through LONG_PRESS_MENU_FUNCTION values).
   // Defaults to Disabled so shortcut-based bookmark toggling remains opt-in.
   uint8_t longPressMenuFunction = LP_MENU_DISABLED;
