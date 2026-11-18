@@ -4,6 +4,13 @@ set(CHECKPOINT_CORE_SOURCES
   ${CHECKPOINT_CORE_DIR}/CheckpointParser.cpp
   ${CHECKPOINT_CORE_DIR}/CheckpointSource.cpp
   ${CHECKPOINT_CORE_DIR}/JsonText.cpp
+  ${CHECKPOINT_CORE_DIR}/CheckpointTypes.cpp
+  ${CHECKPOINT_CORE_DIR}/CheckpointTrigger.cpp
+  ${CHECKPOINT_CORE_DIR}/GradeTable.cpp
+  ${CHECKPOINT_CORE_DIR}/BookState.cpp
+  ${CHECKPOINT_CORE_DIR}/StateCodec.cpp
+  ${CHECKPOINT_CORE_DIR}/StateRestore.cpp
+  ${CHECKPOINT_CORE_DIR}/CheckpointFlow.cpp
 )
 
 # Compile-only check that the library needs neither exceptions nor RTTI, as on
@@ -17,6 +24,12 @@ add_executable(CheckpointCoreTest
   CheckpointManifestTest.cpp
   CheckpointIndexTest.cpp
   CheckpointRobustnessTest.cpp
+  CheckpointTriggerTest.cpp
+  CheckpointFlowTest.cpp
+  GradeRulesTest.cpp
+  StateCodecTest.cpp
+  StateRestoreTest.cpp
+  CheckpointScenarioTest.cpp
   ${CHECKPOINT_CORE_SOURCES}
 )
 add_dependencies(CheckpointCoreTest CheckpointCoreNoRttiCheck)
@@ -27,6 +40,9 @@ target_include_directories(CheckpointCoreTest PRIVATE
 
 target_compile_definitions(CheckpointCoreTest PRIVATE
   CHECKPOINT_FIXTURES_DIR="${REPO_ROOT}/fixtures/checkpoints"
+  CHECKPOINT_BOOKS_DIR="${REPO_ROOT}/fixtures/books"
+  CHECKPOINT_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+  CHECKPOINT_PLAN_PATH="${REPO_ROOT}/docs/PLAN.md"
 )
 
 # AddressSanitizer and UndefinedBehaviorSanitizer for this target only. Any

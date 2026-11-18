@@ -1,0 +1,86 @@
+{
+  "format": "rsvp-checkpoints",
+  "version": 1,
+  "book": {
+    "title": "The Lighthouse Keeper's Almanac",
+    "language": "en",
+    "source_sha256": "b07c3ea9857b00644d284c0eae083bc504bfc895525d0a864c183b916e17c82c",
+    "instructions_version": "fixture"
+  },
+  "sections": [
+    {
+      "id": "s0001",
+      "chapter_href": "text/chapter-1.xhtml",
+      "start_anchor": "rsvp-s0001-start",
+      "end_anchor": "rsvp-s0001-end",
+      "label": "Arrival at Gannet Rock",
+      "word_count": 223
+    },
+    {
+      "id": "s0002",
+      "chapter_href": "text/chapter-1.xhtml",
+      "start_anchor": "rsvp-s0002-start",
+      "end_anchor": "rsvp-s0002-end",
+      "label": "Winding the clockwork",
+      "word_count": 194
+    },
+    {
+      "id": "s0003",
+      "chapter_href": "text/chapter-2.xhtml",
+      "start_anchor": "rsvp-s0003-start",
+      "end_anchor": "rsvp-s0003-end",
+      "label": "Fog signals",
+      "word_count": 255
+    },
+    {
+      "id": "s0004",
+      "chapter_href": "text/chapter-2.xhtml",
+      "start_anchor": "rsvp-s0004-start",
+      "end_anchor": "rsvp-s0004-end",
+      "label": "The visitor from the mainland",
+      "word_count": 295
+    },
+    {
+      "id": "s0005",
+      "chapter_href": "text/chapter-3.xhtml",
+      "start_anchor": "rsvp-s0005-start",
+      "end_anchor": "rsvp-s0005-end",
+      "label": "The keeper's log",
+      "word_count": 294
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "c0001",
+      "section": "s0001",
+      "prompts": [
+        {
+          "id": "c0001-p1",
+          "prompt": "How could sailors tell the Gannet Rock light apart from the other lights on the coast?",
+          "answer": "Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash every ten seconds, which no other light on the coast did."
+        }
+      ]
+    },
+    {
+      "id": "c0002",
+      "section": "s0004",
+      "prompts": [
+        {
+          "id": "c0002-p1",
+          "prompt": "How did the fisherman find his way to the lighthouse in the fog?",
+          "answer": "He steered by the sound of the fog horn alone, following its pattern of two blasts and silence until his boat grounded on the shingle below the tower."
+        },
+        {
+          "id": "c0002-p2",
+          "prompt": "What caused the green light on the water, and what did it tell Dr. Vane?",
+          "answer": "Phosphorescence: light made by tiny living creatures when the water is disturbed. It was not dangerous, but it showed the water was full of plankton, so there would be fish."
+        },
+        {
+          "id": "c0002-p3",
+          "prompt": "What advice did Ione give the fisherman before he left?",
+          "answer": "Never put to sea in November without oars, however good the engine."
+        }
+      ]
+    }
+  ]
+}
