@@ -431,8 +431,8 @@ void DeviceTestActivity::stepSeries() {
     stepPending = false;
     seriesDone.store(false);
     seriesActive.store(true);
-    LOG_DBG("DTS", "step start profile=%s step=%s attempt=%u", profileInfo(sweep.profile().id).key, sweep.stepSpec().key,
-            static_cast<unsigned>(sweep.stepRecord().attempts + 1));
+    LOG_DBG("DTS", "step start profile=%s step=%s attempt=%u", profileInfo(sweep.profile().id).key,
+            sweep.stepSpec().key, static_cast<unsigned>(sweep.stepRecord().attempts + 1));
     runner.begin(sweep.stepSpec());
     wakeAtMs.store(clock.nowMs());
     wakeValid.store(true);
@@ -597,9 +597,8 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
       uint32_t updateMs = 0;
       uint32_t clearMs = 0;
       estimateTimes(backend.panel(), updateMs, clearMs);
-      const uint32_t seconds =
-          estimateProfileSeconds(updateMs, clearMs, profileInfo(ProfileId::STOCK).clearing.softLimit,
-                                 OWNER_SECONDS_PER_RATING);
+      const uint32_t seconds = estimateProfileSeconds(
+          updateMs, clearMs, profileInfo(ProfileId::STOCK).clearing.softLimit, OWNER_SECONDS_PER_RATING);
       line("%s %lu %s", tr(STR_DT_PER_PROFILE), static_cast<unsigned long>((seconds + 30) / 60), tr(STR_DT_MINUTES));
       break;
     }
@@ -632,8 +631,9 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
       if (s != Screen::Stopped && r.hasFigures && r.figures.hasPlayback) {
         const PlaybackFigures& p = r.figures.playback;
         line("%s %lu.%lu WPM · %lu / %u · %s", tr(STR_DT_DELIVERED),
-             static_cast<unsigned long>(p.deliveredWpmTenths / 10), static_cast<unsigned long>(p.deliveredWpmTenths % 10),
-             static_cast<unsigned long>(p.wordsDrawn), spec.count, p.inOrder ? "order ok" : "ORDER VIOLATED");
+             static_cast<unsigned long>(p.deliveredWpmTenths / 10),
+             static_cast<unsigned long>(p.deliveredWpmTenths % 10), static_cast<unsigned long>(p.wordsDrawn),
+             spec.count, p.inOrder ? "order ok" : "ORDER VIOLATED");
         line("%s %lu ms · %s: %lu", tr(STR_DT_MEDIAN), static_cast<unsigned long>(r.figures.updates.medianMs),
              tr(STR_DT_CLEARING_REFRESH), static_cast<unsigned long>(r.figures.clears.count));
       }
@@ -674,7 +674,7 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
         const char* stopped = "";
         if (r.status == StepStatus::STOPPED) {
           // How far the series got before the owner stopped it.
-          const uint32_t done = spec.kind == StepKind::CLEARING  ? f.clears.count
+          const uint32_t done = spec.kind == StepKind::CLEARING   ? f.clears.count
                                 : spec.kind == StepKind::PLAYBACK ? f.playback.wordsShown
                                                                   : f.updates.count;
           line("%s: %s %lu / %u", label, tr(STR_DT_STOPPED), static_cast<unsigned long>(done), spec.count);
@@ -698,8 +698,7 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
                  ratingText(r.rating), stopped);
             break;
           case StepKind::ENDURANCE:
-            line("%s: %s, %s %s %s", label, ratingText(r.rating), tr(STR_DT_RESIDUE), residueName(r.residue),
-                 stopped);
+            line("%s: %s, %s %s %s", label, ratingText(r.rating), tr(STR_DT_RESIDUE), residueName(r.residue), stopped);
             break;
         }
       }
@@ -757,14 +756,14 @@ void DeviceTestActivity::paintControls() {
   const struct {
     bool done;
     const char* name;
-  } items[] = {{sum.upPressed, tr(STR_DT_ITEM_UP)},          {sum.upHeld, tr(STR_DT_ITEM_UP_HELD)},
-               {sum.downPressed, tr(STR_DT_ITEM_DOWN)},      {sum.downHeld, tr(STR_DT_ITEM_DOWN_HELD)},
+  } items[] = {{sum.upPressed, tr(STR_DT_ITEM_UP)},           {sum.upHeld, tr(STR_DT_ITEM_UP_HELD)},
+               {sum.downPressed, tr(STR_DT_ITEM_DOWN)},       {sum.downHeld, tr(STR_DT_ITEM_DOWN_HELD)},
                {sum.confirmPressed, tr(STR_DT_ITEM_CONFIRM)}, {sum.powerClicked, tr(STR_DT_ITEM_POWER)},
                {sum.touched, tr(STR_DT_ITEM_TOUCH)}};
   for (const bool want : {true, false}) {
     char text[LINE_BYTES];
-    size_t used = static_cast<size_t>(
-        snprintf(text, sizeof(text), "%s:", want ? tr(STR_DT_TRIED) : tr(STR_DT_NOT_YET)));
+    size_t used =
+        static_cast<size_t>(snprintf(text, sizeof(text), "%s:", want ? tr(STR_DT_TRIED) : tr(STR_DT_NOT_YET)));
     for (const auto& item : items) {
       if (item.done != want || used >= sizeof(text)) continue;
       const int w = snprintf(text + used, sizeof(text) - used, " %s,", item.name);
@@ -1028,7 +1027,8 @@ void DeviceTestActivity::choose(const uint8_t row) {
       return;
     }
     case Screen::ProfileSummary:
-      LOG_DBG("DTS", "summary profile=%s choice=%s", profileInfo(sweep.profile().id).key, row == 0 ? "next" : "end-run");
+      LOG_DBG("DTS", "summary profile=%s choice=%s", profileInfo(sweep.profile().id).key,
+              row == 0 ? "next" : "end-run");
       go(sweep.summary(row == 0 ? SummaryChoice::NEXT : SummaryChoice::END_RUN));
       return;
     case Screen::RunSummary:
@@ -1112,7 +1112,8 @@ void DeviceTestActivity::loopControls() {
   if (keys.exitRequested()) {
     // The held key's release belongs to this gesture: hand it to MappedInputManager so the menu never
     // sees it (as ControlInput does after a hold).
-    for (const Btn b : {Btn::PageBack, Btn::PageForward, Btn::Up, Btn::Down, Btn::Confirm}) mappedInput.wasLongPressed(b, 0);
+    for (const Btn b : {Btn::PageBack, Btn::PageForward, Btn::Up, Btn::Down, Btn::Confirm})
+      mappedInput.wasLongPressed(b, 0);
     finishControls(RunStatus::COMPLETE);
     return;
   }

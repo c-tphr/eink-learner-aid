@@ -529,7 +529,8 @@ void SettingsActivity::toggleSelectedSetting() {
         }
         break;
       case SettingAction::DeviceTest:
-        if (auto activity = devicetest::create(renderer, mappedInput)) startActivityForResult(std::move(activity), nullptr);
+        if (auto activity = devicetest::create(renderer, mappedInput))
+          startActivityForResult(std::move(activity), nullptr);
         break;
       case SettingAction::None:
         // Do nothing

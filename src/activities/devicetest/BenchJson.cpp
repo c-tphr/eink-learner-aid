@@ -2,8 +2,6 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "BenchJson.h"
-
 #include <DisplayProfiles.h>
 #include <PanelRecords.h>
 #include <Scheduler.h>
@@ -12,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "BenchJson.h"
 #include "Passage.h"
 
 namespace devicetest {
@@ -57,8 +56,8 @@ class JsonWriter {
   // A number with one decimal from tenths: 2405 -> 240.5.
   void tenths(const uint32_t value) {
     char buf[24];
-    const int n =
-        snprintf(buf, sizeof(buf), "%lu.%lu", static_cast<unsigned long>(value / 10), static_cast<unsigned long>(value % 10));
+    const int n = snprintf(buf, sizeof(buf), "%lu.%lu", static_cast<unsigned long>(value / 10),
+                           static_cast<unsigned long>(value % 10));
     separate();
     raw(buf, static_cast<size_t>(n));
   }
@@ -352,8 +351,8 @@ const char* sideLayoutName(const uint8_t layout) {
 }
 
 const char* shortPowerName(const uint8_t action) {
-  static constexpr const char* NAMES[] = {"ignore",   "sleep", "page-turn", "force-refresh", "footnotes", "confirm",
-                                          "clipping", "bookmark", "sync",   "reader-menu",   "frontlight"};
+  static constexpr const char* NAMES[] = {"ignore",   "sleep",    "page-turn", "force-refresh", "footnotes", "confirm",
+                                          "clipping", "bookmark", "sync",      "reader-menu",   "frontlight"};
   return action < sizeof(NAMES) / sizeof(NAMES[0]) ? NAMES[action] : "unknown";
 }
 

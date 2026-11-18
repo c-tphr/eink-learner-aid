@@ -131,7 +131,8 @@ TEST(BenchPlan, StoredStateAfterABenchmarkUnlocksTheTrialsRunAndKeepsTheChosenPr
   kept.chosen = ProfileId::TRIAL_B;
   const TrialSetting again = unlockForBenchmark(kept, displayprofile::trialBit(ProfileId::TRIAL_D));
   EXPECT_EQ(again.chosen, ProfileId::TRIAL_B);
-  EXPECT_EQ(again.unlocked, displayprofile::trialBit(ProfileId::TRIAL_B) | displayprofile::trialBit(ProfileId::TRIAL_D));
+  EXPECT_EQ(again.unlocked,
+            displayprofile::trialBit(ProfileId::TRIAL_B) | displayprofile::trialBit(ProfileId::TRIAL_D));
 }
 
 TEST(BenchPlan, AFullProfileRunsEveryStepThenSummarises) {

@@ -2,9 +2,9 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "BenchPlan.h"
-
 #include <cstdio>
+
+#include "BenchPlan.h"
 
 namespace devicetest {
 

@@ -47,12 +47,12 @@ Role roleOf(uint16_t logical, const controls::SideKeys& keys, bool confirmSelect
 
 enum class EventSource : uint8_t { KEY, TOUCH };
 enum class EventKind : uint8_t {
-  SHORT,         // a key released before controls::HOLD_MS (a power click is always this)
-  HOLD,          // a key held at least controls::HOLD_MS, then released
-  EXIT_HOLD,     // a key held EXIT_HOLD_MS: the owner leaves the check
-  TAP,           // touch: a tap at (x, y)
-  LONG_PRESS,    // touch: held still past the SDK's long-press time, at (x, y)
-  SWIPE_LEFT,    // touch: a swipe from (x, y) to (x2, y2)
+  SHORT,       // a key released before controls::HOLD_MS (a power click is always this)
+  HOLD,        // a key held at least controls::HOLD_MS, then released
+  EXIT_HOLD,   // a key held EXIT_HOLD_MS: the owner leaves the check
+  TAP,         // touch: a tap at (x, y)
+  LONG_PRESS,  // touch: held still past the SDK's long-press time, at (x, y)
+  SWIPE_LEFT,  // touch: a swipe from (x, y) to (x2, y2)
   SWIPE_RIGHT,
   SWIPE_UP,
   SWIPE_DOWN,
@@ -79,9 +79,9 @@ struct ControlEvent {
 // One main-loop frame of raw key state, bit i = HalGPIO index i.
 struct KeyFrame {
   uint32_t nowMs = 0;
-  uint8_t pressed = 0;   // press edges
-  uint8_t released = 0;  // release edges
-  uint8_t down = 0;      // levels
+  uint8_t pressed = 0;           // press edges
+  uint8_t released = 0;          // release edges
+  uint8_t down = 0;              // levels
   uint16_t logicalPressed = 0;   // logical buttons with a press edge this frame
   uint16_t logicalReleased = 0;  // logical buttons with a release edge this frame
 };

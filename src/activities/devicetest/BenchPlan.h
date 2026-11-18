@@ -161,8 +161,8 @@ struct StepFigures {
 
 struct StepRecord {
   StepStatus status = StepStatus::PENDING;
-  uint8_t attempts = 0;      // series run for this step ("Repeat step" adds one)
-  bool hasFigures = false;   // the last attempt's figures are in `figures`
+  uint8_t attempts = 0;     // series run for this step ("Repeat step" adds one)
+  bool hasFigures = false;  // the last attempt's figures are in `figures`
   StepFigures figures;
   Rating rating = Rating::NONE;
   Residue residue = Residue::NONE;

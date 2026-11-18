@@ -83,8 +83,8 @@ void writeBenchmark(const BenchmarkRecord& record, const Sweep& sweep, JsonSink&
 void writeControls(const ControlsRecord& record, JsonSink& sink);
 
 // Names used in the files.
-const char* sideLayoutName(uint8_t layout);      // "prev-next", "next-prev", "disabled", "next-next", "prev-prev"
-const char* shortPowerName(uint8_t action);      // "ignore", "sleep", "page-turn", ... "unknown"
+const char* sideLayoutName(uint8_t layout);  // "prev-next", "next-prev", "disabled", "next-next", "prev-prev"
+const char* shortPowerName(uint8_t action);  // "ignore", "sleep", "page-turn", ... "unknown"
 const char* logicalButtonName(controls::LogicalButton button);  // "PageBack", "PageForward", "Up", ...
 
 }  // namespace devicetest

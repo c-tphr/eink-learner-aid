@@ -2,9 +2,9 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "ControlsCheck.h"
-
 #include <cstdio>
+
+#include "ControlsCheck.h"
 
 namespace devicetest {
 
@@ -37,9 +37,8 @@ const char* rawKeyName(const uint8_t raw) {
 }
 
 const char* logicalName(const uint8_t bit) {
-  static constexpr const char* NAMES[LOGICAL_COUNT] = {"Back",     "Confirm",     "Left",    "Right",
-                                                       "Up",       "Down",        "Power",   "PageBack",
-                                                       "PageForward", "NavNext", "NavPrevious"};
+  static constexpr const char* NAMES[LOGICAL_COUNT] = {
+      "Back", "Confirm", "Left", "Right", "Up", "Down", "Power", "PageBack", "PageForward", "NavNext", "NavPrevious"};
   return bit < LOGICAL_COUNT ? NAMES[bit] : "?";
 }
 
@@ -105,8 +104,8 @@ uint32_t KeyTracker::heldMs(const uint8_t raw, const uint32_t nowMs) const {
   return timing(raw) ? nowMs - pressedAtMs[raw] : 0;
 }
 
-size_t KeyTracker::feed(const KeyFrame& f, const controls::SideKeys& keys, const bool confirmSelects,
-                        ControlEvent* out, const size_t capacity) {
+size_t KeyTracker::feed(const KeyFrame& f, const controls::SideKeys& keys, const bool confirmSelects, ControlEvent* out,
+                        const size_t capacity) {
   if (!isArmed) {
     // The frame that arms reports nothing: an edge seen here belongs to the press before the screen.
     if (reached(f.nowMs, armAtMs) && f.down == 0) isArmed = true;
