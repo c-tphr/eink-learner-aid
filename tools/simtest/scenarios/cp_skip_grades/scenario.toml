@@ -1,8 +1,11 @@
 # Grades across skips, restarts and later passes (task C3a; docs/PLAN.md section 7, grade rules and
-# "every transition saves state first"). The prepared fixture's three-prompt checkpoint c0002 opens
-# through the temporary simulator entry each time the book opens; each run ends with SIGKILL (no
-# shutdown code runs) right after a screen has appeared, so the state file read after the kill is
-# what was written before that screen showed.
+# "every transition saves state first"). The prepared fixture's three-prompt checkpoint c0002 fires on
+# leaving chapter 2's last page (task C3; C3a opened it through a temporary simulator entry). Run 1
+# reaches that page through the toolbar's Contents and five swipes; a kill leaves the reader's progress
+# on that page, so each later run reopens the book there and one swipe fires c0002 again (restoring
+# the prompt itself on reopening is task C5). Each run ends with SIGKILL (no shutdown code runs) right
+# after a screen has appeared, so the state file read after the kill is what was written before that
+# screen showed.
 #
 # Run 1: p1 Incorrect, Continue; p2 Skip question; the p3 prompt appears; kill.
 #        File: p1 incorrect, p2 ungraded, the checkpoint in progress at prompt 3 (index 2).
@@ -14,7 +17,7 @@
 #        reading position after the section's break (chapter 3, word 0).
 description = "Skipped prompts stay ungraded, the first grade survives a later different answer, every grade is in the file before the next screen"
 
-env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0", CROSSPOINT_SIM_CHECKPOINT = "c0002" } }
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
 
 sd = [
   { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
@@ -24,6 +27,25 @@ sd = [
 steps = [
   # Run 1.
   { wait_log = "\\[CPT\\] checkpoint data OEBPS/rsvp/checkpoints.json: .* copy=made" },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 532], note = "The Fog Season" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { swipe = [400, 400, 80, 400], note = "leaving chapter 2's last page fires c0002" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 " },
   { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=page resume_ch=3 resume_word=0 state=missing grades=0 " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal " },
   { wait_log = "\\[CTL\\] Prompt armed" },
@@ -49,8 +71,10 @@ steps = [
   # Run 2.
   { start = true },
   { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
-  { press = "ENTER", note = "reopen the book; the entry opens c0002 again" },
+  { press = "ENTER", note = "reopen the book: the reader's progress is chapter 2's last page" },
   { wait_log = "\\[CPT\\] checkpoint data OEBPS/rsvp/checkpoints.json: .* copy=cached" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { swipe = [400, 400, 80, 400], note = "c0002 fires again" },
   { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=page .* state=read grades=1 " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
   { screen_has = "Recorded earlier: Incorrect" },
@@ -70,7 +94,9 @@ steps = [
   # Run 3.
   { start = true },
   { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
-  { press = "ENTER", note = "reopen the book; the entry opens c0002 again" },
+  { press = "ENTER", note = "reopen the book: the reader's progress is chapter 2's last page" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { swipe = [400, 400, 80, 400], note = "c0002 fires again" },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
   { wait_log = "\\[CTL\\] Prompt armed" },
   { tap = [364, 712], note = "Skip question" },
@@ -89,7 +115,9 @@ steps = [
   # Run 4.
   { start = true },
   { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
-  { press = "ENTER", note = "reopen the book; the entry opens c0002 again" },
+  { press = "ENTER", note = "reopen the book: the reader's progress is chapter 2's last page" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { swipe = [400, 400, 80, 400], note = "c0002 fires again" },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
   { wait_log = "\\[CTL\\] Prompt armed" },
   { tap = [364, 712], note = "Skip question" },
