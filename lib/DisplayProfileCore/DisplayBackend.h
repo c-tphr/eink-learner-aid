@@ -72,6 +72,11 @@ class DisplayBackend {
   // duration (ms). Called only from update() and clear().
   virtual uint32_t presentUpdate() = 0;
   virtual uint32_t presentClear() = 0;
+  // Counts a call that present*() classed as timed out (stats().updates/clears.timeouts). The
+  // call's duration is still recorded when present*() returns it.
+  void recordTimeout(const RefreshKind kind) {
+    (kind == RefreshKind::UPDATE ? statistics.updates : statistics.clears).addTimeout();
+  }
 
  private:
   ProfileId current = ProfileId::STOCK;

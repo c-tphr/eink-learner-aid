@@ -119,6 +119,70 @@ Result play(const ProfileId profile, const uint16_t wpm, const uint8_t wordsPerF
 
 }  // namespace
 
+namespace {
+
+// Plays `count` one-word frames whose every `every`-th word carries `flags` (none when `every` is
+// 0) through `profile`, with the clearing limits the activity takes from the backend, and returns
+// how many word updates ran before the first clearing refresh (0 if none ran).
+uint32_t updatesBeforeFirstClear(const ProfileId profile, const uint32_t every, const uint8_t flags,
+                                 const uint32_t count = 400, const char* word = "word") {
+  FakeClock clock(5000);
+  FakeDisplayBackend backend(clock);
+  EXPECT_TRUE(backend.select(profile));
+  RecordingPainter painter(backend);
+  ProfileDisplaySink sink(backend, painter);
+  std::vector<rsvptest::OwnedToken> tokens;
+  for (uint32_t i = 1; i <= count; ++i) {
+    tokens.push_back({word, i - 1, static_cast<uint8_t>(every != 0 && i % every == 0 ? flags : 0)});
+  }
+  rsvptest::VectorSource source(tokens);
+  rsvp::Scheduler scheduler(source, clock, sink);
+  scheduler.setClearingLimits(backend.info().clearing);
+  scheduler.play();
+  while (true) {
+    const rsvp::StepResult r = scheduler.step();
+    if (r.event == rsvp::StepEvent::STOPPED || !r.wake) break;
+    clock.advanceTo(r.wakeAtMs);
+  }
+  uint32_t updates = 0;
+  for (const FakeEvent& e : backend.events) {
+    if (e.kind == FakeEvent::CLEAR) return updates;
+    if (e.kind == FakeEvent::UPDATE) ++updates;
+  }
+  return 0;
+}
+
+}  // namespace
+
+// Plan section 6, "Clearing", line by line, through the real scheduler with each profile's limits
+// from the profile table (the backend holds no clearing constants of its own).
+TEST(ClearingThroughProfile, UnconditionallyAfterTheHardLimit) {
+  for (const ProfileInfo& info : PROFILES) {
+    EXPECT_EQ(updatesBeforeFirstClear(info.id, 0, 0), info.clearing.hardLimit) << info.key;
+  }
+}
+
+TEST(ClearingThroughProfile, AtParagraphEndsOnceTheSoftLimitHasPassed) {
+  for (const ProfileInfo& info : PROFILES) {
+    // A paragraph ends every 7 words: the first clear follows the first paragraph end at or after
+    // the soft limit.
+    const uint32_t soft = info.clearing.softLimit;
+    EXPECT_EQ(updatesBeforeFirstClear(info.id, 7, rsvp::TOKEN_PARAGRAPH_END), (soft + 6) / 7 * 7) << info.key;
+  }
+}
+
+TEST(ClearingThroughProfile, SectionEndsCountLikeParagraphEnds) {
+  for (const ProfileInfo& info : PROFILES) {
+    const uint32_t soft = info.clearing.softLimit;
+    EXPECT_EQ(updatesBeforeFirstClear(info.id, 11, rsvp::TOKEN_SECTION_END), (soft + 10) / 11 * 11) << info.key;
+  }
+}
+
+TEST(ClearingThroughProfile, SentenceEndsDoNotCount) {
+  // Every word ends a sentence but no paragraph: only the hard limit clears.
+  EXPECT_EQ(updatesBeforeFirstClear(ProfileId::STOCK, 0, 0, 400, "end."), 120u);
+}
+
 TEST(SchedulerThroughProfile, StockAt540DeliversTheArithmeticWpm) {
   const Result r = play(ProfileId::STOCK, 240, 1);
   const size_t words = prose().size();

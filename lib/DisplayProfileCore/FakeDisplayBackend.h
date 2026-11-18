@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "DisplayBackend.h"
+#include "TimedBackend.h"
 
 namespace displayprofile {
 
@@ -106,6 +107,42 @@ class FakeDisplayBackend final : private fake_detail::Parts, public ModelledBack
   }
 
   FakeClock& clock;
+};
+
+// The device backend's hardware side, faked: each refresh advances the fake clock by a transfer
+// time and a BUSY time, and a refresh started "elsewhere" can be left pending for finishPending()
+// to wait out. The log records the order of the calls.
+class FakeRefreshPort final : public RefreshPort {
+ public:
+  enum class Op : uint8_t { FINISH_PENDING, TRANSFER_START, BUSY_END };
+  struct Entry {
+    Op op;
+    RefreshKind kind;
+    uint32_t atMs;
+  };
+
+  explicit FakeRefreshPort(FakeClock& clock) : clock(clock) {}
+
+  void finishPending() override {
+    log.push_back({Op::FINISH_PENDING, RefreshKind::UPDATE, clock.now});
+    clock.advance(pendingMs);
+    pendingMs = 0;
+  }
+  void refresh(const RefreshKind kind) override {
+    log.push_back({Op::TRANSFER_START, kind, clock.now});
+    const bool update = kind == RefreshKind::UPDATE;
+    clock.advance(update ? updateTransferMs : clearTransferMs);
+    clock.advance(update ? updateBusyMs : clearBusyMs);
+    log.push_back({Op::BUSY_END, kind, clock.now});
+  }
+
+  FakeClock& clock;
+  uint32_t updateTransferMs = 0;
+  uint32_t updateBusyMs = 0;
+  uint32_t clearTransferMs = 0;
+  uint32_t clearBusyMs = 0;
+  uint32_t pendingMs = 0;  // the rest of a refresh started elsewhere, waited out once
+  std::vector<Entry> log;
 };
 
 }  // namespace displayprofile
