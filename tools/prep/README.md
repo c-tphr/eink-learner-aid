@@ -55,6 +55,12 @@ s.range_of(element)                   # (words started before its start tag, ...
 - Every word of `<body>` is in the stream: headings, figure captions (prose), table and `pre` text (inside `TABLE` and `CODE` regions, flag `NONPROSE`) and footnote bodies (inside `NOTE` regions). Image alt text and footnote reference marks are never words.
 - Named entities that expat hands over undeclared (`&nbsp;` under an XHTML 1.1 doctype) expand through the firmware's table in `entities.py`, which a test compares with the C++ file; unknown names, including HTML 5-only ones such as `&check;`, stay literal.
 - `tokenize(text)` splits one run of plain text with the same character rules.
+- Hidden, page-break and `rt` content never splits a word: the element's own tags and every tag inside it are ignored entirely (no boundary, no flag, no marker), as in the prototype. Anchors inside are still recorded (decision on pull request #56).
+
+**Known differences from the firmware** (they cannot affect English prose in ordinary XHTML):
+
+- **NFC.** Python composes with full NFC (`unicodedata.normalize("NFC")`, as section 5 says). The firmware's `utf8ComposeNfc` uses a smaller table (`lib/Utf8/Utf8ComposeTable.h`): combining marks U+0300 to U+036F on Latin and Vietnamese letters, plus Hangul. Text that full NFC changes beyond that (singletons such as U+212B ANGSTROM SIGN, marks of other scripts, mark reordering) can come out differently. Decomposed accented Latin letters, the only case English books have, compose the same on both sides.
+- **Element names.** Python matches every element by its lowercased local name, in any namespace. The C++ prototype matches `body` and the non-visible elements (`head`, `style`, `script`, `title`, `rp`) by their qualified name, so a document that writes XHTML with a namespace prefix (`<h:body>`) can differ. Ordinary XHTML uses the default namespace, where the two agree.
 
 ## The checkpoint file, version 1
 

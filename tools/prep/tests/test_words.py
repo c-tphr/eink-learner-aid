@@ -115,14 +115,18 @@ def test_no_word_page_break_markers(attrs):
     assert texts(f"<p>one <span {attrs}>12</span> two</p>") == ["one", "two"]
 
 
-def test_no_word_hidden_element_tags_still_follow_the_boundary_rules():
-    """Section 5 read literally: hiding removes text, not tags. A hidden <div> is still a word boundary and a hidden
-    <img> still an IMAGE marker. (The prototype skips everything inside a hidden element; see the pull request.)"""
-    s = stream('<p>a<span hidden="">x</span>b</p><div>c<div hidden="">y</div>d<span hidden=""><img src="i.png" '
-               'alt=""/></span></div>')
-    assert s.texts == ["ab", "c", "d"]
-    assert [(w.text, w.flags) for w in s.words] == [("ab", PARA_END), ("c", PARA_END), ("d", PARA_END)]
-    assert [(m.kind, m.start) for m in s.markers] == [("IMAGE", 3)]
+def test_no_word_tags_inside_hidden_content_are_ignored():
+    """Hidden, page-break and rt content "never splits a word" (section 5; the lead's decision on PR #56, as in the
+    prototype): the element's own tags and every tag inside it are ignored entirely: no boundary, no flag, no
+    IMAGE/TABLE/CODE/NOTE marker. Anchors inside are still recorded."""
+    s = stream('<div>c<div hidden="">y<p>z</p><br/></div>d<span hidden=""><img src="i.png" alt=""/>'
+               '<table><tr><td>t</td></tr></table><aside epub:type="footnote"><p>n</p></aside></span>e</div>'
+               '<p>f<span epub:type="pagebreak"><h1>12</h1></span>g <ruby>k<rt><br/>K</rt>j</ruby></p>'
+               '<div>h<span hidden=""><span id="rsvp-x"></span></span>i</div>')
+    assert s.texts == ["cde", "fg", "kj", "hi"]
+    assert [(w.text, w.flags) for w in s.words] == [("cde", PARA_END), ("fg", 0), ("kj", PARA_END), ("hi", PARA_END)]
+    assert s.markers == []
+    assert [(a.id, a.index, a.inside_word) for a in s.anchors] == [("rsvp-x", 4, True)]
 
 
 def test_no_word_page_break_values_are_exact():

@@ -88,8 +88,10 @@ RULES = {
     "em dash or en dash that is followed by another non-separator. Soft hyphens and U+FEFF are removed, text is "
     "NFC-composed, and a word longer than 255 UTF-8 bytes is cut (BYTE_SPLIT). Punctuation stays attached.",
     "text_in_no_word": "Footnote reference marks (an a with epub:type noteref or role doc-noteref, or text inside "
-    "both a sup and an internal '#' link, in either nesting order) and page-break markers are text in no word; "
-    "they never split a word. The word a mark follows carries NOTEREF. Image alt text is never a word.",
+    "both a sup and an internal '#' link, in either nesting order), page-break markers, rt and elements with a hidden "
+    "attribute are text in no word; they never split a word, and tags inside a page-break marker, rt or hidden "
+    "element are ignored entirely (no boundary, no marker). The word a mark follows carries NOTEREF. Image alt text "
+    "is never a word.",
     "indexing": "Word indexes are 0-based over one document's word stream. Every range is [start, end): start is "
     "the index of the first word inside, end is one past the last.",
     "flags": "'flags' maps each flag to the [start, end) runs of word indexes that carry it. PARA_END: last word "

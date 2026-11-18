@@ -296,7 +296,7 @@ class _Pass:
         start = self.started()
         counters: list[str] = []
         region = note_region = False
-        hidden = False
+        hidden = processed = False
         if active:
             anchor_id = el.get("id")
             if anchor_id is not None and anchor_id.startswith("rsvp-"):
@@ -304,6 +304,13 @@ class _Pass:
                 self.anchors.append(anchor)
                 if self.cur:
                     self.pending.append(anchor)
+            # Hidden, page-break and rt content "never splits a word": the element's own tags and every
+            # tag inside it are ignored entirely (no boundary, no flag, no marker), as in the prototype.
+            if self.hidden == 0 and hides_text(el):
+                hidden = True
+                self.hidden += 1
+            processed = self.hidden == 0
+        if processed:
             if local == "br":
                 self.boundary(LINE_END)
             elif local in BOUNDARY_ELEMENTS:
@@ -339,9 +346,6 @@ class _Pass:
                     self.note_region = Marker(NOTE, at, at)
                     self.markers.append(self.note_region)
                 self.note += 1
-            if hides_text(el):
-                hidden = True
-                self.hidden += 1
 
         for child in el.children:
             if isinstance(child, str):
@@ -351,7 +355,7 @@ class _Pass:
 
         if entered_nonvisible:
             self.nonvisible -= 1
-        if active:
+        if processed:
             if local in BOUNDARY_ELEMENTS:
                 if local in NON_PARAGRAPH_BOUNDARIES:
                     self.flush()
@@ -372,8 +376,8 @@ class _Pass:
                 self.note -= 1
                 if self.note == 0 and self.note_region is not None:
                     self.note_region.end = self.started()
-            if hidden:
-                self.hidden -= 1
+        if hidden:
+            self.hidden -= 1
         self.ranges[el.order] = (start, self.started())
         if local == "body":
             self.boundary(PARA_END)

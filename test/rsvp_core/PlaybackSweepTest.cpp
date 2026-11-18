@@ -1,10 +1,11 @@
 // Acceptance sweep for the scheduler and the delivered-WPM meter (issue #19, PRD criterion 5 under a
 // fake clock). One stream: the committed prose sample (5,793 words) as one chapter, then the
-// fixture book's four documents (1,281 words, with an image, a table, a code block and two
-// checkpoints). Played for every refresh delay, target WPM and words per update below, resolving
+// fixture book's four documents as FixtureBook.h hands them to RsvpCore (their prose words, with an
+// image, a table and a code block as non-prose stops, footnote bodies skipped, and two checkpoints). Played for every refresh delay, target WPM and words per update below, resolving
 // each stop after 30 s, it checks:
-//   - every word index is drawn exactly once and in order, by the scheduler's audit and by the
-//     fake display's own log (indexes and texts against the source tokens);
+//   - every word handed out is drawn exactly once and in order, by the scheduler's audit and by the
+//     fake display's own log (indexes and texts against the source tokens); the indexes passed over
+//     are exactly the table's and the code block's words, right after their non-prose stops;
 //   - delivered WPM matches the arithmetic expectation:
 //       expected = 60,000 * W / (sum over frames of max(holdMs, R + D) + K * C)
 //     where W is the words shown, holdMs each frame's ideal hold (from an independent FrameBuilder
@@ -72,6 +73,16 @@ size_t streamWords() {
   return n;
 }
 
+// Indexes the audit should see passed over: inside each chapter, the gap between consecutive tokens.
+// Every gap must follow a non-prose stop (checked in IndexGapsAreTheTableAndCodeWords).
+size_t streamGaps() {
+  size_t n = 0;
+  for (const auto& c : stream()) {
+    for (size_t p = 1; p < c.tokens.size(); ++p) n += c.tokens[p].wordIndex - c.tokens[p - 1].wordIndex - 1;
+  }
+  return n;
+}
+
 struct Case {
   uint32_t refreshMs;
   uint16_t wpm;
@@ -116,7 +127,10 @@ PlayRun play(const Case& c, uint32_t startMs = 5000, size_t stallAtFrame = SIZE_
       if (r.event == StepEvent::STOPPED) {
         run.stops.push_back(r.stops);
         // Nothing past the frame on screen has been consumed from the source.
-        if (source.consumed() != scheduler.lastFrame().lastWordIndex + 1) run.consumedNothingPastStops = false;
+        if (source.consumed() == 0 ||
+            source.tokens[source.consumed() - 1].wordIndex != scheduler.lastFrame().lastWordIndex) {
+          run.consumedNothingPastStops = false;
+        }
         if (r.stops & rsvp::STOP_CHAPTER_END) break;
         clock.advance(STOP_WAIT_MS);
         scheduler.play();
@@ -188,24 +202,26 @@ void expectDisplayLogCoversStream(const PlayRun& run, const Case& c) {
   for (size_t ch = 0; ch < stream().size(); ++ch) {
     const auto& tokens = stream()[ch].tokens;
     const size_t end = ch + 1 < run.chapterLogStart.size() ? run.chapterLogStart[ch + 1] : run.log.size();
-    size_t next = 0;
+    size_t next = 0;  // position in tokens (word indexes skip the table and code words)
     const std::vector<Frame> reference = referenceFrames(stream()[ch], c);
     size_t frameNo = 0;
     for (size_t i = run.chapterLogStart[ch]; i < end; ++i) {
       const DisplayCall& call = run.log[i];
       if (call.kind != DisplayCall::FRAME) continue;
-      ASSERT_EQ(call.firstWordIndex, next) << stream()[ch].name;
+      ASSERT_LE(next + call.wordCount, tokens.size()) << stream()[ch].name;
+      ASSERT_EQ(call.firstWordIndex, tokens[next].wordIndex) << stream()[ch].name;
+      ASSERT_EQ(call.lastWordIndex, tokens[next + call.wordCount - 1].wordIndex) << stream()[ch].name;
       ASSERT_EQ(call.lastWordIndex + 1 - call.firstWordIndex, call.wordCount);
       std::string joined;
-      for (uint32_t w = call.firstWordIndex; w <= call.lastWordIndex; ++w) {
+      for (size_t p = next; p < next + call.wordCount; ++p) {
         if (!joined.empty()) joined += ' ';
-        joined += tokens[w].text;
+        joined += tokens[p].text;
       }
       ASSERT_EQ(call.text, joined);
       ASSERT_LT(frameNo, reference.size());
       EXPECT_EQ(call.holdMs, reference[frameNo].holdMs);
       ++frameNo;
-      next = call.lastWordIndex + 1;
+      next += call.wordCount;
     }
     EXPECT_EQ(next, tokens.size()) << stream()[ch].name;
     EXPECT_EQ(frameNo, reference.size());
@@ -235,7 +251,39 @@ void expectTiming(const PlayRun& run) {
 
 TEST(PlaybackSweep, StreamIsLongEnough) {
   EXPECT_GE(stream()[0].tokens.size(), 2000u);
-  EXPECT_EQ(streamWords(), 5793u + 20 + 417 + 550 + 294);
+  // The fixture's share, counted from the expected file directly: each document's words minus its
+  // TABLE, CODE and NOTE regions (20 + 427 + 566 + 296 with word rules version 1).
+  size_t fixtureProse = 0;
+  for (size_t ch = 1; ch < stream().size(); ++ch) {
+    const auto& document = rsvptest::fixtureDocument(stream()[ch].name);
+    size_t words = static_cast<size_t>(rsvptest::requireIndex(document, "word_count", stream()[ch].name));
+    for (const auto& m : rsvptest::fixtureMarkers(document)) {
+      if (m.kind != "IMAGE") words -= m.end - m.start;
+    }
+    fixtureProse += words;
+  }
+  EXPECT_EQ(streamWords(), 5793u + fixtureProse);
+}
+
+TEST(PlaybackSweep, IndexGapsAreTheTableAndCodeWords) {
+  // Within a chapter the source skips indexes only right after a non-prose stop (a table or code
+  // block) or for footnote bodies at the chapter end; the skipped indexes add up to the TABLE and
+  // CODE regions.
+  size_t regions = 0;
+  for (size_t ch = 1; ch < stream().size(); ++ch) {
+    for (const auto& m : rsvptest::fixtureMarkers(rsvptest::fixtureDocument(stream()[ch].name))) {
+      if (m.kind == "TABLE" || m.kind == "CODE") regions += m.end - m.start;
+    }
+  }
+  for (const auto& c : stream()) {
+    for (size_t p = 1; p < c.tokens.size(); ++p) {
+      if (c.tokens[p].wordIndex != c.tokens[p - 1].wordIndex + 1) {
+        EXPECT_TRUE(c.tokens[p - 1].flags & rsvp::TOKEN_NON_PROSE_FOLLOWS) << c.name << " at " << c.tokens[p].wordIndex;
+      }
+    }
+  }
+  EXPECT_GT(regions, 0u);
+  EXPECT_EQ(streamGaps(), regions);
 }
 
 TEST(PlaybackSweep, EveryWordOnceInOrderAndDeliveredWpmAsExpected) {
@@ -252,7 +300,7 @@ TEST(PlaybackSweep, EveryWordOnceInOrderAndDeliveredWpmAsExpected) {
     EXPECT_TRUE(run.auditInOrder);
     EXPECT_EQ(run.auditWords, words);
     EXPECT_EQ(run.auditSegments, stream().size());
-    EXPECT_EQ(run.auditSkipped, 0u);
+    EXPECT_EQ(run.auditSkipped, streamGaps());  // the table's and the code block's words
     expectDisplayLogCoversStream(run, c);
     EXPECT_EQ(run.stats.wordsShown, words);
     EXPECT_TRUE(run.consumedNothingPastStops);
