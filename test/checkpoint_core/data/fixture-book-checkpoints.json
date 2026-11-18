@@ -4,7 +4,7 @@
   "book": {
     "title": "The Lighthouse Keeper's Almanac",
     "language": "en",
-    "source_sha256": "b07c3ea9857b00644d284c0eae083bc504bfc895525d0a864c183b916e17c82c",
+    "source_sha256": "6adf04106f6e00142f3f19a92b64f835c8c1afb15afa985d61b434115a363b01",
     "instructions_version": "fixture"
   },
   "sections": [
@@ -14,7 +14,7 @@
       "start_anchor": "rsvp-s0001-start",
       "end_anchor": "rsvp-s0001-end",
       "label": "Arrival at Gannet Rock",
-      "word_count": 223
+      "word_count": 233
     },
     {
       "id": "s0002",
@@ -30,7 +30,7 @@
       "start_anchor": "rsvp-s0003-start",
       "end_anchor": "rsvp-s0003-end",
       "label": "Fog signals",
-      "word_count": 255
+      "word_count": 311
     },
     {
       "id": "s0004",
@@ -38,7 +38,7 @@
       "start_anchor": "rsvp-s0004-start",
       "end_anchor": "rsvp-s0004-end",
       "label": "The visitor from the mainland",
-      "word_count": 295
+      "word_count": 297
     },
     {
       "id": "s0005",
@@ -46,7 +46,7 @@
       "start_anchor": "rsvp-s0005-start",
       "end_anchor": "rsvp-s0005-end",
       "label": "The keeper's log",
-      "word_count": 294
+      "word_count": 321
     }
   ],
   "checkpoints": [

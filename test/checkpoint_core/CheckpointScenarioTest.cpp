@@ -1,8 +1,10 @@
 // The four checkpoint acceptance criteria of docs/PRD.md ("v1 acceptance
 // criteria"), replayed end to end at the logic level on the synthetic book:
-// c0001 (one prompt) on s0001, chapter 2 words [0, 223) of 417, ends
-// mid-chapter; c0002 (three prompts) on s0004, chapter 3 words [255, 550) of
-// 550, ends its chapter. Pages hold 40 words.
+// c0001 (one prompt) on s0001, in reader chapter 2, ends mid-chapter; c0002
+// (three prompts) on s0004, in reader chapter 3, ends its chapter. Word
+// positions come from fixtures/books/fixture.expected.json (FixtureBook), in
+// its word model: chapter word indexes count table, code and footnote-body
+// words too. Pages hold 40 word indexes.
 
 #include <gtest/gtest.h>
 
@@ -31,7 +33,7 @@ void pageUntilStop(ReaderSim& sim, int limit = 40) {
 TEST(CheckpointScenario, FixtureBookMatchesTheAcceptanceSetup) {
   FixtureBook book;
   ASSERT_TRUE(book.ok);
-  EXPECT_STREQ(book.index->sourceSha256(), "b07c3ea9857b00644d284c0eae083bc504bfc895525d0a864c183b916e17c82c");
+  EXPECT_EQ(std::string(book.index->sourceSha256()), book.epubSha256);  // the checkpoint file is from this EPUB
   const uint16_t c1 = book.checkpoint("c0001");
   const uint16_t c2 = book.checkpoint("c0002");
   EXPECT_EQ(book.index->promptCount(c1), 1);
@@ -41,7 +43,7 @@ TEST(CheckpointScenario, FixtureBookMatchesTheAcceptanceSetup) {
   const SectionRange s1 = book.layout.sections[book.section("s0001")];
   const SectionRange s4 = book.layout.sections[book.section("s0004")];
   EXPECT_EQ(s1.chapter, 2);
-  EXPECT_EQ(s1.end, 223u);
+  EXPECT_EQ(s1.start, 0u);  // the chapter's first section
   EXPECT_LT(s1.end, static_cast<uint32_t>(book.layout.words[2]));  // ends mid-chapter
   EXPECT_EQ(s4.chapter, 3);
   EXPECT_EQ(s4.end, static_cast<uint32_t>(book.layout.words[3]));  // ends its chapter
@@ -57,6 +59,11 @@ TEST(CheckpointScenario, FixtureBookMatchesTheAcceptanceSetup) {
 TEST(CheckpointScenario, Prd1_ReadingIntoEitherCheckpointFiresItInBothModesAndJumpingPastDoesNot) {
   FixtureBook book;
   ASSERT_TRUE(book.ok);
+  const Position s1Last = book.lastWordOf("s0001");
+  const Position s4Last = book.lastWordOf("s0004");
+  // s0001 ends mid-chapter: reading resumes at its end. s0004 ends its chapter: at the next chapter's word 0.
+  const Position s1Resume{s1Last.chapter, s1Last.word + 1};
+  const Position s4Resume{book.nextChapter(s4Last.chapter), 0};
   // RSVP from the start of chapter 1.
   {
     ReaderSim sim(book);
@@ -64,14 +71,14 @@ TEST(CheckpointScenario, Prd1_ReadingIntoEitherCheckpointFiresItInBothModesAndJu
     Step s = sim.play();
     ASSERT_EQ(s.kind, StepKind::Fire);
     EXPECT_STREQ(sim.state->active.id, "c0001");
-    EXPECT_EQ(sim.place.position, (Position{2, 222}));  // the section's last word is on screen
-    EXPECT_EQ(sim.state->active.resume, (Place{Position{2, 223}, ReadingMode::Rsvp}));
+    EXPECT_EQ(sim.place.position, s1Last);  // the section's last word is on screen
+    EXPECT_EQ(sim.state->active.resume, (Place{s1Resume, ReadingMode::Rsvp}));
     sim.handle(FlowEvent::SkipCheckpoint);
     s = sim.play();
     ASSERT_EQ(s.kind, StepKind::Fire);
     EXPECT_STREQ(sim.state->active.id, "c0002");
-    EXPECT_EQ(sim.place.position, (Position{3, 549}));
-    EXPECT_EQ(sim.state->active.resume, (Place{Position{4, 0}, ReadingMode::Rsvp}));
+    EXPECT_EQ(sim.place.position, s4Last);
+    EXPECT_EQ(sim.state->active.resume, (Place{s4Resume, ReadingMode::Rsvp}));
   }
   // Page view from the start of chapter 1.
   {
@@ -80,14 +87,16 @@ TEST(CheckpointScenario, Prd1_ReadingIntoEitherCheckpointFiresItInBothModesAndJu
     pageUntilStop(sim);
     ASSERT_EQ(sim.flow->state(), FlowState::PromptHidden);
     EXPECT_STREQ(sim.state->active.id, "c0001");
-    EXPECT_EQ(sim.place.position, (Position{2, 200}));  // leaving the page [200, 239] that shows word 222
-    EXPECT_EQ(sim.state->active.resume, (Place{Position{2, 223}, ReadingMode::Page}));
+    // Leaving the page that shows the section's last word.
+    EXPECT_EQ(sim.place.position, (Position{2, sim.pages.firstWord(s1Last.word)}));
+    EXPECT_EQ(sim.state->active.resume, (Place{s1Resume, ReadingMode::Page}));
     sim.handle(FlowEvent::SkipCheckpoint);
     pageUntilStop(sim);
     ASSERT_EQ(sim.flow->state(), FlowState::PromptHidden);
     EXPECT_STREQ(sim.state->active.id, "c0002");
-    EXPECT_EQ(sim.place.position, (Position{3, 520}));  // the chapter's last page
-    EXPECT_EQ(sim.state->active.resume, (Place{Position{4, 0}, ReadingMode::Page}));
+    const uint32_t chapterLast = book.chapterWords(s4Last.chapter) - 1;
+    EXPECT_EQ(sim.place.position, (Position{3, sim.pages.firstWord(chapterLast)}));  // the chapter's last page
+    EXPECT_EQ(sim.state->active.resume, (Place{s4Resume, ReadingMode::Page}));
   }
   // Jumps past each checkpoint, in each mode, then ordinary reading on.
   const NavSource jumps[] = {NavSource::TableOfContents, NavSource::GoToPercent, NavSource::Bookmark,
@@ -95,10 +104,13 @@ TEST(CheckpointScenario, Prd1_ReadingIntoEitherCheckpointFiresItInBothModesAndJu
   for (ReadingMode mode : {ReadingMode::Rsvp, ReadingMode::Page}) {
     for (NavSource source : jumps) {
       ReaderSim sim(book);
-      sim.openAt(Place{Position{2, 100}, mode});
-      EXPECT_EQ(sim.jump(Position{2, 300}, source).kind, StepKind::None) << navSourceName(source);
-      EXPECT_EQ(sim.jump(Position{3, 300}, source).kind, StepKind::None);
-      EXPECT_EQ(sim.jump(Position{4, 10}, source).kind, StepKind::None);
+      // Inside s0001, past its end in the same chapter, inside s0004, then past it in the next chapter.
+      const SectionRange s1 = book.range("s0001");
+      const SectionRange s4 = book.range("s0004");
+      sim.openAt(Place{Position{2, (s1.start + s1.end) / 2}, mode});
+      EXPECT_EQ(sim.jump(Position{2, s1.end + 67}, source).kind, StepKind::None) << navSourceName(source);
+      EXPECT_EQ(sim.jump(Position{3, (s4.start + s4.end) / 2}, source).kind, StepKind::None);
+      EXPECT_EQ(sim.jump(Position{book.nextChapter(3), 10}, source).kind, StepKind::None);
       EXPECT_EQ(sim.flow->state(), FlowState::Idle);
       // Reading on from after the breaks fires nothing that was passed.
       if (mode == ReadingMode::Rsvp) {
@@ -120,10 +132,12 @@ TEST(CheckpointScenario, Prd2_IncorrectRereadEitherModeReturnEarlyOrAtEndRetryCo
   FixtureBook book;
   ASSERT_TRUE(book.ok);
   const uint16_t c2 = book.checkpoint("c0002");
+  const Position s4First = book.firstWordOf("s0004");
+  const Position s4Resume{book.nextChapter(s4First.chapter), 0};  // s0004 ends its chapter
   for (FlowEvent reread : {FlowEvent::RereadRsvp, FlowEvent::RereadPage}) {
     for (bool early : {true, false}) {
       ReaderSim sim(book);
-      sim.openAt(Place{Position{3, 255}, ReadingMode::Rsvp});
+      sim.openAt(Place{s4First, ReadingMode::Rsvp});
       ASSERT_EQ(sim.play().kind, StepKind::Fire);
       sim.handle(FlowEvent::Reveal);
       sim.handle(FlowEvent::Correct, AT);  // first prompt
@@ -132,7 +146,7 @@ TEST(CheckpointScenario, Prd2_IncorrectRereadEitherModeReturnEarlyOrAtEndRetryCo
       ASSERT_TRUE(sim.handle(FlowEvent::Incorrect, AT).gradeRecorded);
       ASSERT_TRUE(sim.handle(reread).accepted);
       const ReadingMode mode = reread == FlowEvent::RereadRsvp ? ReadingMode::Rsvp : ReadingMode::Page;
-      EXPECT_EQ(sim.place, (Place{Position{3, 255}, mode}));  // the section's start
+      EXPECT_EQ(sim.place, (Place{s4First, mode}));  // the section's start
       if (early) {
         if (mode == ReadingMode::Rsvp) {
           sim.play(30);
@@ -141,7 +155,7 @@ TEST(CheckpointScenario, Prd2_IncorrectRereadEitherModeReturnEarlyOrAtEndRetryCo
           sim.nextPage();
         }
         ASSERT_EQ(sim.flow->state(), FlowState::Rereading);
-        EXPECT_GT(sim.state->active.reread.position.word, 255u);
+        EXPECT_GT(sim.state->active.reread.position.word, s4First.word);
         sim.handle(FlowEvent::ReturnEarly);
       } else if (mode == ReadingMode::Rsvp) {
         sim.play();
@@ -152,7 +166,7 @@ TEST(CheckpointScenario, Prd2_IncorrectRereadEitherModeReturnEarlyOrAtEndRetryCo
       ASSERT_EQ(sim.flow->state(), FlowState::PromptHidden);
       EXPECT_EQ(sim.flow->promptIndex(), 1);
       EXPECT_FALSE(sim.state->active.rereading);
-      EXPECT_EQ(sim.state->active.resume, (Place{Position{4, 0}, ReadingMode::Rsvp}));
+      EXPECT_EQ(sim.state->active.resume, (Place{s4Resume, ReadingMode::Rsvp}));
       sim.handle(FlowEvent::Reveal);
       const Transition t = sim.handle(FlowEvent::Correct, "2026-12-01T19:30:00");
       EXPECT_TRUE(t.accepted);
@@ -178,10 +192,12 @@ TEST(CheckpointScenario, Prd3_SkipOnePromptOrExitPartwayKeepsGradesAndResumesAft
   ASSERT_TRUE(book.ok);
   const uint16_t c1 = book.checkpoint("c0001");
   const uint16_t c2 = book.checkpoint("c0002");
+  const Position s4First = book.firstWordOf("s0004");
+  const Position s4Resume{book.nextChapter(s4First.chapter), 0};  // s0004 ends its chapter
   // Skip one prompt, page view.
   {
     ReaderSim sim(book);
-    sim.openAt(Place{Position{3, 255}, ReadingMode::Page});
+    sim.openAt(Place{s4First, ReadingMode::Page});
     pageUntilStop(sim);
     ASSERT_EQ(sim.flow->state(), FlowState::PromptHidden);
     sim.handle(FlowEvent::Reveal);
@@ -194,14 +210,14 @@ TEST(CheckpointScenario, Prd3_SkipOnePromptOrExitPartwayKeepsGradesAndResumesAft
     EXPECT_EQ(sim.stored(c2, 0), Grade::Correct);
     EXPECT_EQ(sim.stored(c2, 1), Grade::Ungraded);
     EXPECT_EQ(sim.stored(c2, 2), Grade::Incorrect);
-    EXPECT_EQ(t.resume, (Place{Position{4, 0}, ReadingMode::Page}));
+    EXPECT_EQ(t.resume, (Place{s4Resume, ReadingMode::Page}));
     EXPECT_EQ(sim.place, t.resume);  // the next chapter's first page, waiting
     EXPECT_EQ(sim.state->position, t.resume);
   }
   // Exit partway, RSVP, after a reread in page view.
   {
     ReaderSim sim(book);
-    sim.openAt(Place{Position{3, 255}, ReadingMode::Rsvp});
+    sim.openAt(Place{s4First, ReadingMode::Rsvp});
     sim.play();
     sim.handle(FlowEvent::Reveal);
     sim.handle(FlowEvent::Incorrect, AT);
@@ -214,26 +230,29 @@ TEST(CheckpointScenario, Prd3_SkipOnePromptOrExitPartwayKeepsGradesAndResumesAft
     EXPECT_EQ(sim.stored(c2, 0), Grade::Incorrect);
     EXPECT_EQ(sim.stored(c2, 1), Grade::Ungraded);
     EXPECT_EQ(sim.stored(c2, 2), Grade::Ungraded);
-    EXPECT_EQ(t.resume, (Place{Position{4, 0}, ReadingMode::Rsvp}));  // original mode, not the reread's
+    EXPECT_EQ(t.resume, (Place{s4Resume, ReadingMode::Rsvp}));  // original mode, not the reread's
     EXPECT_EQ(sim.place, t.resume);
     EXPECT_FALSE(sim.state->hasActive);
     // Playback waits for Play: nothing moves until the reader acts.
     EXPECT_EQ(sim.flow->state(), FlowState::Finished);
-    EXPECT_EQ(sim.place.position, (Position{4, 0}));
+    EXPECT_EQ(sim.place.position, s4Resume);
   }
   // Exit the single-prompt checkpoint mid-chapter in page view: the same page
   // comes back, positioned after the break, and the next action reads on.
   {
     ReaderSim sim(book);
-    sim.openAt(Place{Position{2, 160}, ReadingMode::Page});
+    const Position s1Last = book.lastWordOf("s0001");
+    const uint32_t endPage = sim.pages.firstWord(s1Last.word);  // the page that shows the section's last word
+    ASSERT_GE(endPage, sim.pages.wordsPerPage);
+    sim.openAt(Place{Position{2, endPage - sim.pages.wordsPerPage}, ReadingMode::Page});  // the page before it
     pageUntilStop(sim);
     const Transition t = sim.handle(FlowEvent::SkipCheckpoint);
-    EXPECT_EQ(t.resume, (Place{Position{2, 223}, ReadingMode::Page}));
+    EXPECT_EQ(t.resume, (Place{Position{2, s1Last.word + 1}, ReadingMode::Page}));  // s0001 ends mid-chapter
     EXPECT_EQ(sim.stored(c1, 0), Grade::Ungraded);
-    EXPECT_EQ(sim.pages.firstWord(sim.place.position.word), 200u);  // the page that was left
+    EXPECT_EQ(sim.pages.firstWord(sim.place.position.word), endPage);  // the page that was left
     sim.nextPage();
     EXPECT_EQ(sim.flow->state(), FlowState::Finished);  // not fired again
-    EXPECT_EQ(sim.place.position, (Position{2, 240}));
+    EXPECT_EQ(sim.place.position, (Position{2, endPage + sim.pages.wordsPerPage}));
   }
 }
 
@@ -244,8 +263,10 @@ TEST(CheckpointScenario, Prd4_CloseAndReopenRestoresPromptOrRereadAndALaterPassS
   FixtureBook book;
   ASSERT_TRUE(book.ok);
   const uint16_t c2 = book.checkpoint("c0002");
+  const Position s4First = book.firstWordOf("s0004");
+  const Position s4Resume{book.nextChapter(s4First.chapter), 0};  // s0004 ends its chapter
   ReaderSim sim(book);
-  sim.openAt(Place{Position{3, 255}, ReadingMode::Page});
+  sim.openAt(Place{s4First, ReadingMode::Page});
   pageUntilStop(sim);
   ASSERT_EQ(sim.flow->state(), FlowState::PromptHidden);
   sim.handle(FlowEvent::Reveal);
@@ -260,7 +281,7 @@ TEST(CheckpointScenario, Prd4_CloseAndReopenRestoresPromptOrRereadAndALaterPassS
   EXPECT_EQ(plan.notes, 0);
   EXPECT_EQ(second->flow->state(), FlowState::PromptHidden);
   EXPECT_EQ(second->flow->promptIndex(), 1);
-  EXPECT_EQ(second->state->active.resume, (Place{Position{4, 0}, ReadingMode::Page}));
+  EXPECT_EQ(second->state->active.resume, (Place{s4Resume, ReadingMode::Page}));
   EXPECT_EQ(second->stored(c2, 0), Grade::Correct);
   second->handle(FlowEvent::Reveal);
   second->handle(FlowEvent::Incorrect, AT);
@@ -268,7 +289,7 @@ TEST(CheckpointScenario, Prd4_CloseAndReopenRestoresPromptOrRereadAndALaterPassS
   second->play(25);
   ASSERT_EQ(second->flow->state(), FlowState::Rereading);
   const Place rereadAt = second->state->active.reread;
-  EXPECT_EQ(rereadAt, (Place{Position{3, 280}, ReadingMode::Rsvp}));
+  EXPECT_EQ(rereadAt, (Place{Position{3, s4First.word + 25}, ReadingMode::Rsvp}));  // 25 words into the reread
 
   // Close mid-reread (the reread position is saved at the position cadence), reopen.
   auto third = ReaderSim::reopen(book, encodeToString(*second->state), &plan);
@@ -277,7 +298,7 @@ TEST(CheckpointScenario, Prd4_CloseAndReopenRestoresPromptOrRereadAndALaterPassS
   EXPECT_EQ(plan.place, rereadAt);
   EXPECT_EQ(third->flow->state(), FlowState::Rereading);
   EXPECT_EQ(third->place, rereadAt);
-  EXPECT_EQ(third->state->active.resume, (Place{Position{4, 0}, ReadingMode::Page}));
+  EXPECT_EQ(third->state->active.resume, (Place{s4Resume, ReadingMode::Page}));
   // Continue: read to the section end, back to the same prompt, hidden.
   third->play();
   ASSERT_EQ(third->flow->state(), FlowState::PromptHidden);
@@ -286,7 +307,7 @@ TEST(CheckpointScenario, Prd4_CloseAndReopenRestoresPromptOrRereadAndALaterPassS
   third->handle(FlowEvent::Correct, AT);
   const Transition t = third->handle(FlowEvent::SkipPrompt);
   ASSERT_TRUE(t.finished);
-  EXPECT_EQ(t.resume, (Place{Position{4, 0}, ReadingMode::Page}));  // the original mode
+  EXPECT_EQ(t.resume, (Place{s4Resume, ReadingMode::Page}));  // the original mode
   EXPECT_EQ(third->stored(c2, 0), Grade::Correct);
   EXPECT_EQ(third->stored(c2, 1), Grade::Incorrect);
   EXPECT_EQ(third->stored(c2, 2), Grade::Ungraded);
@@ -295,7 +316,7 @@ TEST(CheckpointScenario, Prd4_CloseAndReopenRestoresPromptOrRereadAndALaterPassS
   auto fourth = ReaderSim::reopen(book, third->lastSaved, &plan);
   ASSERT_NE(fourth, nullptr);
   EXPECT_EQ(plan.view, OpenView::Position);
-  EXPECT_EQ(plan.place, (Place{Position{4, 0}, ReadingMode::Page}));
+  EXPECT_EQ(plan.place, (Place{s4Resume, ReadingMode::Page}));
 
   // A later pass in the other mode shows the checkpoint again, grades intact.
   fourth->jump(Position{3, 0}, NavSource::TableOfContents);
