@@ -259,10 +259,9 @@ reading::SavedWord RsvpActivity::loadState() {
             "state %s book_wpm=%u book_words=%u default_wpm=%u default_words=%u wpm=%u words_per_update=%u "
             "position=%s ch=%d word=%lu",
             reading::stateSourceName(load.source), state->overrides.hasWpm ? state->overrides.wpm : 0,
-            state->overrides.hasWordsPerUpdate ? state->overrides.wordsPerUpdate : 0, global.wpm,
-            global.wordsPerUpdate, values.wpm, values.wordsPerUpdate,
-            state->hasPosition ? modeName(state->position.mode) : "none", saved.chapter,
-            static_cast<unsigned long>(saved.word));
+            state->overrides.hasWordsPerUpdate ? state->overrides.wordsPerUpdate : 0, global.wpm, global.wordsPerUpdate,
+            values.wpm, values.wordsPerUpdate, state->hasPosition ? modeName(state->position.mode) : "none",
+            saved.chapter, static_cast<unsigned long>(saved.word));
   }
   scheduler.setWpm(values.wpm);
   scheduler.setWordsPerFrame(values.wordsPerUpdate);
@@ -275,8 +274,8 @@ void RsvpActivity::load() {
   const reading::SavedWord saved = loadState();
   if (entry.resume && saved.valid && saved.chapter < epub->getSpineItemsCount()) spine = saved.chapter;
   if (openChapter(spine)) {
-    const reading::EntryChoice choice = reading::chooseEntry(index.reader(), spine, entry.pageStartOffset,
-                                                             entry.pageEndOffset, saved, entry.resume);
+    const reading::EntryChoice choice =
+        reading::chooseEntry(index.reader(), spine, entry.pageStartOffset, entry.pageEndOffset, saved, entry.resume);
     source.seek(choice.word);
     scheduler.reposition();
     LOG_DBG("RSVP", "enter ch=%d page_offset=%lu word=%lu chapter_words=%lu activity_bytes=%u from=%s", spine,
@@ -783,8 +782,7 @@ void RsvpActivity::saveForBook() {
         state.overrides = *static_cast<const checkpoint::Overrides*>(context);
       },
       &overrides);
-  LOG_DBG("RSVP", "saved book wpm=%u words_per_update=%u ok=%d", overrides.wpm, overrides.wordsPerUpdate,
-          ok ? 1 : 0);
+  LOG_DBG("RSVP", "saved book wpm=%u words_per_update=%u ok=%d", overrides.wpm, overrides.wordsPerUpdate, ok ? 1 : 0);
   {
     RenderLock lock;
     status = ok ? Status::SavedBook : Status::SaveFailed;
@@ -836,9 +834,8 @@ void RsvpActivity::leave(const rsvpentry::HandOff::Then then) {
     LOG_DBG("RSVP", "leave to=%s ch=%d word=%lu offset=%lu", to, spine, static_cast<unsigned long>(source.position()),
             static_cast<unsigned long>(offset));
     // Exit keeps the book in RSVP for its next opening (S4 row 14); page view and the menu do not.
-    savePosition(then == rsvpentry::HandOff::Then::ExitBook ? checkpoint::ReadingMode::Rsvp
-                                                            : checkpoint::ReadingMode::Page,
-                 to);
+    savePosition(
+        then == rsvpentry::HandOff::Then::ExitBook ? checkpoint::ReadingMode::Rsvp : checkpoint::ReadingMode::Page, to);
   }
   finish();
 }

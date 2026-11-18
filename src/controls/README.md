@@ -2,8 +2,9 @@
 
 **ControlMap** (`docs/PLAN.md` section 4; contract: `docs/spikes/S4-control-map.md`, section 7): the
 single binding table for the RSVP, checkpoint, reread and device-test screens, and the input adapter
-that turns the firmware's key and touch events into control events. Filled by task R4a (#21); the
-checkpoint (C3, C4) and device-test (D3a) screens add their screens and zones to the same table.
+that turns the firmware's key and touch events into control events. Filled by task R4a (#21); R4b
+(#22) added the pause screen's steppers and save buttons (S4 rows 6-11); the checkpoint (C3, C4) and
+device-test (D3a) screens add their screens and zones to the same table.
 
 | File | What it holds | Host-tested |
 | --- | --- | --- |
@@ -19,7 +20,7 @@ Host tests: `test/rsvp_activity` (`ControlMapTest`, `ControlGestureTest`).
 - A short press of a side key, released before 0.7 s, moves the highlight on release: the `prev` key
   to the previous item, the `next` key to the next one. It never activates. No wrap.
 - Holding either side key 0.7 s activates the highlighted item. On repeating items (the sentence
-  steps) the activation repeats every 0.4 s while the key stays down. `Confirm` (GPIO5, role
+  steps and the four steppers) the activation repeats every 0.4 s while the key stays down. `Confirm` (GPIO5, role
   unconfirmed) activates on release while `KEYS.confirmSelects` is true.
 - A new screen ignores input until it has been shown for 0.3 s and every key and finger is up.
 - During RSVP playback the first key press or touch-down pauses; the adapter suppresses the rest of

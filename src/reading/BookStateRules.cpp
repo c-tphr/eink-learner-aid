@@ -2,9 +2,9 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "BookStateRules.h"
-
 #include <cstring>
+
+#include "BookStateRules.h"
 
 namespace reading {
 

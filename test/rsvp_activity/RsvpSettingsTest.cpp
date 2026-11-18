@@ -141,12 +141,12 @@ TEST(RsvpValues, OverridesForWritesBothValues) {
 TEST(BookStateRules, UnusableFilesGiveAFreshState) {
   auto state = std::make_unique<checkpoint::BookState>();
   const std::string cases[] = {
-      "",                                                     // empty (cut off before any byte)
-      "{\"version\": 1, \"overrides\": {\"wpm\": 300}",       // truncated
-      "not json at all",                                      // garbage
-      "{\"version\": 2, \"overrides\": {}}\n",                // a newer version
+      "",                                                      // empty (cut off before any byte)
+      "{\"version\": 1, \"overrides\": {\"wpm\": 300}",        // truncated
+      "not json at all",                                       // garbage
+      "{\"version\": 2, \"overrides\": {}}\n",                 // a newer version
       "{\"version\": 1, \"overrides\": {\"wpm\": \"fast\"}}",  // wrong type
-      "{\"overrides\": {}}",                                  // no version
+      "{\"overrides\": {}}",                                   // no version
   };
   for (const std::string& text : cases) {
     state->overrides.hasWpm = true;  // must be cleared

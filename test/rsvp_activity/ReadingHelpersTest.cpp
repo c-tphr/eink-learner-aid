@@ -230,8 +230,8 @@ TEST(EntryRule, ASavedWordOffThePageIsIgnored) {
   const uint32_t pageEnd = startOf(ix.reader, 200);
   // Before the page (the reader paged on), on the next page (the reader paged back), another chapter,
   // past the chapter's words (a stale file).
-  const reading::SavedWord cases[] = {savedAt(1, 107), savedAt(1, 0), savedAt(1, 200), savedAt(1, 300),
-                                      savedAt(2, 150), savedAt(1, ix.reader.wordCount())};
+  const reading::SavedWord cases[] = {savedAt(1, 107), savedAt(1, 0),   savedAt(1, 200),
+                                      savedAt(1, 300), savedAt(2, 150), savedAt(1, ix.reader.wordCount())};
   for (const reading::SavedWord& saved : cases) {
     const reading::EntryChoice c = reading::chooseEntry(ix.reader, 1, pageStart, pageEnd, saved, false);
     EXPECT_EQ(c.word, 108u) << saved.chapter << ":" << saved.word;

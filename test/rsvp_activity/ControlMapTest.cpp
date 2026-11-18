@@ -45,9 +45,9 @@ TEST(ControlMap, ConfirmSelectsOnlyWhenTheTableSaysSo) {
 TEST(ControlMap, PauseScreenOrderAndDefault) {
   // S4 section 2 focus order: Exit, Menu, Page view, << sentence, PLAY, sentence >>, WPM -, WPM +,
   // words -, words +, Save default, Save book.
-  const Item order[] = {Item::Exit,    Item::Menu,      Item::PageView,  Item::SentenceBack,
-                        Item::Play,    Item::SentenceForward, Item::WpmDown, Item::WpmUp,
-                        Item::WordsDown, Item::WordsUp,   Item::SaveDefault, Item::SaveBook};
+  const Item order[] = {
+      Item::Exit,    Item::Menu,  Item::PageView,  Item::SentenceBack, Item::Play,        Item::SentenceForward,
+      Item::WpmDown, Item::WpmUp, Item::WordsDown, Item::WordsUp,      Item::SaveDefault, Item::SaveBook};
   ASSERT_EQ(PAUSE.count, 12);
   for (int i = 0; i < PAUSE.count; ++i) EXPECT_EQ(PAUSE.zones[i].item, order[i]) << i;
   EXPECT_EQ(PAUSE.zones[PAUSE.defaultIndex].item, Item::Play);
@@ -78,11 +78,11 @@ TEST(ControlMap, PauseZonesMatchS4AndRespectTargetSizes) {
     Item item;
     int x, y, w, h;
   };
-  const Expected s4[] = {{Item::Exit, 16, 52, 136, 64},       {Item::Menu, 172, 52, 136, 64},
-                         {Item::PageView, 328, 52, 136, 64},  {Item::SentenceBack, 16, 204, 448, 64},
-                         {Item::Play, 16, 280, 448, 120},     {Item::SentenceForward, 16, 412, 448, 64},
-                         {Item::WpmDown, 16, 488, 96, 64},    {Item::WpmUp, 368, 488, 96, 64},
-                         {Item::WordsDown, 16, 564, 96, 64},  {Item::WordsUp, 368, 564, 96, 64},
+  const Expected s4[] = {{Item::Exit, 16, 52, 136, 64},         {Item::Menu, 172, 52, 136, 64},
+                         {Item::PageView, 328, 52, 136, 64},    {Item::SentenceBack, 16, 204, 448, 64},
+                         {Item::Play, 16, 280, 448, 120},       {Item::SentenceForward, 16, 412, 448, 64},
+                         {Item::WpmDown, 16, 488, 96, 64},      {Item::WpmUp, 368, 488, 96, 64},
+                         {Item::WordsDown, 16, 564, 96, 64},    {Item::WordsUp, 368, 564, 96, 64},
                          {Item::SaveDefault, 16, 640, 216, 64}, {Item::SaveBook, 248, 640, 216, 64}};
   for (const auto& e : s4) {
     const int i = indexOf(PAUSE, e.item);

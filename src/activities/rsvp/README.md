@@ -5,12 +5,12 @@
 `src/reading/ChapterWordIndex`) and draws through `DisplayProfile` (`src/display/`). Controls follow
 `docs/spikes/S4-control-map.md` through the binding table in `src/controls/`.
 
-Filled by task R4a (#21); R4b (#22) adds the WPM and words-per-update steppers, saving them, and the
-saved RSVP position; R5 (#23) the non-prose hand-off to page view.
+Filled by task R4a (#21); R4b (#22) added the WPM and words-per-update steppers, saving them, and the
+saved RSVP position; R5 (#23) adds the non-prose hand-off to page view.
 
 | File | What it holds |
 | --- | --- |
-| `RsvpLaunch.h` | The reader's entry point: `rsvpentry::create()` and `HandOff` (how RSVP returns). Without the flag `create()` returns nothing |
+| `RsvpLaunch.h` | The reader's entry point: `rsvpentry::create()` with an `Entry` (the page on screen), `HandOff` (how RSVP returns, and how it saves the reader's progress), `openedInRsvp()`. Without the flag `create()` returns nothing and `openedInRsvp()` false |
 | `RsvpActivity.h/.cpp` | The activity: playback, pause screen, chapter changes, input |
 | `WordBand.h/.cpp` | Where a frame is drawn in the word band (pure arithmetic, host-tested) |
 
@@ -21,19 +21,74 @@ Everything here is compiled only with the RSVP feature flag (`docs/ARCHITECTURE-
 The reader pushes the activity over itself (`EpubReaderActivity::openSpeedRead()`), from the first
 row of its menu ("Speed read", also the first row of the toolbar's More panel) or from a 0.7 s hold
 of a side key ("Page turn long press: Speed read", the default in RSVP builds). The reader keeps its
-book and layout. RSVP opens on the pause screen at the first word whose end is past the page's start
-offset, with Play highlighted; it never starts by itself.
+book and layout. RSVP opens on the pause screen with Play highlighted, at the word chosen by the
+rule below; it never starts by itself.
 
-Leaving fills `HandOff` and finishes; the reader's result handler acts on it:
+When a book opens and its state file (`src/reading/BookStateFile.h`) says it was left in RSVP mode,
+the reader opens RSVP by itself once its first page is shown (`rsvpentry::openedInRsvp()`,
+`resumeSpeedRead` in the reader).
 
-| Pause-screen item | Reader does |
-| --- | --- |
-| Page view (or a left-edge Back swipe) | Jumps to the page holding the next word (`applyProgressChange` with its visible offset); that render saves the reader's progress |
-| Menu | The same, then opens its menu (toolbar or list, per the setting) |
-| Exit | Saves that page as its progress and goes Home, like the menu's "Go Home" |
+### Where RSVP opens
 
-The Home gesture on the pause screen goes Home as everywhere else (the reader's progress is then the
-page RSVP was entered from; R4b saves the RSVP position).
+`reading::chooseEntry()` (`src/reading/RsvpPosition.h`, host-tested), with the state file's position
+(the "saved word"):
+
+1. **The book opened in RSVP mode** (the automatic entry above): the saved chapter and word, at most
+   the chapter's end, whatever page the reader shows.
+2. **Otherwise**, the saved word when it lies **on the page the reader shows**: the same chapter, not
+   before the page's entry word, and starting before the next page's start offset (the reader passes
+   it; on a chapter's last page there is no upper bound).
+3. **Otherwise** the page's entry word: the first word whose end is past the page's start offset.
+
+Why "on the page" and not "on or after the page's start": after Page view the reader shows the page
+holding the saved word, so entering again from that page continues at that exact word (rule 2). Once
+the reader has paged on, the saved word lies before the page and the page wins. If the reader has
+paged back, the saved word lies after the page; "on or after" would then jump ahead of what the
+reader is looking at, so the bound applies there too. Rule 1 does not look at the page, because after
+a power loss the reader's own progress can be older than the state file (it is not written at every
+pause; see below).
+
+### Routes out, and what each saves
+
+The position written is always "the next word": the word Play would show first.
+
+| Route | State file (`position`) | Reader's own progress (`progress.bin`) |
+| --- | --- | --- |
+| Pause screen: Page view (or a left-edge Back swipe) | chapter, word, `page` | The reader jumps to the page holding the word; its render saves that page |
+| Pause screen: Menu | chapter, word, `page` | The same, then the reader opens its menu |
+| Pause screen: Exit | chapter, word, `rsvp` | The reader saves the page holding the word (`HandOff::saveReaderProgress`) and goes Home |
+| Home gesture (bottom-edge swipe) on the pause screen | chapter, word, `rsvp` (in `onExit()`) | Saved by RSVP through `HandOff::saveReaderProgress` while the reader is still under it |
+| Home gesture during playback | Nothing: it pauses (S4 section 6), and the pause saves | Unchanged |
+| Sleep (power hold, auto-sleep cannot fire while playing) | chapter, word, `rsvp` (`prepareForSleep()`) | Saved the same way as for the Home gesture |
+| Power-off | The firmware has no power-off hook besides sleep: the last pause or chapter change | The last route above, or the page RSVP was entered from |
+| A pause (any reason: key, touch, image or table, end of book) | chapter, word, `rsvp` | Unchanged; rule 1 restores from the state file |
+| A chapter change during playback | chapter, first word, `rsvp` | Unchanged |
+
+How often during playback: never per word (SD wear, and a write would delay the next frame on the
+render task). A write happens when playback pauses, which is every way playback ends, and once per
+chapter change, so a power loss mid-chapter costs at most the part of the chapter read since the
+last pause. A write that would repeat the place last written by this RSVP session is skipped.
+
+## Pace settings
+
+The WPM steppers move by 20 within 60 to 1000, the words-per-update steppers by 1 within 1 to 4
+(`src/reading/RsvpValues.h`); a press at a limit changes nothing. Held on the key path, they repeat
+every 0.4 s. A change takes effect at the next Play. Words per update above 1 group words through
+`FrameBuilder` (a group never crosses a sentence or paragraph end).
+
+- **Save as default** writes `rsvpWpmTens` (WPM / 10) and `rsvpWordsPerUpdate` to CrossPoint's
+  settings file (`/.crosspoint/settings.json`) through upstream's settings list. They exist only in
+  RSVP builds and are not shown in the Settings screens or the web settings page.
+- **Save for this book** writes both values as `overrides` in the book's state file.
+- The status line then starts with "Saved as default", "Saved for this book" or "Could not save"
+  instead of "Paused", until the next stepper press, sentence step or Play.
+
+When RSVP opens, each value is the book's override if the state file has one, else the global
+default (which is 240 WPM and 1 word until a default is saved).
+
+The state file is read when RSVP opens and when a book opens; an invalid one (not JSON, wrong
+members, a newer version) or an unreadable one gives the defaults, and the next save moves it aside
+to `<file>.bad` and writes a fresh one. `book_sha256` is not computed yet (`src/reading/README.md`).
 
 ## Tasks and timing
 
@@ -69,8 +124,8 @@ rule with the renderer's real text widths. Black and white only.
 **Pause screen** (S4 section 2, zones in `src/controls/ControlMap.h`): status (target WPM, delivered
 WPM of the session, rounded), position (chapter title, chapter and book percent), Exit / Menu / Page
 view, the words Play starts with, back one sentence, Play (default), forward one sentence, the WPM
-and words-per-update values (R4b adds their steppers in these rows, and the two save buttons below),
-a one-line note, and the key hint. Notes: "An image, table or code block was skipped" after a
+and words-per-update values between their minus and plus steppers (drawn shapes, so the screen text of
+a row is its value), Save as default and Save for this book, a one-line note, and the key hint. Notes: "An image, table or code block was skipped" after a
 non-prose stop (Play continues after the item), "End of the book", "This chapter cannot be speed
 read" (no index could be built).
 
@@ -90,7 +145,9 @@ are decimal, times in ms.
 
 | Line | When |
 | --- | --- |
-| `enter ch=<spine> page_offset=<o> word=<w> chapter_words=<n> activity_bytes=<b>` | RSVP opened at word `w` |
+| `state <missing\|read\|invalid\|unreadable\|no-memory> book_wpm=<w> book_words=<k> default_wpm=<w> default_words=<k> wpm=<w> words_per_update=<k> position=<none\|rsvp\|page> ch=<c> word=<w>` | RSVP read the state file: the book's overrides (0: none), the global default, the values used, the saved position |
+| `enter ch=<spine> page_offset=<o> word=<w> chapter_words=<n> activity_bytes=<b> from=<page\|saved\|resumed>` | RSVP opened at word `w`, by which rule ("Where RSVP opens") |
+| `book state <read\|invalid\|unreadable\|no-memory> mode=<none\|rsvp\|page> ch=<c> word=<w>` | A book with a state file opened (`openedInRsvp()`) |
 | `play ch=<spine> word=<w> wpm=<t> words_per_update=<k>` | Play |
 | `frame ch=<spine> first=<i> last=<j> words=<k> hold=<ideal ms> ms=<update ms> text="<text>"` | After every frame shown; `ms` is the backend's measured update time |
 | `clear ch=<spine> ms=<ms>` | A clearing refresh during playback (clearing policy) |
@@ -99,6 +156,10 @@ are decimal, times in ms.
 | `pause screen focus=<Item> refresh=<clear\|update> status="<first line>"` | The pause screen was refreshed |
 | `sentence <back\|forward> ch=<spine> from=<w> to=<w>` | A sentence step |
 | `leave to=<page-view\|menu\|exit> ch=<spine> word=<w> offset=<visible offset>` | Leaving RSVP |
+| `values wpm=<w> words_per_update=<k> changed=<0\|1>` | A stepper press (`changed=0` at a limit) |
+| `saved default wpm=<w> words_per_update=<k> ok=<0\|1>`, `saved book ...` | Save as default, Save for this book |
+| `position saved reason=<pause\|non-prose\|end-of-book\|index-rebuilt\|chapter\|page-view\|menu\|exit\|home\|sleep> ch=<spine> word=<w> mode=<rsvp\|page> ok=<0\|1>` | The state file's position was written |
+| `state <path> set aside as <path>.bad` | An invalid or unreadable state file was moved aside before a save |
 | `Index built spine=<s> words=<n> bytes=<n> source=<n> ms=<ms>`, `Index open spine=<s> ...` | `src/reading/ChapterWordIndex` |
 | `[CTL] Pause armed` | The pause screen accepts input (300 ms after it is shown and every key and finger up) |
 | `[CTL] Pause focus=<Item>`, `[CTL] Pause select=<Item>` | Highlight moved, item activated (S4 section 9) |
@@ -106,7 +167,16 @@ are decimal, times in ms.
 
 ## Memory
 
-The activity is one heap object made when RSVP opens (`activity_bytes` in the enter line, about
-5.4 KB in the simulator: the scheduler with its 300-byte frame, the 1.9 KB index reader, the 2.3 KB sentence window,
-the band geometry). Playback allocates nothing per word: frames, text widths (a 257-byte stack copy)
-and the band layout use fixed storage. An index build is transient (`src/reading/README.md`).
+The activity is one heap object made when RSVP opens (`activity_bytes` in the enter line, 5,440
+bytes in the simulator: the scheduler with its 300-byte frame, the 1.9 KB index reader, the 2.3 KB
+sentence window, the band geometry; R4b's entry parameters, values, status and last saved place add
+40 bytes). Playback allocates nothing per word: frames, text widths (a 257-byte stack copy) and the
+band layout use fixed storage. An index build is transient (`src/reading/README.md`).
+
+Reading or writing the state file allocates one `checkpoint::BookState` (78 KB; on the Picco the
+allocator places a block this size in PSRAM) and a buffer the size of the file (about 100 to 200
+bytes for a book without checkpoint data), both freed before the call returns
+(`src/reading/BookStateFile.h`). That happens when a book opens, when RSVP opens, at each pause,
+chapter change, save button and exit; never per word. If the allocation fails, RSVP opens with the
+global defaults at the page's first word, and the save reports "Could not save" (buttons) or logs
+`ok=0` (position) without touching the file.
