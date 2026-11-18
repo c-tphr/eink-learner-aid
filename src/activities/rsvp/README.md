@@ -68,6 +68,7 @@ The position written is always "the next word": the word Play would show first.
 | Banner: Stay, Back, or a page-turn swipe | chapter, the same word, `page` | The item's page, or the page the swipe turns to |
 | Home gesture, sleep or power loss while the banner shows | Unchanged (`rsvp`): reopening the book opens RSVP after the item | The item's page |
 | A chapter change during playback | chapter, first word, `rsvp` | Unchanged |
+| A checkpoint (task C2; "Checkpoints" below) | When it shows: the frame on screen, `rsvp`, with the checkpoint in progress (written by CheckpointActivity); when it ends: the first word after the break, `rsvp` | Unchanged; Home or sleep while it shows: the page holding the frame on screen |
 
 How often during playback: never per word (SD wear, and a write would delay the next frame on the
 render task). A write happens when playback pauses, which is every way playback ends, and once per
@@ -93,7 +94,8 @@ default (which is 240 WPM and 1 word until a default is saved).
 
 The state file is read when RSVP opens and when a book opens; an invalid one (not JSON, wrong
 members, a newer version) or an unreadable one gives the defaults, and the next save moves it aside
-to `<file>.bad` and writes a fresh one. `book_sha256` is not computed yet (`src/reading/README.md`).
+to `<file>.bad` and writes a fresh one. A prepared book's file carries the checkpoint file's `book_sha256`
+(`src/reading/README.md`, "The state file's `book_sha256`").
 
 ## Non-prose items
 
@@ -215,9 +217,29 @@ costs one long update (up to the SDK's 30 s BUSY limit), not one per word; Play 
 simulator's modelled backend never classes a call as a timeout, so this is proven in
 `test/rsvp_activity/DisplayTimeoutTest.cpp` through the device backend's timing logic.
 
-**Checkpoints.** A stop at a section end with a checkpoint (`STOP_CHECKPOINT`) pauses with
-`reason=checkpoint` and no note. No section ends are passed to the word source yet, so it does not
-happen; task C2 handles it.
+**Checkpoints** (task C2; `src/reading/README.md`, "ReadingSession"). In a prepared book the word
+source carries the chapter's section ends (`ReadingSession::sectionEnds`), so a frame never groups past
+the last word of a section, and playback stops once the last word of a section with a checkpoint has
+had its slot (`STOP_CHECKPOINT`): that word stays on screen and nothing after the break is drawn. RSVP
+logs the `pause reason=checkpoint` line (the session's meter and audit so far) and `leave to=checkpoint`,
+asks the session for the Fire step (`rsvpStop()`), and the main task pushes CheckpointActivity over RSVP
+(RSVP stays alive under it, in phase Checkpoint). When it ends, RSVP takes the place
+`ReadingSession::endCheckpoint()` gives and shows its pause screen there with Play highlighted and the
+status line "Checkpoint done" (S4 row 33); nothing plays until Play:
+
+- the section ended mid-chapter: the source already stands at the first word after the break, so the
+  stop is resolved and the audit's segment carries on; Play continues at that word;
+- the section ended its chapter: the next chapter with prose opens at word 0, a new audit segment as for
+  any chapter change; the end of the book: "End of the book";
+- a reread request (task C4, not done yet) resumes as Finished; a checkpoint that could not start
+  resumes after the break with the status "Paused".
+
+The meter is the same session's: time on the checkpoint screens is not playback time, because the
+scheduler closed its active span at the stop and opens a new one at Play. While the checkpoint shows,
+Home and sleep keep what CheckpointActivity wrote when it started (the position before the break, the
+frame on screen, mode `rsvp`, and the checkpoint in progress) instead of saving the next word, and save
+the reader's progress at the page holding that frame. A stop that the session does not confirm (a book
+without checkpoint data never flags one) pauses with `reason=checkpoint` as before.
 
 **Sentence steps** (`src/reading/RsvpPosition.h`): back goes to the start of the current sentence, or
 of the previous one when already at a start; forward to the next sentence. Held (key path), they
@@ -241,6 +263,7 @@ are decimal, times in ms.
 | `pause screen focus=<Item> refresh=<clear\|update> status="<first line>"` | The pause screen was refreshed |
 | `sentence <back\|forward> ch=<spine> from=<w> to=<w>` | A sentence step |
 | `leave to=<page-view\|menu\|exit> ch=<spine> word=<w> offset=<visible offset>` | Leaving RSVP |
+| `leave to=checkpoint ch=<spine> first=<w> last=<w>` | Stopped at a checkpoint: the frame on screen (its last word ends the section); CheckpointActivity follows |
 | `leave to=item kind=<image\|table\|code> ch=<spine> word=<next word> offset=<item start offset>` | Handing over to page view at a non-prose item |
 | `[ERR] [RSVP] display timeout ch=<spine> word=<next word>: pausing` | A word update timed out; the pause follows |
 | `banner kind=<image\|table\|code> ch=<spine> word=<next word> item_offset=<o> activity_bytes=<b> hand_off_bytes=<b>` | The banner opened |

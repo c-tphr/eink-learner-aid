@@ -84,6 +84,12 @@ void notePageMove(reading::ReadingSession& session, PageMove move);
 
 #else
 
+}  // namespace readingsession
+
+#include "activities/Activity.h"  // the stubs' unique_ptr<Activity> needs the complete type
+
+namespace readingsession {
+
 inline std::shared_ptr<reading::ReadingSession> open(const std::shared_ptr<Epub>&) { return nullptr; }
 inline bool wantsNextPageOffset(const reading::ReadingSession&, int) { return false; }
 inline std::unique_ptr<Activity> nextPageCheckpoint(GfxRenderer&, MappedInputManager&, reading::ReadingSession&,
