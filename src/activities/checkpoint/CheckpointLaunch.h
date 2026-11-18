@@ -41,9 +41,9 @@ struct Outcome {
   checkpointui::End end = checkpointui::End::None;
   uint16_t checkpoint = checkpoint::NO_INDEX;  // index in the book's CheckpointIndex
   uint16_t promptIndex = 0;                    // the prompt shown last; after a reread request, the one to return to
-  checkpoint::Place resume;  // Finished, Skipped: the first word after the break, in Request::mode
-  checkpoint::Place reread;  // RereadRsvp, RereadPage: the section's first word, in the chosen mode
-  bool saved = true;         // every state file write of the checkpoint succeeded
+  checkpoint::Place resume;                    // Finished, Skipped: the first word after the break, in Request::mode
+  checkpoint::Place reread;                    // RereadRsvp, RereadPage: the section's first word, in the chosen mode
+  bool saved = true;                           // every state file write of the checkpoint succeeded
 };
 
 // The activity for `request` over `book` (open, with the checkpoint data of the book at `bookPath`).

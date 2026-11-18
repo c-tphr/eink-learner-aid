@@ -56,8 +56,7 @@ const controls::Screen& layoutOf(const Screen screen) {
 int defaultFocus(const Screen screen, const checkpoint::ReadingMode modeInUse) {
   const controls::Screen& layout = layoutOf(screen);
   if (screen == Screen::AfterIncorrect) {
-    return controls::indexOf(layout,
-                             modeInUse == checkpoint::ReadingMode::Rsvp ? Item::RereadRsvp : Item::RereadPage);
+    return controls::indexOf(layout, modeInUse == checkpoint::ReadingMode::Rsvp ? Item::RereadRsvp : Item::RereadPage);
   }
   return layout.defaultIndex;
 }

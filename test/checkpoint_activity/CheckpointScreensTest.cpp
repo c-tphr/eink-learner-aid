@@ -22,8 +22,9 @@ using controls::Item;
 
 namespace {
 
-const FlowState ALL_STATES[] = {FlowState::Idle,      FlowState::PromptHidden, FlowState::AnswerShown,
-                                FlowState::IncorrectChoice, FlowState::Rereading, FlowState::Finished};
+const FlowState ALL_STATES[] = {FlowState::Idle,        FlowState::PromptHidden,
+                                FlowState::AnswerShown, FlowState::IncorrectChoice,
+                                FlowState::Rereading,   FlowState::Finished};
 
 std::vector<Item> order(const controls::Screen& s) {
   std::vector<Item> items;
@@ -67,8 +68,9 @@ TEST(CheckpointScreens, FocusOrderPutsSkipCheckpointLast) {
   // Skip checkpoint".
   EXPECT_EQ(order(checkpointui::layoutOf(Screen::Prompt)),
             (std::vector<Item>{Item::Reveal, Item::SkipPrompt, Item::SkipCheckpoint}));
-  EXPECT_EQ(order(checkpointui::layoutOf(Screen::Answer)),
-            (std::vector<Item>{Item::AnswerBox, Item::Correct, Item::Incorrect, Item::SkipPrompt, Item::SkipCheckpoint}));
+  EXPECT_EQ(
+      order(checkpointui::layoutOf(Screen::Answer)),
+      (std::vector<Item>{Item::AnswerBox, Item::Correct, Item::Incorrect, Item::SkipPrompt, Item::SkipCheckpoint}));
   EXPECT_EQ(order(checkpointui::layoutOf(Screen::AfterIncorrect)),
             (std::vector<Item>{Item::RereadRsvp, Item::RereadPage, Item::ContinueOn, Item::SkipPrompt,
                                Item::SkipCheckpoint}));
@@ -182,10 +184,14 @@ TEST(CheckpointScreens, KeyPathsOfS4) {
 
 TEST(CheckpointScreens, ItemsSendTheirFlowEvents) {
   const std::pair<Item, FlowEvent> pairs[] = {
-      {Item::Reveal, FlowEvent::Reveal},         {Item::SkipPrompt, FlowEvent::SkipPrompt},
-      {Item::SkipCheckpoint, FlowEvent::SkipCheckpoint}, {Item::Correct, FlowEvent::Correct},
-      {Item::Incorrect, FlowEvent::Incorrect},   {Item::RereadRsvp, FlowEvent::RereadRsvp},
-      {Item::RereadPage, FlowEvent::RereadPage}, {Item::ContinueOn, FlowEvent::Continue},
+      {Item::Reveal, FlowEvent::Reveal},
+      {Item::SkipPrompt, FlowEvent::SkipPrompt},
+      {Item::SkipCheckpoint, FlowEvent::SkipCheckpoint},
+      {Item::Correct, FlowEvent::Correct},
+      {Item::Incorrect, FlowEvent::Incorrect},
+      {Item::RereadRsvp, FlowEvent::RereadRsvp},
+      {Item::RereadPage, FlowEvent::RereadPage},
+      {Item::ContinueOn, FlowEvent::Continue},
   };
   for (const auto& [item, expected] : pairs) {
     FlowEvent event = FlowEvent::ReturnEarly;
@@ -205,10 +211,9 @@ TEST(CheckpointScreens, EveryItemOnAScreenIsOfferedInItsStateAndNowhereElse) {
       for (int i = 0; i < layout.count; ++i) {
         const Item item = layout.zones[i].item;
         FlowEvent event = FlowEvent::Reveal;
-        const bool accepted =
-            item == Item::AnswerBox
-                ? state == FlowState::AnswerShown
-                : checkpointui::flowEventFor(item, event) && checkpoint::CheckpointFlow::accepts(state, event);
+        const bool accepted = item == Item::AnswerBox ? state == FlowState::AnswerShown
+                                                      : checkpointui::flowEventFor(item, event) &&
+                                                            checkpoint::CheckpointFlow::accepts(state, event);
         EXPECT_EQ(checkpointui::offered(item, state), accepted)
             << checkpoint::flowStateName(state) << " " << controls::itemName(item);
         // Everything a screen shows is accepted in the state it shows.

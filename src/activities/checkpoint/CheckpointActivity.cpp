@@ -33,11 +33,11 @@ using controls::Item;
 constexpr int MARGIN = 16;
 constexpr int CONTENT_WIDTH = 448;
 constexpr int HEADER_Y = 12;
-constexpr int RECORDED_Y = 56;        // Prompt: "Recorded earlier: ..."
-constexpr int PROMPT_TOP = 92;        // Prompt: the prompt text, down to 8 px above Reveal
-constexpr int PROMPT_BOTTOM = 408;    //
-constexpr int SHORT_PROMPT_Y = 52;    // Answer: the prompt, two lines
-constexpr int REREAD_NOTE_Y = 56;     // After Incorrect: the note, then the prompt in two lines
+constexpr int RECORDED_Y = 56;      // Prompt: "Recorded earlier: ..."
+constexpr int PROMPT_TOP = 92;      // Prompt: the prompt text, down to 8 px above Reveal
+constexpr int PROMPT_BOTTOM = 408;  //
+constexpr int SHORT_PROMPT_Y = 52;  // Answer: the prompt, two lines
+constexpr int REREAD_NOTE_Y = 56;   // After Incorrect: the note, then the prompt in two lines
 constexpr int INCORRECT_PROMPT_Y = 100;
 constexpr int BOX_PADDING = 12;
 constexpr int HINT_Y = 752;
@@ -59,7 +59,9 @@ const char* modeName(const checkpoint::ReadingMode mode) {
   return mode == checkpoint::ReadingMode::Rsvp ? "rsvp" : "page";
 }
 
-const char* gradeLabel(const Grade grade) { return grade == Grade::Correct ? tr(STR_CP_CORRECT) : tr(STR_CP_INCORRECT); }
+const char* gradeLabel(const Grade grade) {
+  return grade == Grade::Correct ? tr(STR_CP_CORRECT) : tr(STR_CP_INCORRECT);
+}
 
 const char* gradeLog(const Grade grade) { return grade == Grade::Ungraded ? "none" : checkpoint::gradeName(grade); }
 
@@ -476,7 +478,8 @@ void CheckpointActivity::paintPrompt() {
     const int fit = (PROMPT_BOTTOM - PROMPT_TOP) / renderer.getLineHeight(fontId);
     const std::vector<std::string> lines = wrap(renderer, fontId, promptText, CONTENT_WIDTH, fit + 1);
     if (static_cast<int>(lines.size()) <= fit || fontId == PROMPT_FONTS[sizeof(PROMPT_FONTS) / sizeof(int) - 1]) {
-      if (static_cast<int>(lines.size()) > fit) LOG_ERR("CPT", "prompt %s does not fit: cut at %d lines", promptId, fit);
+      if (static_cast<int>(lines.size()) > fit)
+        LOG_ERR("CPT", "prompt %s does not fit: cut at %d lines", promptId, fit);
       paintWrapped(fontId, promptText, PROMPT_TOP, fit);
       return;
     }
@@ -495,8 +498,8 @@ void CheckpointActivity::paintAnswer() {
   // The prompt, shortened to two lines (an ellipsis marks the cut): it was shown in full before.
   paintWrapped(LABEL_FONT, promptText, SHORT_PROMPT_Y, SHORT_PROMPT_LINES);
 
-  const controls::Zone& box = controls::CHECKPOINT_ANSWER.zones[controls::indexOf(controls::CHECKPOINT_ANSWER,
-                                                                                    Item::AnswerBox)];
+  const controls::Zone& box =
+      controls::CHECKPOINT_ANSWER.zones[controls::indexOf(controls::CHECKPOINT_ANSWER, Item::AnswerBox)];
   const bool focused = checkpointui::layoutOf(screen).zones[focus].item == Item::AnswerBox;
   renderer.drawRect(box.x, box.y, box.w, box.h, focused ? FOCUS_BORDER : BORDER, true);
 

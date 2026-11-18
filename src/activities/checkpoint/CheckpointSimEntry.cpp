@@ -51,7 +51,8 @@ bool fireStep(const Epub& epub, const reading::CheckpointBook& book, const uint1
   // 6 KB for this call (every section of a book may share one chapter).
   auto sections = makeUniqueNoThrow<checkpoint::ChapterSections>();
   if (!sections) return false;
-  const uint16_t next = spine + 1 < epub.getSpineItemsCount() ? static_cast<uint16_t>(spine + 1) : checkpoint::NO_CHAPTER;
+  const uint16_t next =
+      spine + 1 < epub.getSpineItemsCount() ? static_cast<uint16_t>(spine + 1) : checkpoint::NO_CHAPTER;
   sections->reset(static_cast<uint16_t>(spine), words.reader().wordCount(), next);
   if (sections->add(section, start.wordIndex, end.wordIndex, c) != checkpoint::ChapterSections::AddResult::Added) {
     return false;

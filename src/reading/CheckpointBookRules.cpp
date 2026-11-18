@@ -2,10 +2,10 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "CheckpointBookRules.h"
-
 #include <cinttypes>
 #include <cstdio>
+
+#include "CheckpointBookRules.h"
 
 namespace reading {
 

@@ -90,9 +90,8 @@ inline constexpr Binding BINDINGS[] = {
     {Ctx::FocusScreen, Ev::PrevShort, Act::FocusPrev}, {Ctx::FocusScreen, Ev::NextShort, Act::FocusNext},
     {Ctx::FocusScreen, Ev::Hold, Act::Select},         {Ctx::FocusScreen, Ev::HoldRepeat, Act::SelectRepeat},
     {Ctx::FocusScreen, Ev::Tap, Act::TapItem},         {Ctx::FocusScreen, Ev::BackGesture, Act::Back},
-    {Ctx::PageView, Ev::Hold, Act::EnterRsvp},
-    // Checkpoint screens (task C3a).
-    {Ctx::FocusScreen, Ev::SwipeUp, Act::SwipeNext},   {Ctx::FocusScreen, Ev::SwipeDown, Act::SwipePrev},
+    {Ctx::PageView, Ev::Hold, Act::EnterRsvp},         {Ctx::FocusScreen, Ev::SwipeUp, Act::SwipeNext},
+    {Ctx::FocusScreen, Ev::SwipeDown, Act::SwipePrev},
 };
 
 // First matching row, else Act::None. Ev::Confirm selects on focus screens when KEYS.confirmSelects.
@@ -163,8 +162,8 @@ inline constexpr Screen CHECKPOINT_PROMPT{
 // Answer revealed: the answer box (default; covers where Reveal was), Correct, Incorrect, Skip question,
 // Skip checkpoint. A grade is never the default.
 inline constexpr Zone CHECKPOINT_ANSWER_ZONES[] = {
-    {Item::AnswerBox, 16, 120, 448, 440, false}, {Item::Correct, 16, 576, 208, 88, false},
-    {Item::Incorrect, 256, 576, 208, 88, false}, {Item::SkipPrompt, 264, 680, 200, 64, false},
+    {Item::AnswerBox, 16, 120, 448, 440, false},     {Item::Correct, 16, 576, 208, 88, false},
+    {Item::Incorrect, 256, 576, 208, 88, false},     {Item::SkipPrompt, 264, 680, 200, 64, false},
     {Item::SkipCheckpoint, 16, 680, 200, 64, false},
 };
 inline constexpr Screen CHECKPOINT_ANSWER{

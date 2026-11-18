@@ -87,7 +87,8 @@ TEST(CheckpointBookRules, SizeLimitAndCopyName) {
   EXPECT_FALSE(reading::checkpointFileSizeAllowed(checkpoint::MAX_FILE_BYTES + 1));
   EXPECT_EQ(reading::checkpointCopyName(0x0123abcdu, 2805), "checkpoints-0123abcd-2805.json");
   EXPECT_EQ(reading::checkpointCopyName(0, 91475), "checkpoints-00000000-91475.json");
-  EXPECT_NE(reading::checkpointCopyName(1, 2805), reading::checkpointCopyName(2, 2805)) << "another entry, another copy";
+  EXPECT_NE(reading::checkpointCopyName(1, 2805), reading::checkpointCopyName(2, 2805))
+      << "another entry, another copy";
   EXPECT_STREQ(reading::checkpointDataName(CheckpointData::TooLarge), "too-large");
   EXPECT_STREQ(reading::checkpointDataName(CheckpointData::None), "none");
 }

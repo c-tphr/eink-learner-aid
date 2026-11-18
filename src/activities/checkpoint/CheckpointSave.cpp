@@ -2,10 +2,10 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "CheckpointSave.h"
-
 #include <cstdio>
 #include <cstring>
+
+#include "CheckpointSave.h"
 
 namespace checkpointui {
 
@@ -50,8 +50,8 @@ bool formatGradeTime(const int tmYear, const int tmMon, const int tmMday, const 
                      const int tmSec, char out[checkpoint::TIMESTAMP_CHARS + 1]) {
   out[0] = '\0';
   const int year = tmYear + 1900;
-  if (year < 2020 || year > 2135 || tmMon < 0 || tmMon > 11 || tmMday < 1 || tmMday > 31 || tmHour < 0 ||
-      tmHour > 23 || tmMin < 0 || tmMin > 59 || tmSec < 0 || tmSec > 60) {
+  if (year < 2020 || year > 2135 || tmMon < 0 || tmMon > 11 || tmMday < 1 || tmMday > 31 || tmHour < 0 || tmHour > 23 ||
+      tmMin < 0 || tmMin > 59 || tmSec < 0 || tmSec > 60) {
     return false;
   }
   // A leap second is written as :59, which the state file accepts.

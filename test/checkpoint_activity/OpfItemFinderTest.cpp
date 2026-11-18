@@ -77,7 +77,8 @@ TEST(OpfItemFinder, FindsThePreparedBooksItemInAnyChunking) {
 
 TEST(OpfItemFinder, AnOrdinaryBookHasNoItem) {
   std::string opf = PREPARED_OPF;
-  opf.erase(opf.find("<item id=\"rsvp-checkpoints\""), opf.find("</manifest>") - opf.find("<item id=\"rsvp-checkpoints\""));
+  opf.erase(opf.find("<item id=\"rsvp-checkpoints\""),
+            opf.find("</manifest>") - opf.find("<item id=\"rsvp-checkpoints\""));
   const FindResult run = find(opf, 64);
   EXPECT_FALSE(run.found);
   EXPECT_FALSE(run.failed);

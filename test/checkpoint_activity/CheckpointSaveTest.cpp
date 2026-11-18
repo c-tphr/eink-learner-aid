@@ -116,7 +116,7 @@ class CheckpointSave : public ::testing::Test {
     json = readSample("multi-prompt.json");
     ASSERT_FALSE(json.empty());
     source = std::make_unique<checkpoint::MemoryCheckpointSource>(reinterpret_cast<const uint8_t*>(json.data()),
-                                                                   json.size());
+                                                                  json.size());
     index = std::make_unique<checkpoint::CheckpointIndex>();
     ASSERT_EQ(index->open(*source).verdict, checkpoint::Verdict::Valid);
   }
