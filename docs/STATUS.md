@@ -4,14 +4,15 @@ The orchestrator keeps this file current. A new session should be able to resume
 
 ## Where we are
 
-_Updated 2026-11-17._
+_Updated 2026-11-18._
 
-- **Milestone:** M0 Foundation (F1 done; F2 in progress). M2 spikes S1 to S3 are done; M3, M4 and M5 library work that needs only host tests is running ahead of F2.
-- **Merged:** #1 bootstrap (PR #41), #2 F1 (PR #42, merge commit), #13 P1 (PR #43), #10 S2 (PR #45), #14 P3 (PR #46), #11 S3 (PR #47), #9 S1 (PR #48), plan change for the spikes (PR #50)
-- **Assigned, in progress:** #3 F2, #15 P2a, #18 R1, #24 C1a
-- **Next when dependencies merge:** #49 P6 (after P2a), then #16 P2b and #20 R3; #4 F3 and #12 S4 (after F2); #19 R2 needs R1 and #8 E3; #25 C1b (after C1a)
-- **Blockers:** the firmware build (`pio run -e picco`) fails in cloud sessions with a certificate error; F2 (#3) owns the fix (see "Facts learned")
-- **Waiting on the owner (not blocking yet):** enable "Automatically delete head branches"; confirm GitHub Actions is enabled (pull request #42 triggered no workflow run although upstream's `ci.yml` runs on `pull_request`)
+- **Milestone:** M0 Foundation: F1 done; F2 (#3) in rework (pull request #55), which gates F3, F4, the simulator and all user-facing work. M2 spikes S1 to S3 done. The portable libraries for M4 and M5 are done ahead of the firmware build: RsvpCore (R1, R2) and CheckpointCore (C1a, C1b).
+- **Merged:** #1 (PR #41), #2 F1 (PR #42, merge commit), #13 P1 (#43), #10 S2 (#45), #14 P3 (#46), #11 S3 (#47), #9 S1 (#48), plan change (#50), #18 R1 (#51), #15 P2a (#52), #24 C1a (#53), #19 R2 (#54), #25 C1b (#57)
+- **In rework:** #3 F2 (PR #55: firmware builds; simulator needs the patch mechanism); #49 P6 (PR #56: Python passes; C++ fixture reader must move to the new expected-file layout)
+- **Assigned, in progress:** #35 D5 (guarded flash tool, started before D4 against synthetic images)
+- **Next when dependencies merge:** after F2: #4 F3, #5 F4, #12 S4, #6 E2, #7 E1. After P6: #20 R3, #16 P2b. Then #8 E3 (needs F4, E2), #21 R4a.
+- **Blockers:** none beyond the two reworks.
+- **Waiting on the owner (not blocking yet):** enable "Automatically delete head branches"; confirm GitHub Actions is enabled (no workflow run has ever been triggered by a pull request here, although upstream's `ci.yml` runs on `pull_request`). F3 cannot be validated until Actions runs.
 
 ## Last decisions
 
@@ -28,13 +29,19 @@ _Updated 2026-11-17._
 - 2026-11-17: R1 (#18) and C1a (#24) were started before F4 (#5): they are portable libraries proven by host tests and do not need the firmware build. F4 adds the flag and remaining skeletons around them.
 - 2026-11-17: C1a rule: the firmware parser must match the Python verdict for all 107 samples; exact issue codes are required for version and cross-reference samples, coarser codes are allowed for parse and schema samples.
 
+- 2026-11-18: F2 results: `pio run -e picco` works in cloud sessions through `scripts/cloud-setup.sh`, which pre-fetches every package in processes that keep the session's CA settings (no CA bundle edits, no disabled verification). Only `collector.platformio.org` (telemetry) is refused; nothing needs adding to the allowlist. `dl.platformio.org` and `dl.espressif.com` were never contacted.
+- 2026-11-18: The simulator's newest commit (`84c3421d`) does not compile against the pinned firmware. Decision: no fork; patches live in `scripts/simulator_patches/` and are applied to the fetched library by `scripts/patch_simulator.py`, following upstream's `patch_sdfat.py` convention. The same folder takes stubs for HAL methods this project adds.
+- 2026-11-18: D5 design: logic in the Python package `tools/device/piccoflash/` (testable against a fake device), `session.ps1` as a thin launcher with a pinned private Python; no force flag.
+- 2026-11-18: Checkpoint behaviour fixed by C1b (PR #57, 20 decisions): re-arming is literal (previous page then next page over a section end fires again); skip is offered after Incorrect too; only `book.source_sha256`-matching state keeps position; answer-revealed is never persisted.
+- 2026-11-18: Hidden, page-break and `rt` content never splits a word (tags inside are ignored), per the S1 prototype.
+
 ## Issue map
 
 | ID | Issue | Milestone | State |
 | --- | --- | --- | --- |
 | B0 | #1 | M0 | merged |
 | F1 | #2 | M0 | merged |
-| F2 | #3 | M0 | in progress |
+| F2 | #3 | M0 | in rework (PR #55) |
 | F3 | #4 | M0 | open |
 | F4 | #5 | M0 | open |
 | E2 | #6 | M1 | open |
@@ -46,18 +53,18 @@ _Updated 2026-11-17._
 | S4 | #12 | M2 | open |
 | P1 | #13 | M3 | merged |
 | P3 | #14 | M3 | merged |
-| P2a | #15 | M3 | in progress |
+| P2a | #15 | M3 | merged |
 | P2b | #16 | M3 | open |
-| P6 | #49 | M3 | open (word rules; after P2a, before P2b and R3) |
+| P6 | #49 | M3 | in rework (PR #56) |
 | P4 | #17 | M3 | open |
-| R1 | #18 | M4 | in progress |
-| R2 | #19 | M4 | open |
+| R1 | #18 | M4 | merged |
+| R2 | #19 | M4 | merged |
 | R3 | #20 | M4 | open |
 | R4a | #21 | M4 | open |
 | R4b | #22 | M4 | open |
 | R5 | #23 | M4 | open |
-| C1a | #24 | M5 | in progress |
-| C1b | #25 | M5 | open |
+| C1a | #24 | M5 | merged |
+| C1b | #25 | M5 | merged |
 | C2 | #26 | M5 | open |
 | C3 | #27 | M5 | open |
 | C4 | #28 | M5 | open |
@@ -67,7 +74,7 @@ _Updated 2026-11-17._
 | D3a | #32 | M6 | open |
 | D3b | #33 | M6 | open |
 | D4 | #34 | M6 | open |
-| D5 | #35 | M6 | open |
+| D5 | #35 | M6 | in progress |
 | D6 | #36 | M6 | open |
 | A0 | #37 | M6 | open |
 | P5 | #38 | M7 | open |
@@ -80,7 +87,10 @@ _Updated 2026-11-17._
 - Upload hazard: upstream's comment says the `picco` upload writes only the app, but reading the build scripts shows `scripts/app_only_upload.py` runs too late to remove the bootloader (0x0), partition table (0x8000) and `boot_app0` (0xE000, inside stock NVS) from the upload command. The plan's hazard note stands. F2 confirms with `-t envdump`. Never run an upload target.
 - `simulator_picco` is not defined in upstream's `platformio.ini`; it comes from the simulator repo's sample configuration. F2 adds it, pinned.
 - Host tests upstream are CMake and GoogleTest under `test/`: 924 pass at the pinned commit (about 5 minutes to build on 4 cores).
-- Cloud build blocker: pioarduino's `builder/penv_setup.py` (`_setup_certifi_env`) overwrites the CA environment variables with its private certifi bundle, which lacks the session proxy's CA, so downloads made after the platform loads fail with `CERTIFICATE_VERIFY_FAILED`. Not a blocked host. Does not affect GitHub Actions or Codespaces.
+- Cloud builds: run `./scripts/cloud-setup.sh` first in every session (about 3 minutes from empty caches, seconds afterwards). A plain `pio run` on empty caches fails with `CERTIFICATE_VERIFY_FAILED` because pioarduino replaces the CA settings; worse, its `idf_tools.py` falls back to unverified downloads, which the setup script treats as a failure. Building a `custom_sdkconfig` environment (upstream `default`) in the same core directory triggers a reinstall that hits the TLS problem again; re-run the setup script. `picco` builds in about 5.5 minutes: flash 5,449,518 B of the 7,431,782 B two-slot budget, RAM 34.4%.
+- Upload hazard confirmed by `pio run -e picco -t envdump`: `UPLOADERFLAGS` holds 0x0, 0x8000 and 0xe000 images although `FLASH_EXTRA_IMAGES` is empty.
+- Host suite on `main`: 1,113 tests (924 upstream, 115 RsvpCore, 74 CheckpointCore). Python: `python3 -m pytest tools/prep -q` (281 on `main`).
+- The cloud VM pauses when the session is idle, so wall-clock durations are unreliable; scripts time with `/proc/uptime`.
 - Network: all ten allowlisted hosts and the five upstream repos respond; no host refused so far. F2's smoke test gives the complete list.
 - Pushing `task/<n>-<slug>` branches works. Merged branches are not deleted (setting is off and sessions cannot delete branches).
 - Implementers' working copies live under `.claude/worktrees/` (ignored locally through `.git/info/exclude`).
