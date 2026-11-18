@@ -43,6 +43,8 @@ steps = [
   { wait_log = "\\[CTL\\] DeviceTest focus=temperature:0" },
   { press = "DOWN", hold_ms = 900, note = "Continue" },
   { wait_log = "\\[CTL\\] DeviceTest select=temperature:0" },
+  { wait_log = "\\[DTS\\] screen overview focus=0" },
+  { shot = "overview" },
   { wait_log = "\\[CTL\\] DeviceTest armed screen=overview" },
   { press = "DOWN", hold_ms = 900, note = "Start the benchmark" },
   { wait_log = "\\[CTL\\] DeviceTest select=overview:0" },
@@ -295,4 +297,5 @@ steps = [
   { expect_json = "rsvp-bench/0001-bench.json", pointer = "/profiles/1/steps/5/status", equals = "skipped" },
   { expect_json = "rsvp-bench/0001-bench.json", pointer = "/profiles/1/steps/9/status", equals = "skipped" },
   { expect_json = ".crosspoint/settings.json", pointer = "/rsvpDisplayProfile", equals = 15 },
+  { compare = "overview" },
 ]
