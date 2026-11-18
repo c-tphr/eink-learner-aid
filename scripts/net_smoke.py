@@ -77,6 +77,19 @@ def handle(client, log_path, upstream):
         parts = first.split()
         if not parts:
             return  # a TCP reachability probe (pioarduino checks the proxy port this way)
+        if upstream and len(parts) >= 2 and parts[1].startswith("/__agentproxy/"):
+            # The agent proxy's own status page: pass it through, so tools
+            # behind this proxy still detect the agent proxy.
+            up = socket.create_connection((upstream.hostname, upstream.port or 80), timeout=30)
+            lines = [l for l in head.split("\r\n") if not l.lower().startswith(("connection:", "proxy-connection:"))]
+            up.sendall(("\r\n".join(lines) + "\r\nConnection: close\r\n\r\n").encode("latin-1") + rest)
+            while True:
+                data = up.recv(65536)
+                if not data:
+                    break
+                client.sendall(data)
+            up.close()
+            return
         if len(parts) < 2 or parts[0].upper() != "CONNECT":
             write_log(log_path, {"event": "non_connect", "request": first})
             client.sendall(b"HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n")
