@@ -49,25 +49,10 @@ struct Chapter {
   SectionEndTable table;
 };
 
-// FixtureBook.h's tokens with the one documented difference: the adapter also treats LINE_END
-// (a word before <br>) as a paragraph end, as task R3 specifies; FixtureBook.h maps PARA_END only.
-// `lineEnds` counts the tokens changed.
-std::vector<OwnedToken> expectedTokens(const std::string& href, size_t* lineEnds = nullptr) {
-  const testjson::Value& document = rsvptest::fixtureDocument(href);
-  auto tokens = rsvptest::chapterTokens(document);
-  std::set<size_t> lineEndWords;
-  for (const auto& run : rsvptest::fixtureFlagRuns(document, "LINE_END")) {
-    for (size_t w = run.first; w < run.second; ++w) lineEndWords.insert(w);
-  }
-  size_t changed = 0;
-  for (auto& t : tokens) {
-    if (lineEndWords.count(t.wordIndex) && !(t.flags & rsvp::TOKEN_PARAGRAPH_END)) {
-      t.flags |= rsvp::TOKEN_PARAGRAPH_END;
-      ++changed;
-    }
-  }
-  if (lineEnds) *lineEnds = changed;
-  return tokens;
+// FixtureBook.h's tokens. Like the adapter, they treat LINE_END (a word before <br>) as a paragraph
+// end, as task R3 specifies.
+std::vector<OwnedToken> expectedTokens(const std::string& href) {
+  return rsvptest::chapterTokens(rsvptest::fixtureDocument(href));
 }
 
 std::vector<OwnedToken> drain(rsvp::WordSource& source, std::vector<uint32_t>* skipped = nullptr) {
@@ -101,9 +86,7 @@ TEST(Adapter, TokensAreThoseOfTheExpectedFile) {
     IndexWordSource source(chapter.reader, SectionEndTable::lookup, &chapter.table);
     std::vector<uint32_t> skipped;
     const auto got = drain(source, &skipped);
-    size_t lineEnds = 0;
-    auto want = expectedTokens(href, &lineEnds);
-    EXPECT_EQ(lineEnds, std::string(href) == "text/chapter-2.xhtml" ? 2u : 0u);  // "lines:" and "flashes."
+    auto want = expectedTokens(href);
     // The adapter also marks the chapter's last token, which RsvpCore infers anyway.
     if (!want.empty()) want.back().flags |= rsvp::TOKEN_CHAPTER_END;
     ASSERT_EQ(got.size(), want.size());

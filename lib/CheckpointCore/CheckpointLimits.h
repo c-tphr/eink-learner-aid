@@ -1,9 +1,9 @@
 #pragma once
 
 // Firmware limits for rsvp/checkpoints.json. A file that exceeds one is
-// rejected with the issue code "limit", which the Python validator does not
-// have. "Chars" are Unicode code points after JSON unescaping, as in the
-// schema's minLength/maxLength, so each limit can be adopted as a maxLength.
+// rejected with the issue code "limit". "Chars" are Unicode code points after
+// JSON unescaping, as in the schema's minLength/maxLength. tools/prep/limits.py
+// mirrors every limit (tests/test_limits.py compares it with this header).
 // README.md lists them and explains the RAM they cost.
 
 #include <cstddef>

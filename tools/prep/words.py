@@ -3,9 +3,10 @@
 A word is what the firmware's WordIndex will call a word. The contract is
 ``docs/spikes/S1-word-stream.md`` section 5 ("What a word is"); this module
 implements it for Python, and its rules are not restated here in prose beyond
-what the code needs. The throwaway C++ prototype of the same rules is
-``test/spike_word_stream/WordStreamSpike.cpp``; ``tests/test_words.py`` feeds
-the prototype's worked example through this module and compares.
+what the code needs. The firmware's implementation is ``lib/WordIndex``; the
+throwaway C++ prototype of spike S1 was removed in task R3. Its worked example
+is kept as ``fixtures/words/fixture_s1.xhtml``; ``tests/test_words.py`` feeds
+it through this module and compares with the prototype's expected result.
 
 ``word_stream(document)`` walks one spine document (bytes or an
 ``xmltree.Document``) and returns a ``WordStream``:

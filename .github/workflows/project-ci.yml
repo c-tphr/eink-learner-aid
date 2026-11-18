@@ -537,6 +537,54 @@ jobs:
             build/device-kit/kit-report.txt
           if-no-files-found: warn
 
+  # TEMPORARY (task H1, #72): the host tests and the simulator build on ubuntu-latest (GCC 15),
+  # to prove the GCC 15 fixes. Not part of ci-ok; removed again before the pull request merges.
+  gcc15-host-tests:
+    name: gcc15-host-tests (ubuntu-latest, temporary)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Image and compiler
+        run: |
+          grep PRETTY_NAME /etc/os-release
+          gcc --version | head -1
+          g++ --version | head -1
+      - name: Build and run the host test suite
+        run: cmake -S test -B build/test && cmake --build build/test -j$(nproc) && ctest --test-dir build/test --output-on-failure -j$(nproc)
+      - name: Test count
+        if: always()
+        run: ctest --test-dir build/test -N | tail -1 || true
+
+  gcc15-simulator:
+    name: gcc15-simulator (ubuntu-latest, temporary)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Image and compiler
+        run: |
+          grep PRETTY_NAME /etc/os-release
+          gcc --version | head -1
+      - name: scripts/cloud-setup.sh (installs SDL2, OpenSSL, Xvfb)
+        run: ./scripts/cloud-setup.sh
+      - name: pio run -e simulator_picco
+        run: |
+          set -o pipefail
+          mkdir -p build
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -e simulator_picco 2>&1 | tee build/pio-simulator_picco.log
+          grep "Applied simulator patch" build/pio-simulator_picco.log || true
+          ls -l .pio/build/simulator_picco/program
+      - name: Headless smoke run (xvfb-run, scripted screenshot, QUIT)
+        run: |
+          python3 -m pip install --user --break-system-packages pillow || python3 -m pip install --user pillow
+          .github/scripts/sim-smoke.sh .pio/build/simulator_picco/program build/sim-smoke
+
   ci-ok:
     # The one check branch protection needs: green only when every job above
     # succeeded (the self-activating jobs succeed when they have nothing to do).
