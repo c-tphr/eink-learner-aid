@@ -96,6 +96,7 @@ steps = [
   { wait_log = "\\[CTL\\] DeviceTest focus=acceptance-result:2" },
   { press = "DOWN", hold_ms = 900, note = "hold: Fail" },
   { wait_log = "\\[CTL\\] DeviceTest armed screen=acceptance-reason" },
+  { shot = "keys_fail_reasons", note = "the fail reasons, Back highlighted" },
   { press = "DOWN" },
   { wait_log = "\\[CTL\\] DeviceTest focus=acceptance-reason:1" },
   { press = "DOWN", hold_ms = 900, note = "hold: It did not appear" },
@@ -282,4 +283,5 @@ steps = [
   { expect_json = "rsvp-bench/0001-acceptance.json", pointer = "/criterion_5/measured_pass", equals = true },
   { expect_json = "rsvp-bench/0001-acceptance.json", pointer = "/criterion_5/pause_screen", equals = "fail" },
   { expect_json = "rsvp-bench/0001-acceptance.json", pointer = "/criteria/4/result", equals = "fail" },
+  { compare = "keys_fail_reasons" },
 ]
