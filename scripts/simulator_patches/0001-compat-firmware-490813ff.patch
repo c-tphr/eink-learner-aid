@@ -1,3 +1,32 @@
+Compatibility stubs for crosspoint-simulator 84c3421d against CrossPoint 490813ff
+
+Applied by scripts/patch_simulator.py to the simulator library under
+.pio/libdeps/<env>/simulator. The simulator replaces the firmware's lib/hal
+with its own shims; these hunks answer upstream firmware changes made after
+the simulator's last sync (2026-11-10). Each hunk is additive and mirrors the
+firmware's signature, as the simulator's FORKING.md recommends.
+
+src/BoardConfig.h: enum InputStyle and BoardProfile::inputStyle
+  Firmware 867a1210 (#4407, 2026-11-15) reads BoardConfig::ACTIVE.inputStyle
+  in src/MappedInputManager.cpp:23. Enum values are copied from the SDK
+  (libs/hardware/BoardConfig/include/BoardConfig.h). The new member is last
+  and has a default, so the simulator's positional profile initialisers
+  still compile. The firmware only tests for DigitalConfirmPowerHold, which no
+  simulator profile reports, so simulated input behaves as before.
+
+src/HalDisplay.h: setReaderRefresh(), controllerIdle(),
+displayRetainedGrayscaleOverlay()
+  Firmware 5058eb43 (#4362, 2026-11-13) calls these from
+  src/activities/reader/ReaderUtils.h:246-247, src/main.cpp:150 and
+  lib/GfxRenderer/GfxRenderer.cpp:2451. The simulator models no waveforms or
+  panel power, so the first two are no-ops; the overlay returns false
+  ("not drawn"), and the firmware then refreshes as usual.
+
+src/SecureHttpClient.h: getCombinedHeader()
+  src/network/HttpDownloader.cpp:155 calls it; it exists in the SDK's
+  SecureNet at the pinned SDK commit (3f3e4c11). Joins every value of one
+  header with ", ", as the SDK does.
+
 diff --git a/src/BoardConfig.h b/src/BoardConfig.h
 index f1de19b..c04c52b 100644
 --- a/src/BoardConfig.h

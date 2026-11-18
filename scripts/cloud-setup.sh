@@ -182,11 +182,11 @@ phase_prefetch() {
 say "repo: $REPO_ROOT"
 say "PlatformIO core dir: ${PLATFORMIO_CORE_DIR:-$HOME/.platformio}"
 if agent_proxy_status >/dev/null; then
-  say "network: Claude Code agent proxy at $(proxy_url) (TLS re-terminated; CA bundle from the session's environment)"
+  say "intercepting proxy: detected (Claude Code agent proxy at $(proxy_url)); using the pre-fetch path, because 'pio run' alone fails TLS verification here"
 elif [[ -n "$(proxy_url)" ]]; then
-  say "network: HTTPS proxy $(proxy_url)"
+  say "intercepting proxy: not detected (plain HTTPS proxy $(proxy_url)); running the same pre-fetch, which 'pio run' would not need"
 else
-  say "network: direct (no HTTPS proxy)"
+  say "intercepting proxy: not detected (direct network, e.g. GitHub Actions or Codespaces); running the same pre-fetch, which 'pio run' would not need"
 fi
 
 run_phase "system packages" phase_apt
