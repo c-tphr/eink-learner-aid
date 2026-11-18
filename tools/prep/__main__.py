@@ -14,6 +14,10 @@ Steps of the /prep-book loop (tools/prep/loop.py):
     python3 -m tools.prep save-check WORKDIR
     python3 -m tools.prep issues WORKDIR
 
+The guard probe, /prep-book's first step (tools/prep/probe.py):
+
+    python3 -m tools.prep guard-probe OUTDIR [--check]
+
 Exit status: 0 success (for validate and verify-check: everything passed;
 for report: the book is READY), 1 a problem with the input or a failed
 check (each problem is printed on stderr), 2 a usage error.
@@ -201,6 +205,25 @@ def _cmd_issues(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _cmd_guard_probe(args: argparse.Namespace) -> int:
+    from .probe import ProbeError, agent_prompt, check, prepare
+    try:
+        if not args.check:
+            folder = prepare(args.outdir, args.date)
+            print(f"wrote the guard probe {folder}; run the prep-checker agent with this prompt and nothing else:")
+            print(agent_prompt(args.outdir))
+            return EXIT_OK
+        outcome = check(args.outdir)
+    except (ProbeError, OSError) as exc:
+        print(f"prep guard-probe: {exc}", file=sys.stderr)
+        return EXIT_INPUT
+    if outcome.passed:
+        print(outcome.message)
+        return EXIT_OK
+    print(outcome.message, file=sys.stderr)
+    return EXIT_INPUT
+
+
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python3 -m tools.prep", description="Book preparation tools.")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
@@ -264,6 +287,12 @@ def make_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("issues", help="/prep-book: write rounds/NN/issues.md, the drafter's issue list")
     p.add_argument("workdir", type=Path, help="the work folder")
     p.set_defaults(func=_cmd_issues)
+
+    p = sub.add_parser("guard-probe", help="/prep-book step 1: prove the checker's guard runs in this session")
+    p.add_argument("outdir", type=Path, help="the output folder; the probe is OUTDIR/guard-probe/")
+    p.add_argument("--check", action="store_true", help="judge the probe after the prep-checker agent ran on it")
+    p.add_argument("--date", help="the date to give the checker (YYYY-MM-DD); default today (UTC)")
+    p.set_defaults(func=_cmd_guard_probe)
     return parser
 
 

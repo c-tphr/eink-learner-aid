@@ -2,9 +2,20 @@
 
 A prepared book is a copy of an EPUB with checkpoints in it: at the end of each section the reader stops and recalls what they just read. This page tells you how to make one with `/prep-book`, what the result means, and what to do next. The technical details are in `tools/prep/README.md`; the rules the AI follows are in `tools/prep/INSTRUCTIONS.md`.
 
+## Where it works
+
+`/prep-book` needs **Claude Code on your own computer**, started in a terminal in the folder of this repository (a local clone with Python 3 and Java installed), in a folder you trust. The checker's result is accepted only when its guard, a hook in `.claude/agents/prep-checker.md`, recorded the checker writing it, and Claude Code runs that hook only after you have said that you trust the folder.
+
+- **Does not work:** a Claude Code cloud session. There the hook does not run, so every round would fail (this was seen in issue #75). The same is true of any session where the first step below fails.
+- **How you can tell:** the first step of `/prep-book` runs the real checker on a tiny made-up text and checks that the guard recorded its write. It takes about a minute and does not touch your book. If it prints `PASSED: the checker's guard is active`, the run continues. If it prints `FAILED (guard-not-active)`, the run stops: start Claude Code on your own computer in this repository, answer yes when it asks whether you trust the folder, quit and restart Claude Code, and run `/prep-book` again. Any other `FAILED (...)` message says what went wrong; run `/prep-book` again.
+- **Not yet observed:** nobody on the team has yet run the probe in a local, trusted session, so a pass there is expected from Claude Code's documentation but not yet seen.
+- **The scripts work anywhere.** `python3 -m tools.prep extract`, `build`, `validate`, `verify-check` and `report` need no Claude Code at all; any machine with Python 3 (and Java, for EPUBCheck) can run them, for example to check a prepared book again.
+
+The probe's files are in `guard-probe/` in the output folder. You may delete that folder after the run.
+
 ## Run it
 
-1. Open Claude Code in this repository (a cloud session, a Codespace, or a local clone with Python 3 and Java installed). The first time, install the Python packages: `pip install -r tools/prep/requirements.txt`.
+1. Open Claude Code on your own computer, in a terminal, in this repository (see "Where it works" above). The first time, install the Python packages: `pip install -r tools/prep/requirements.txt`.
 2. Type:
 
    ```text
@@ -22,6 +33,7 @@ A prepared book is a copy of an EPUB with checkpoints in it: at the end of each 
 
 What happens:
 
+- The checker's guard is checked on a made-up text (about a minute). If it is not active, the run stops here.
 - A script reads the book into numbered paragraphs.
 - Claude (the **drafter**) chooses the sections and writes the prompts and reference answers.
 - Scripts build the prepared EPUB and check its structure (anchors, word counts, nothing else changed, EPUBCheck).
@@ -75,6 +87,7 @@ In the output folder:
 | `Book.validation-report.md` | The report, for reading: READY or NOT READY, why, every check, every issue raised in any round and how it was resolved. |
 | `Book.validation-report.json` | The same report for scripts. |
 | `work/` | Everything the run used: the numbered text, the draft, and `work/rounds/01`, `02`, `03` with each round's draft, validator result, checker result and issue list. Keep it if you want to see how the book was prepared; it is not needed on the device. |
+| `guard-probe/` | The first step's check of the checker's guard, on a made-up text. Not part of the book; you may delete it. |
 
 ## Load the prepared book into the simulator
 

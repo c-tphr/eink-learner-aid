@@ -15,6 +15,13 @@ reads the hook input (JSON) on stdin and exits
   before ``save-check`` ran. Before allowing it, the guard records the
   SHA-256 of the content in ``rounds/NN/checker-write.json``, so ``save-check``
   can tell that the file is the one the checker wrote through this guard;
+- the same for a guard probe (``python3 -m tools.prep guard-probe``), which
+  /prep-book runs first to prove that this hook runs at all: reads inside
+  ``guard-probe/input/`` (whose ``book.json`` has ``format``
+  ``rsvp-guard-probe-input``) and one Write to ``guard-probe/result/checker-reply.txt``,
+  recorded with ``format`` ``rsvp-guard-probe-write``. A probe folder cannot
+  authorise a round's result, and a round's checker folder cannot authorise a
+  probe's result;
 - 2, with the reason on stderr, otherwise. Claude Code then blocks the call
   and shows the reason to the checker.
 
@@ -41,6 +48,11 @@ CHECKER_DIR = "checker"
 REPLY = "checker-reply.txt"
 RECORD = "checker-write.json"
 RECORD_FORMAT = "rsvp-checker-write"
+PROBE_FORMAT = "rsvp-guard-probe-input"
+PROBE_RECORD_FORMAT = "rsvp-guard-probe-write"
+PROBE_DIR = "guard-probe"
+PROBE_INPUT_DIR = "input"
+PROBE_RESULT_DIR = "result"
 
 
 def reply_digest(data: bytes) -> str:
@@ -48,13 +60,13 @@ def reply_digest(data: bytes) -> str:
     return hashlib.sha256(data.replace(b"\r\n", b"\n").rstrip()).hexdigest()
 
 
-def _book(folder: str) -> dict | None:
+def _book(folder: str, formats: tuple[str, ...] = (FORMAT,)) -> dict | None:
     try:
         with open(os.path.join(folder, "book.json"), encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, ValueError):
         return None
-    return data if isinstance(data, dict) and data.get("format") == FORMAT else None
+    return data if isinstance(data, dict) and data.get("format") in formats else None
 
 
 def checker_root(path: str) -> str | None:
@@ -62,7 +74,7 @@ def checker_root(path: str) -> str | None:
     real = os.path.realpath(path)
     here = real if os.path.isdir(real) else os.path.dirname(real)
     while True:
-        if os.path.isfile(os.path.join(here, "book.json")) and _book(here) is not None:
+        if os.path.isfile(os.path.join(here, "book.json")) and _book(here, (FORMAT, PROBE_FORMAT)) is not None:
             return here
         parent = os.path.dirname(here)
         if parent == here:
@@ -111,6 +123,17 @@ def decide(event: dict) -> str | None:
     return None
 
 
+def _result_book(folder: str) -> dict | None:
+    """The book.json that may name a result file in ``folder``: ``WORKDIR/checker/`` (format ``rsvp-checker-input``)
+    for ``WORKDIR/rounds/NN/``, ``guard-probe/input/`` (format ``rsvp-guard-probe-input``) for ``guard-probe/result/``."""
+    parent = os.path.dirname(folder)
+    if os.path.basename(parent) == "rounds":
+        return _book(os.path.join(os.path.dirname(parent), CHECKER_DIR), (FORMAT,))
+    if os.path.basename(folder) == PROBE_RESULT_DIR and os.path.basename(parent) == PROBE_DIR:
+        return _book(os.path.join(parent, PROBE_INPUT_DIR), (PROBE_FORMAT,))
+    return None
+
+
 def write_target(event: dict) -> tuple[str | None, str, dict | None]:
     """(reason to refuse or ``None``, the round folder, the checker folder's book.json) for a Write call."""
     args = event.get("tool_input") or {}
@@ -121,11 +144,9 @@ def write_target(event: dict) -> tuple[str | None, str, dict | None]:
         return "Write has no content", "", None
     folder = os.path.realpath(os.path.dirname(path))
     where = os.path.join(folder, os.path.basename(path))
-    work = os.path.dirname(os.path.dirname(folder))
-    book = _book(os.path.join(work, CHECKER_DIR))
+    book = _result_book(folder)
     expected = book.get("result_file") if book else None
-    if not (isinstance(expected, str) and os.path.basename(path) == REPLY and os.path.basename(
-            os.path.dirname(folder)) == "rounds" and where == os.path.join(
+    if not (isinstance(expected, str) and os.path.basename(path) == REPLY and where == os.path.join(
             os.path.realpath(os.path.dirname(expected)), os.path.basename(expected))):
         return (f"the checker may write only its result file, the 'result_file' that book.json names, not {where}",
                 folder, None)
@@ -143,7 +164,8 @@ def decide_write(event: dict) -> str | None:
         return reason
     assert book is not None
     content = event["tool_input"]["content"].encode("utf-8")
-    record = {"format": RECORD_FORMAT, "version": 1, "file": REPLY, "round": book.get("round"),
+    kind = PROBE_RECORD_FORMAT if book.get("format") == PROBE_FORMAT else RECORD_FORMAT
+    record = {"format": kind, "version": 1, "file": REPLY, "round": book.get("round"),
               "prepared_sha256": book.get("prepared_sha256"), "sha256": reply_digest(content),
               "bytes": len(content)}
     try:
