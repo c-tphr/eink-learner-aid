@@ -18,7 +18,9 @@ import pytest
 from jsonschema import Draft202012Validator, validators
 
 from tools.prep import checkpoints as cp
-from tools.prep import epubcheck, refs
+from tools.prep import epubcheck, refs, words
+from tools.prep.build import build_file
+from tools.prep.epub import load_book
 from tools.prep.fixture import generate as gen
 
 REPO = Path(__file__).resolve().parents[3]
@@ -29,6 +31,7 @@ DRAFT_SCHEMA = REPO / "tools" / "prep" / "schema" / "draft.schema.json"
 EPUB_BYTES = (BOOKS / "fixture.epub").read_bytes()
 DRAFT = json.loads((BOOKS / "fixture.draft.json").read_text(encoding="utf-8"))
 EXPECTED = json.loads((BOOKS / "fixture.expected.json").read_text(encoding="utf-8"))
+EXPECTED_DOCS = {d["href"]: d for d in EXPECTED["documents"]}
 
 XHTML = "{http://www.w3.org/1999/xhtml}"
 EPUB_TYPE = "{http://www.idpf.org/2007/ops}type"
@@ -157,7 +160,8 @@ def _mid_chapter(root, element):
 
 def test_every_content_type_is_present_mid_chapter():
     zf, base, _, manifest, _ = opf_info()
-    found = {"figure": 0, "table": 0, "pre": 0, "noteref": 0}
+    found = {"figure": 0, "table": 0, "pre": 0, "br": 0, "pagebreak": 0}
+    forms = []
     for href, root in spine_documents()[1:]:
         body = root.find(f"{XHTML}body")
         for figure in body.findall(f"{XHTML}figure"):
@@ -179,16 +183,25 @@ def test_every_content_type_is_present_mid_chapter():
             assert code is not None and 4 <= len(code.text.split("\n")) <= 6
             assert _mid_chapter(root, pre)
             found["pre"] += 1
+        found["br"] += len(list(body.iter(f"{XHTML}br")))
+        for span in body.iter(f"{XHTML}span"):
+            if span.get(EPUB_TYPE) == "pagebreak" and span.get("role") == "doc-pagebreak" and span.text:
+                found["pagebreak"] += 1
         notes = {a.get("id"): a for a in body.findall(f"{XHTML}aside") if a.get(EPUB_TYPE) == "footnote"}
-        for sup in root.iter(f"{XHTML}sup"):
-            a = sup.find(f"{XHTML}a")
-            assert a.get(EPUB_TYPE) == "noteref"
+        for a in body.iter(f"{XHTML}a"):
             assert a.get("href").startswith("#") and a.get("href")[1:] in notes
-            found["noteref"] += 1
+            inner_sup = a.find(f"{XHTML}sup")
+            parent_sup = any(a in list(s) for s in body.iter(f"{XHTML}sup"))
+            if a.get(EPUB_TYPE) == "noteref":
+                forms.append("noteref")
+            elif parent_sup:
+                forms.append("sup-link")
+            elif inner_sup is not None:
+                forms.append("link-sup")
         if notes:  # footnotes sit after the last body block
             assert list(body)[-len(notes) :] == list(notes.values())
-    assert found["figure"] == found["table"] == found["pre"] == 1
-    assert found["noteref"] >= 2
+    assert found == {"figure": 1, "table": 1, "pre": 1, "br": 2, "pagebreak": 1}
+    assert forms == ["noteref", "sup-link", "link-sup"]
 
 
 def test_block_ids_are_numbered_in_document_order():
@@ -199,129 +212,157 @@ def test_block_ids_are_numbered_in_document_order():
 
 
 # --------------------------------------------------------------------------
-# Independent recount of the words from the XHTML
+# Two routes to the same answer: the expected file comes from the generator's content model; here it is compared
+# with the preparation tools' word pass (tools/prep/words.py) and block segmentation (tools/prep/epub.py) run on
+# the XHTML in fixture.epub.
 
 
-def _is_noteref(el) -> bool:
-    return el.tag == f"{XHTML}sup" and any(a.get(EPUB_TYPE) == "noteref" for a in el.iter(f"{XHTML}a"))
+def test_expected_matches_the_word_pass_on_the_epub():
+    book = load_book(BOOKS / "fixture.epub")
+    for sd in book.spine:
+        expected = EXPECTED_DOCS[sd.href]
+        assert sd.words == expected["words"], sd.href
+        assert expected["word_count"] == len(sd.words)
+        assert sd.stream.flag_ranges() == expected["flags"], sd.href
+        assert [{"kind": m.kind, "start": m.start, "end": m.end} for m in sd.stream.markers] == expected["markers"]
+        assert [(r.mark, r.word) for r in sd.stream.noterefs] == [(n["mark"], n["word"]) for n in expected["noterefs"]]
+        assert sd.stream.anchors == []  # the original has no anchors; the prepared copy's are checked below
 
 
-def _visible(el, marks: list[int], prefix: str = "") -> str:
-    """Visible text of ``el`` without note marks; appends to ``marks`` the word count before each mark."""
-    text = el.text or ""
-    for child in el:
-        if _is_noteref(child):
-            marks.append(len((prefix + text).split()))
-        else:
-            text += _visible(child, marks, prefix + text)
-        text += child.tail or ""
-    return text
+def test_expected_blocks_match_prep_extract_segmentation():
+    book = load_book(BOOKS / "fixture.epub")
+    for sd in book.spine:
+        expected = EXPECTED_DOCS[sd.href]["blocks"]
+        got = [(b.ref, b.source_id, b.kind, b.element.local, b.start, b.word_count) for b in sd.blocks + sd.notes]
+        assert got == [(b["paragraph"], b["id"], b["kind"], b["element"], b["first_word"], b["word_count"])
+                       for b in expected], sd.href
+        # Every word belongs to exactly one block.
+        assert [w for b in sd.blocks + sd.notes for w in b.words] == sd.words
 
 
-def recount(root):
-    words, blocks, marks = [], [], []
-    for el in _body_blocks(root):
-        tag = el.tag[len(XHTML) :]
-        if tag in ("p", "h1", "h2"):
-            local = []
-            block_words = _visible(el, local).split()
-            marks += [len(words) + n - 1 for n in local]
-            blocks.append((el.get("id"), "heading" if tag != "p" else "paragraph", len(words)))
-            words += block_words
-        else:
-            blocks.append((el.get("id"), tag, len(words) - 1))
-    return words, blocks, marks
+def test_expected_sections_match_prep_build(tmp_path):
+    out = tmp_path / "fixture.prepared.epub"
+    build_file(BOOKS / "fixture.epub", BOOKS / "fixture.draft.json", out)
+    prepared = load_book(out)
+    data = json.loads(prepared.archive.read("OEBPS/rsvp/checkpoints.json"))
+    counts = {s["id"]: s["word_count"] for s in data["sections"]}
+    for section in EXPECTED["sections"]:
+        sd = prepared.doc_by_href(section["chapter_href"])
+        start, end = sd.stream.anchor(section["start_anchor"]), sd.stream.anchor(section["end_anchor"])
+        assert (start.index, end.index) == (section["start"], section["end"]), section["id"]
+        assert not start.inside_word and not end.inside_word
+        assert counts[section["id"]] == section["word_count"] == section["end"] - section["start"]
 
 
-def test_expected_words_match_an_independent_recount():
-    docs = {d["href"]: d for d in EXPECTED["documents"]}
-    for href, root in spine_documents():
-        expected = docs[href]
-        words, blocks, marks = recount(root)
-        assert words == expected["words"], href
-        assert expected["word_count"] == len(words)
-        got_blocks = []
-        for b in expected["blocks"]:
-            kind = {"image": "figure", "table": "table", "code": "pre"}.get(b["kind"], b["kind"])
-            got_blocks.append((b["id"], kind, b.get("first_word", b.get("after_word"))))
-        assert got_blocks == blocks, href
-        assert [n["after_word"] for n in expected["noterefs"]] == marks, href
+def test_generator_cross_check_catches_a_disagreement(monkeypatch):
+    """A wrong rule on either route makes the generator refuse to write anything."""
+    docs = gen.build_model()
+    xhtml = {d["href"]: gen.render_document(d).encode("utf-8") for d in docs}
+    assert gen.cross_check(docs, xhtml) == []
+    # Route 1 wrong: the content model forgets that an em dash ends a word.
+    monkeypatch.setattr(gen, "_DASH_PIECE", re.compile(".+"))
+    problems = gen.cross_check(gen.build_model(), xhtml)
+    assert "text/chapter-2.xhtml: words differ" in problems
+    monkeypatch.undo()
+    # Route 2 wrong: the word pass treats U+00A0 as part of a word.
+    monkeypatch.setattr(words, "SEPARATORS", words.SEPARATORS - {" "})
+    assert "text/chapter-1.xhtml: words differ" in gen.cross_check(docs, xhtml)
+    with pytest.raises(ValueError, match="the content model and the word pass disagree"):
+        gen.generate_files()
 
 
 def test_expected_paragraph_refs_follow_spine_position_and_block_order():
     by_href = paragraph_refs()
     for doc in EXPECTED["documents"]:
-        assert [b["paragraph"] for b in doc["blocks"]] == by_href[doc["href"]]
-        notes = [p for f in doc["footnotes"] for p in f["paragraphs"]]
+        main = [b for b in doc["blocks"] if b["kind"] != "footnote"]
+        assert [b["paragraph"] for b in main] == by_href[doc["href"]]
+        notes = [b for b in doc["blocks"] if b["kind"] == "footnote"]
         prefix = by_href[doc["href"]][0].split("-")[0]
-        assert [p["paragraph"] for p in notes] == [f"{prefix}-n{n:03d}" for n in range(1, len(notes) + 1)]
+        assert [b["paragraph"] for b in notes] == [f"{prefix}-n{n:03d}" for n in range(1, len(notes) + 1)]
+        assert [p for f in doc["footnotes"] for p in f["paragraphs"]] == [b["paragraph"] for b in notes]
     assert by_href["text/chapter-1.xhtml"][5] == "d02-p006"
 
 
 def test_expected_non_prose_text_and_footnotes_match_the_xhtml():
-    docs = {d["href"]: d for d in EXPECTED["documents"]}
     for href, root in spine_documents():
-        expected = docs[href]
-        by_id = {el.get("id"): el for el in _body_blocks(root)}
+        expected = EXPECTED_DOCS[href]
+        by_id = {el.get("id"): el for el in root.iter() if el.get("id")}
         for b in expected["blocks"]:
             el = by_id[b["id"]]
+            block_words = expected["words"][b["first_word"] : b["first_word"] + b["word_count"]]
             if b["kind"] == "image":
                 assert el.find(f"{XHTML}figcaption").text == b["caption"]
                 assert el.find(f"{XHTML}img").get("alt") == b["alt"]
                 src = el.find(f"{XHTML}img").get("src")  # image_href is relative to the OPF, like hrefs
                 assert posixpath.normpath(posixpath.join(posixpath.dirname(href), src)) == b["image_href"]
+                assert block_words == b["caption"].split()  # the caption is words, the alt text is not
+                assert {"kind": "IMAGE", "start": b["first_word"], "end": b["first_word"]} in expected["markers"]
             elif b["kind"] == "table":
                 rows = [[c.text for c in tr] for tr in el.iter(f"{XHTML}tr")]
                 assert rows == [b["header"], *b["rows"]]
                 assert el.find(f"{XHTML}caption").text == b["caption"]
+                cells = [b["caption"], *(c for row in rows for c in row)]
+                assert block_words == " ".join(cells).split()
+                assert {"kind": "TABLE", "start": b["first_word"], "end": b["first_word"] + b["word_count"]} \
+                    in expected["markers"]
             elif b["kind"] == "code":
                 assert el.find(f"{XHTML}code").text.split("\n") == b["lines"]
+                assert block_words == "\n".join(b["lines"]).split()
+                assert {"kind": "CODE", "start": b["first_word"], "end": b["first_word"] + b["word_count"]} \
+                    in expected["markers"]
+            elif b["kind"] == "footnote":
+                assert block_words == el.text.split()
         asides = [a for a in root.find(f"{XHTML}body") if a.tag == f"{XHTML}aside"]
         assert [a.get("id") for a in asides] == [f["id"] for f in expected["footnotes"]]
-        for aside, note in zip(asides, expected["footnotes"]):
-            got = [{"id": p.get("id"), "words": "".join(p.itertext()).split()} for p in aside]
-            assert got == [{"id": p["id"], "words": p["words"]} for p in note["paragraphs"]]
+        for note in expected["footnotes"]:
+            assert {"kind": "NOTE", "start": note["start"], "end": note["end"]} in expected["markers"]
         for ref in expected["noterefs"]:
-            sups = [s for s in root.iter(f"{XHTML}sup") if s.find(f"{XHTML}a").get("href") == f"#{ref['note']}"]
-            assert len(sups) == 1 and sups[0].find(f"{XHTML}a").text == ref["mark"]
+            links = [a for a in root.iter(f"{XHTML}a") if a.get("href") == f"#{ref['note']}"]
+            assert len(links) == 1 and "".join(links[0].itertext()) == ref["mark"]
+            assert expected["words"][ref["word"]] != ref["mark"]  # the mark is not a word
 
 
 def test_inline_elements_do_not_split_words():
-    docs = {d["href"]: d for d in EXPECTED["documents"]}
     seen = set()
     for href, root in spine_documents():
-        for item in docs[href]["inline_elements"]:
+        for item in EXPECTED_DOCS[href]["inline_elements"]:
             el = root.find(f".//{XHTML}{item['element']}")
             assert el is not None and el.text == item["text"]
-            assert docs[href]["words"][item["word_index"]].startswith(item["text"])
+            assert EXPECTED_DOCS[href]["words"][item["word"]].startswith(item["text"])
             seen.add(item["element"])
     assert seen == {"em", "strong"}
 
 
 def test_section_word_ranges_follow_the_blocks():
-    docs = {d["href"]: d for d in EXPECTED["documents"]}
     for section in EXPECTED["sections"]:
-        doc = docs[section["chapter_href"]]
+        doc = EXPECTED_DOCS[section["chapter_href"]]
         blocks = {b["paragraph"]: b for b in doc["blocks"]}
-        assert section["first_word"] == blocks[section["first_paragraph"]]["first_word"]
-        assert section["last_word"] == blocks[section["last_paragraph"]]["last_word"]
-        assert blocks[section["first_paragraph"]]["id"] == section["first_block_id"]
-        assert blocks[section["last_paragraph"]]["id"] == section["last_block_id"]
-        assert section["word_count"] == section["last_word"] - section["first_word"] + 1
-        assert doc["words"][section["first_word"]] == section["first_word_text"]
-        assert doc["words"][section["last_word"]] == section["last_word_text"]
+        first, last = blocks[section["first_paragraph"]], blocks[section["last_paragraph"]]
+        assert section["start"] == first["first_word"]
+        assert section["end"] == last["first_word"] + last["word_count"]
+        assert first["id"] == section["first_block_id"] and last["id"] == section["last_block_id"]
+        assert section["word_count"] == section["end"] - section["start"]
+        assert doc["words"][section["start"]] == section["first_word_text"]
+        assert doc["words"][section["end"] - 1] == section["last_word_text"]
     by_chapter = {}
     for section in EXPECTED["sections"]:
         by_chapter.setdefault(section["chapter_href"], []).append(section)
-    for href, sections in by_chapter.items():  # sections tile each chapter's word stream
-        assert sections[0]["first_word"] == 0
-        assert sections[-1]["last_word"] == docs[href]["word_count"] - 1
+    for href, sections in by_chapter.items():  # sections tile each chapter up to its footnote bodies
+        notes = [m["start"] for m in EXPECTED_DOCS[href]["markers"] if m["kind"] == "NOTE"]
+        assert sections[0]["start"] == 0
+        assert sections[-1]["end"] == min(notes, default=EXPECTED_DOCS[href]["word_count"])
         for a, b in zip(sections, sections[1:]):
-            assert b["first_word"] == a["last_word"] + 1
+            assert b["start"] == a["end"]
+
+
+def _prose_word_count(doc) -> int:
+    skipped = {i for m in doc["markers"] if m["kind"] != "IMAGE" for i in range(m["start"], m["end"])}
+    return doc["word_count"] - len(skipped)
 
 
 def test_chapter_sizes_follow_the_guidance():
-    counts = [d["word_count"] for d in EXPECTED["documents"] if d["role"] == "chapter"]
+    """Word counts outside the TABLE, CODE and NOTE regions keep the sizes the fixture was designed with."""
+    counts = [_prose_word_count(d) for d in EXPECTED["documents"] if d["role"] == "chapter"]
     assert 350 <= counts[0] <= 450 and 500 <= counts[1] <= 650 and 250 <= counts[2] <= 350, counts
     sections = [len([s for s in EXPECTED["sections"] if s["chapter_href"] == d["href"]])
                 for d in EXPECTED["documents"] if d["role"] == "chapter"]
@@ -329,28 +370,41 @@ def test_chapter_sizes_follow_the_guidance():
 
 
 def test_tokenisation_cases_are_present():
-    docs = {d["href"]: d for d in EXPECTED["documents"]}
+    flags_of = {}
+    for doc in EXPECTED["documents"]:
+        for name, runs in doc["flags"].items():
+            for start, end in runs:
+                for i in range(start, end):
+                    flags_of.setdefault((doc["href"], i), set()).add(name)
     for case in EXPECTED["token_cases"]:
-        assert docs[case["href"]]["words"][case["word_index"]] == case["word"], case["case"]
+        assert EXPECTED_DOCS[case["href"]]["words"][case["word_index"]] == case["word"], case["case"]
+        assert set(case["flags"]) == flags_of.get((case["href"], case["word_index"]), set()), case["case"]
     words = [w for d in EXPECTED["documents"] if d["role"] == "chapter" for w in d["words"]]
     assert any(w.endswith(".") for w in words)
     assert any(w.endswith("?") for w in words)
     assert any(w.endswith("!") for w in words)
     assert any(w.endswith(",") for w in words) and any(w.endswith(";") for w in words)
     assert any(w.startswith('"') for w in words) and any(w.endswith('."') for w in words)
-    assert any("—" in w for w in words)
+    assert any(w.endswith("—") for w in words) and any(w.endswith("–") for w in words)
+    assert not any(c in w for w in words for c in " ­")
     assert any(re.fullmatch(r"[A-Za-z]+-[A-Za-z]+[,.;]?", w) for w in words)
-    assert "3.5" in words and "Dr." in words
+    assert "3.5" in words and "Dr." in words and "café" in words and "lighthouse" in words
     assert any(len(re.sub(r"[^A-Za-z]", "", w)) >= 14 for w in words)
-    assert "café" in words
-    non_ascii = [b for d in EXPECTED["documents"] for b in d["blocks"] if "first_word" in b
-                 and any(ord(c) > 127 for w in docs[d["href"]]["words"][b["first_word"] : b["last_word"] + 1] for c in w)]
-    assert len(non_ascii) == 1
+    names = {name for d in EXPECTED["documents"] for name, runs in d["flags"].items() if runs}
+    assert names == {"PARA_END", "LINE_END", "NONPROSE", "NOTEREF", "HEADING"}  # BYTE_SPLIT: test_words.py only
+    kinds = {m["kind"] for d in EXPECTED["documents"] for m in d["markers"]}
+    assert kinds == {"IMAGE", "TABLE", "CODE", "NOTE"}
     for href, root in spine_documents():
         for el in _body_blocks(root):
             if el.tag in (f"{XHTML}p", f"{XHTML}h1", f"{XHTML}h2"):
-                text = _visible(el, [])
-                assert "  " not in text and text == text.strip()
+                text = el.text or ""
+                assert "  " not in text and text == text.lstrip()
+
+
+def test_expected_rules_version():
+    assert (EXPECTED["version"], EXPECTED["rules_version"]) == (2, gen.RULES_VERSION) == (2, 1)
+    assert "S1-word-stream.md section 5" in EXPECTED["rules"]["source"]
+    assert "SENT_END" not in json.dumps(EXPECTED)  # sentence ends are the firmware's alone
 
 
 # --------------------------------------------------------------------------

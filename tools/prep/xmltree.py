@@ -24,8 +24,9 @@ from __future__ import annotations
 
 import re
 import xml.parsers.expat
-from html.entities import html5
 from typing import Iterator, Union
+
+from .entities import expand as expand_entity
 
 XHTML_NS = "http://www.w3.org/1999/xhtml"
 OPS_NS = "http://www.idpf.org/2007/ops"
@@ -204,7 +205,7 @@ def parse(data: bytes, where: str = "document") -> Document:
 
     def skipped(name: str, is_parameter_entity: bool) -> None:
         if not is_parameter_entity:
-            add_text(html5.get(name + ";", f"&{name};"))
+            add_text(expand_entity(name))
 
     parser.StartElementHandler = start
     parser.EndElementHandler = end

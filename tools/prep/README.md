@@ -15,11 +15,12 @@ Exit status of every command: 0 success, 1 a problem with the input (every probl
 | Module | Contents |
 | --- | --- |
 | `__main__.py` | The command line (`python3 -m tools.prep`) |
-| `words.py` | `tokenize`, the one word definition (also used by the fixture generator) |
+| `words.py` | `word_stream`, the one word pass: the firmware's word definition (see "Words" below) |
+| `entities.py` | The firmware's named HTML entity table (`lib/Epub/Epub/htmlEntities.cpp`), for undeclared entities |
 | `refs.py` | Paragraph references (`d02-p006`) |
 | `xmltree.py` | Expat-based XML tree that keeps the byte offset of every tag, for splicing |
 | `epubzip.py` | Zip reader and rewriter that copies untouched entries byte for byte |
-| `epub.py` | `load_book(path)` → `Book`: package, spine, table of contents, blocks and words of every spine document. `all_text` and `prose_text` give the visible text of an element |
+| `epub.py` | `load_book(path)` → `Book`: package, spine, table of contents, and the word stream and blocks of every spine document. `all_text` and `prose_text` give the visible text of an element |
 | `extract.py` | Writes the work folder |
 | `draft.py` | `check_draft(raw, book)`: draft parse, schema and cross-reference checks |
 | `build.py` | `build_file(epub, draft, out)`, anchor insertion, the manifest line, `checkpoints.json` |
@@ -32,6 +33,28 @@ issues = check_file("rsvp/checkpoints.json")   # list[Issue(code, path, message)
 verdict(issues)                                # "valid", "invalid" or "unsupported-version"
 data = load_checkpoints("rsvp/checkpoints.json")  # parsed dict, or raises CheckpointFileError
 ```
+
+## Words
+
+A word is what the firmware's WordIndex calls a word. The rules are **`docs/spikes/S1-word-stream.md` section 5 ("What a word is")**, the contract between `lib/WordIndex` and these tools; this README does not restate them. `words.py` implements them once, and `extract`, `build` and the fixture generator's self-check all use it. Rule-by-rule tests are in `tests/test_words.py`, including a parity test that feeds the C++ prototype's worked example (`test/spike_word_stream/fixture_s1.xhtml`) through the Python pass.
+
+One decision goes beyond section 5: the words of a footnote or endnote body (an element whose `epub:type` has the token `footnote`, `endnote` or `endnotes`, or whose `role` has `doc-footnote`, `doc-endnote` or `doc-endnotes`) stay in the stream and form a `NOTE` region. RSVP passes over it; page view shows it.
+
+```python
+from tools.prep.words import word_stream
+
+s = word_stream(xhtml_bytes)          # or an xmltree.Document
+s.words                               # [Word(text, flags)], flags: PARA_END LINE_END NONPROSE NOTEREF HEADING BYTE_SPLIT
+s.markers                             # [Marker(kind, start, end)]: IMAGE (start == end), TABLE, CODE, NOTE
+s.anchors                             # [Anchor(id, index, inside_word)] for ids starting "rsvp-"
+s.noterefs                            # [NoteRef(mark, word)]: each footnote mark and the word that carries NOTEREF
+s.range_of(element)                   # (words started before its start tag, ... before its end tag)
+```
+
+- Flag bits are the firmware's (`WordStreamSpike.h`). There is no sentence-end flag: sentence ends are decided once, by the firmware (`lib/RsvpCore`).
+- Every word of `<body>` is in the stream: headings, figure captions (prose), table and `pre` text (inside `TABLE` and `CODE` regions, flag `NONPROSE`) and footnote bodies (inside `NOTE` regions). Image alt text and footnote reference marks are never words.
+- Named entities that expat hands over undeclared (`&nbsp;` under an XHTML 1.1 doctype) expand through the firmware's table in `entities.py`, which a test compares with the C++ file; unknown names, including HTML 5-only ones such as `&check;`, stay literal.
+- `tokenize(text)` splits one run of plain text with the same character rules.
 
 ## The checkpoint file, version 1
 
@@ -191,12 +214,12 @@ Cross-reference rules (checked by `prep build` in `draft.py`, and for the fixtur
 
 1. Section ids are unique, checkpoint ids are unique, prompt ids are unique across the file.
 2. Every paragraph reference exists in its `chapter_href`. `last_paragraph` is not before `first_paragraph`, so a range lies inside one document (plan rule 1).
-3. Ranges (sections and exclusions together) do not overlap, and every reading-stream block of every spine document is in exactly one of them. Footnote bodies are outside the reading stream and are neither covered nor excluded.
+3. Ranges (sections and exclusions together) do not overlap, and every reading-stream block of every spine document is in exactly one of them. Footnote bodies (`n` blocks) are neither covered nor excluded; their words are in the word stream as NOTE regions, but a draft never cites them.
 4. Sections appear in reading order.
 5. A checkpoint names an existing section; at most one checkpoint per section (plan rule 2).
 6. Every `supporting_paragraphs` entry lies inside the checkpoint's section.
 7. `prompt` and `answer` are plain text and not blank, as defined for `checkpoints.json` above.
-8. A section has at least one word (a section of figures alone would get `word_count` 0, which `checkpoints.json` forbids).
+8. A section has at least one word between its anchors (a section holding only an uncaptioned image would get `word_count` 0, which `checkpoints.json` forbids).
 9. The section's anchors can be placed (see "Anchor placement") and their ids are not already used in the document.
 
 `prep build` checks in three stages and stops after the first stage that finds anything: (1) parse (as `checkpoints.json` layer 1) and schema, (2) `book.source_sha256` equals the SHA-256 of the EPUB given, (3) every cross-reference rule, all reported together. Each problem is printed as `<code> at <JSON pointer>: <message>`:
@@ -214,10 +237,10 @@ Cross-reference rules (checked by `prep build` in `draft.py`, and for the fixtur
 | `overlapping-ranges` | Paragraphs claimed by two ranges (names the other range) |
 | `uncovered-paragraphs` | Paragraphs in no section and not excluded, as runs |
 | `section-order` | Sections not in reading order |
-| `empty-section` | A section without words |
+| `empty-section` | A section without words between its anchors |
 | `duplicate-id`, `unknown-section`, `multiple-checkpoints-for-section`, `not-plain-text`, `blank-text` | As for `checkpoints.json` |
 | `support-outside-section` | A supporting paragraph outside the checkpoint's section |
-| `anchor-placement`, `anchor-id-conflict` | An anchor cannot be placed validly, or its id is taken |
+| `anchor-placement`, `anchor-id-conflict` | An anchor cannot be placed validly (no element may hold it there, or the word pass would put it strictly inside a word), or its id is taken |
 
 ## `prep extract`: the work folder
 
@@ -232,9 +255,9 @@ WORKDIR/
   ...
 ```
 
-- `source.json`: `source_file`, `source_sha256` (copy it into the draft's `book.source_sha256`), `title`, `language`, `opf_path`, `opf_dir`; `spine` in reading order, each with `index`, `prefix` (`d02`), `idref`, `href` (verbatim from the manifest: use it as `chapter_href`), `media_type`, `linear`, `title` (the document's `<title>`), `text_file` (the index from text file to href; `null` for a non-XHTML spine item), `blocks`, `first_paragraph`, `last_paragraph`, `words`, `footnote_blocks`; `toc`, the nav document's `toc` list (or the NCX when there is no nav), each entry with `label`, `href` (relative to the OPF directory), `depth`, `source` and `paragraph`, the block the entry points at.
-- `structure.json`: per document (`index`, `prefix`, `href`, `zip_path`, `media_type`, `linear`, `text_file`, `word_count`) the `blocks` and the `footnotes`, each with `ref`, `number`, `kind`, `element`, `source_id` (the element's `id`, or `null`), `word_count`, `level` (headings), `first_word`/`last_word` (0-based in the document's reading stream) or `after_word` (non-prose blocks), `placeholder` (non-prose), `note_id` (footnotes: the footnote container's id), `path` (an XPath-like locator such as `/html[1]/body[1]/p[3]`), `line` (source line of the start tag) and `anchor_placement` (`inside`, `around` or `none`).
-- `text/dNN-<file name>.txt`: a header, then one entry per block, separated by blank lines: `[d02-p005] paragraph, 66 words, id c1-p005` and on the next line the block's words joined by single spaces. A footnote mark is shown glued to its word as `[^1]` and is not a word. A non-prose block shows a placeholder such as `[Image: <figure>; alt "..."; caption "..."]`, `[Table: <table>; 4 rows x 3 columns; caption "..."]` or `[Code: <pre>; 6 lines]`. Footnote bodies follow under their own heading as `[d02-n001] footnote, 24 words, note fn1, id c1-n001`.
+- `source.json`: `source_file`, `source_sha256` (copy it into the draft's `book.source_sha256`), `title`, `language`, `opf_path`, `opf_dir`; `spine` in reading order, each with `index`, `prefix` (`d02`), `idref`, `href` (verbatim from the manifest: use it as `chapter_href`), `media_type`, `linear`, `title` (the document's `<title>`), `text_file` (the index from text file to href; `null` for a non-XHTML spine item), `blocks`, `first_paragraph`, `last_paragraph`, `words` (the length of the document's word stream), `footnote_blocks`; `toc`, the nav document's `toc` list (or the NCX when there is no nav), each entry with `label`, `href` (relative to the OPF directory), `depth`, `source` and `paragraph`, the block the entry points at.
+- `structure.json` (`version` 2): per document (`index`, `prefix`, `href`, `zip_path`, `media_type`, `linear`, `text_file`, `word_count`, the length of its word stream) the `blocks` and the `footnotes`, each with `ref`, `number`, `kind`, `element`, `source_id` (the element's `id`, or `null`), `word_count`, `level` (headings), `first_word` (0-based in the document's word stream: the block's words are `[first_word, first_word + word_count)`; for a block without words, the index of the next word), `placeholder` (non-prose), `note_id` (footnotes: the footnote container's id), `path` (an XPath-like locator such as `/html[1]/body[1]/p[3]`), `line` (source line of the start tag) and `anchor_placement` (`inside`, `around` or `none`). Version 1 had `last_word` and, for non-prose blocks, `after_word` instead, and counted no words in figures, tables, code and footnote bodies.
+- `text/dNN-<file name>.txt`: a header, then one entry per block, separated by blank lines: `[d02-p005] paragraph, 66 words, id c1-p005` and on the next line the block's words joined by single spaces. A footnote mark is shown glued to the word that carries its `NOTEREF` flag as `[^1]` and is not a word. A non-prose block's header gives its word count too (caption, cells, code), and its line shows a placeholder such as `[Image: <figure>; alt "..."; caption "..."]`, `[Table: <table>; 4 rows x 3 columns; caption "..."]` or `[Code: <pre>; 6 lines]`. Footnote bodies follow under their own heading as `[d02-n001] footnote, 24 words, note fn1, id c1-n001`.
 
 ## Paragraph identity
 
@@ -242,12 +265,13 @@ WORKDIR/
 
 - **Reference**: `d<spine position>-p<block number>`, both 1-based. The spine position is zero-padded to the width of the spine length (at least 2 digits), the block number to the width of the document's block count (at least 3): `d02-p006`. Footnote bodies are numbered in their own series, `d02-n001`. Every spine item gets a position, including non-linear and non-XHTML ones, so a reference stays fixed when the drafter excludes a document.
 - **What is a block** (in document order inside `body`):
-  1. Text in `script`, `style`, `template`, `title`, `noscript`, `rt`, `rp`, in elements with a `hidden` attribute and in page-break markers (`role="doc-pagebreak"`, `epub:type="pagebreak"`) is in no word.
-  2. Non-prose blocks: `table` (kind `table`), `pre` (`code`), `img`, `svg`, `picture` (`image`), `math` (`math`), `video`, `audio`, `object`, `iframe`, `embed`, `canvas` (`media`), and `figure` when it holds one of those (kind from its content). They count no words.
-  3. Footnote containers (`epub:type` with a footnote, endnote, rearnote, note, footnotes, endnotes or rearnotes token, or `role` doc-footnote, doc-endnote or doc-endnotes) are outside the reading stream; their blocks get kind `footnote` and `n` references.
-  4. Any other element with text of its own (a non-blank text node, or an inline child with words) is one prose block, with everything inside it. Kinds: `heading` (`h1` to `h6`), `list-item` (`li`, `dt`, `dd`, or inside one), `blockquote` (or inside one), `aside` (inside a non-footnote `aside`), else `paragraph`. An element without text of its own is not a block; its children are visited.
-  5. A prose block without words (an empty spacer paragraph) is not a block.
-- **Words of a block**: its text, concatenated across inline elements, with `br` and block-level descendants acting as a space, without footnote reference marks and without non-prose descendants, split by `tokenize`. A footnote reference mark is an `a` with `epub:type` noteref or `role` doc-noteref, or text inside both a `sup` and an `a href` to an internal `#` target, in either order (the firmware's rule, `docs/spikes/S1-word-stream.md` section 5). The fixture's `fixture.expected.json` is reproduced exactly: same words, kinds, block boundaries and footnote bodies.
+  1. Text that is in no word (section 5: `head`, `style`, `script`, `title`, `rp`, `rt`, elements with a `hidden` attribute, page-break markers with `role="doc-pagebreak"` or `epub:type="pagebreak"`) never makes a block.
+  2. Non-prose blocks: `table` (kind `table`), `pre` (`code`), `img`, `svg`, `picture` (`image`), `math` (`math`), `video`, `audio`, `object`, `iframe`, `embed`, `canvas` (`media`), and `figure` when it holds one of those (kind from its content).
+  3. Footnote and endnote bodies (the `NOTE` regions: `epub:type` with a footnote, endnote or endnotes token, or `role` doc-footnote, doc-endnote or doc-endnotes) get kind `footnote` and `n` references. Their words are in the stream, but a draft cannot cite them.
+  4. Any other element with text of its own (a non-blank text node, or an inline child with words, not counting footnote marks, non-prose descendants and footnote bodies) is one prose block, with everything inside it. Kinds: `heading` (`h1` to `h6`), `list-item` (`li`, `dt`, `dd`, or inside one), `blockquote` (or inside one), `aside` (inside a non-footnote `aside`), else `paragraph`. An element without text of its own is not a block; its children are visited. "Block-level" here means the elements at which the word pass splits words (section 5's boundary elements other than `br`, `img` and `image`), so a block's words never straddle its tags.
+  5. A prose block without words (an empty spacer paragraph, including one holding only a no-break space) is not a block.
+- **Words of a block**: the words of the document's word stream (see "Words") that start inside the block's element: `[first_word, first_word + word_count)`. Every word of the fixture belongs to exactly one block. `fixture.expected.json` is reproduced exactly: same words, flags, markers, kinds, block boundaries and footnote bodies.
+- **Changes from aligning with the firmware's rules (issue #49).** Block numbering is unchanged for ordinary books. It changes only where a rule forced it: `noscript` and `template` text are now words (section 5 does not exclude them), so they no longer hide a paragraph; `dialog`, `fieldset`, `form` and `menu` are no longer block-level (they do not split words); `rearnote`, `note`, `footnotes` and `rearnotes` containers are no longer footnote bodies (the NOTE rule names footnote, endnote and endnotes only), so their blocks are ordinary blocks a draft must cover; and a paragraph holding only no-break spaces, soft hyphens or U+FEFF has no words and is no longer a block.
 
 ## `prep build`: the prepared EPUB
 
@@ -255,15 +279,15 @@ WORKDIR/
 
 1. **Anchors** in the section's chapter document: `<span id="rsvp-<section id>-start"></span>` and `...-end"></span>`, spliced into the original bytes at offsets found by the parser. Nothing is re-serialised, so the XML declaration, doctype, namespaces, entity references, attribute order and white space of every other byte stay as they were. Tests remove the inserted spans from each changed document and compare the rest byte for byte with the original.
 2. **One manifest line** in the package document, `<item id="rsvp-checkpoints" href="rsvp/checkpoints.json" media-type="application/json"/>`, inserted before `</manifest>`. When `</manifest>` starts its own line, the item is a new line indented like the manifest's last item and ended with the file's own line break (LF or CRLF); otherwise it is inserted right before `</manifest>`.
-3. **`rsvp/checkpoints.json`** in the package document's directory (`OEBPS/rsvp/checkpoints.json`, or `rsvp/checkpoints.json` for an OPF at the archive root), version 1, UTF-8, two-space indented, ending in a newline. `book` holds the draft's `title`, `language`, `source_sha256` and `instructions_version`; `sections` follow the draft's order with `chapter_href` as the manifest href, the two anchor names, the draft's `label` and `word_count`, the number of reading-stream words of the section's blocks (headings included; footnote bodies, figures, tables and code excluded); `checkpoints` and their prompts keep the draft's order, ids, prompts and answers. `supporting_paragraphs` stay in the draft. The file is validated with `checkpoints.validate_checkpoints` before it is written.
+3. **`rsvp/checkpoints.json`** in the package document's directory (`OEBPS/rsvp/checkpoints.json`, or `rsvp/checkpoints.json` for an OPF at the archive root), version 1, UTF-8, two-space indented, ending in a newline. `book` holds the draft's `title`, `language`, `source_sha256` and `instructions_version`; `sections` follow the draft's order with `chapter_href` as the manifest href, the two anchor names, the draft's `label` and `word_count`, the number of words in `[start, end)` where `start` and `end` are the word indexes of the start and end anchors as the firmware computes them (every word between the anchors counts: headings, captions, table cells, code and any footnote body that falls inside); `checkpoints` and their prompts keep the draft's order, ids, prompts and answers. `supporting_paragraphs` stay in the draft. The file is validated with `checkpoints.validate_checkpoints` before it is written.
 
-Zip container: every entry the build does not change is copied byte for byte (local header, extra fields, compressed data, data descriptor), with its compression method, timestamp and attributes, in the original order, with the original archive comment; `mimetype` therefore stays first and stored. A changed entry keeps its method (stored or deflate), timestamp, name and extra fields; only its CRC and sizes change, and a data descriptor is not written for it. The new JSON entry goes last and copies the package document's method, timestamp and attributes. ZIP64, encrypted entries and multi-disk archives are refused. After building, the tool re-reads its output and stops if any document's words, visible text or blocks changed or an anchor is missing or repeated.
+Zip container: every entry the build does not change is copied byte for byte (local header, extra fields, compressed data, data descriptor), with its compression method, timestamp and attributes, in the original order, with the original archive comment; `mimetype` therefore stays first and stored. A changed entry keeps its method (stored or deflate), timestamp, name and extra fields; only its CRC and sizes change, and a data descriptor is not written for it. The new JSON entry goes last and copies the package document's method, timestamp and attributes. ZIP64, encrypted entries and multi-disk archives are refused. Before writing, the build runs the word pass on every changed document and refuses (`anchor-placement`) if an anchor would sit strictly inside a word. After building, the tool re-reads its output and stops if any document's words, flags, markers, footnote marks, visible text or blocks changed, or an anchor is missing, repeated or not at the word index the section's `word_count` was computed from.
 
 EPUBCheck 5.3.0 reports no error and no warning for the `application/json` manifest item that the spine does not reference; with `--usage` it lists one USAGE message, `OPF-097` ("listed in the manifest, but no reference to it was found in content documents"). The format the plan specifies therefore needs no change.
 
 ### Anchor placement
 
-The start anchor precedes the section's first word and the end anchor follows its last word, at a word boundary, and no word between two sections is left outside them other than excluded matter and footnote bodies.
+The start anchor precedes the section's first word and the end anchor follows its last word, at a word boundary, and no word between two sections is left outside them other than excluded matter and footnote bodies that lie between the sections' blocks.
 
 | Section's first or last block | Start anchor | End anchor |
 | --- | --- | --- |
@@ -273,7 +297,7 @@ The start anchor precedes the section's first word and the end anchor follows it
 - Non-prose blocks get sibling anchors because a `span` may not be a child of `table`, `tr` or `tbody`, may break `figure`'s rule that `figcaption` is its first or last child, and inside `pre` would sit in preformatted text; anchors therefore never fall inside a table or code block. A sibling `span` is allowed wherever the block's parent takes phrasing content (`body`, `div`, `section`, `li`, `td`, ...). When the parent does not (`ul`, `ol`, `dl`, `table` parts, `figure`, `hgroup`, ...), the placement is `none` and the build refuses with `anchor-placement` rather than write invalid XHTML.
 - Two sections meeting in adjacent blocks get separate anchors: the end anchor inside or after the last block of one, the start anchor inside or before the first block of the next. When both fall on the same byte offset (a section ending with a table directly followed by one starting with a `pre`), the end anchor is written first: `</table><span id="rsvp-s0001-end"></span><span id="rsvp-s0002-start"></span><pre>`.
 - The span is written with the namespace prefix of its parent element, so a book that writes XHTML with a prefix still gets XHTML spans.
-- Anchors are placed at element boundaries of blocks, so they sit between words under any word definition that splits at those elements, including the firmware's (`docs/spikes/S1-word-stream.md` section 5).
+- Anchors are placed at element boundaries of blocks, and blocks are elements at which the firmware's word pass splits words, so they sit between words (`docs/spikes/S1-word-stream.md` section 5). The build checks this with the word pass itself (above).
 
 ## Synthetic fixture book
 
@@ -284,13 +308,26 @@ python3 tools/prep/fixture/generate.py           # regenerate after editing fixt
 python3 tools/prep/fixture/generate.py --check   # exit 1 and name each stale file
 ```
 
-`fixture.expected.json` is the ground truth other layers compare against. It is computed from the source data, not by parsing the EPUB. Its `rules` member states the word definition, which is implemented by the single function `tokenize` in `words.py`, shared by the generator, `prep extract` and `prep build`, so that a later task can align it with the firmware's parser:
+`fixture.expected.json` is the ground truth other layers compare against, including the firmware's WordIndex tests (task R3). It is computed from the content model in `content.py`, not by parsing the EPUB, with the generator's own small text splitter. Before writing anything, the generator runs the word pass (`words.py`) on every XHTML document it produced and refuses if the two routes disagree; `tests/test_fixture.py` compares the committed file with the word pass, `prep extract`'s blocks and `prep build`'s anchors on `fixture.epub` again. An error in either route therefore shows up as a difference.
 
-- A word is a maximal run of characters other than U+0020, U+0009, U+000A and U+000D in the visible text of one prose block (`h1`, `h2`, `p`). Punctuation stays attached; an unspaced em dash joins its neighbours into one word. Nothing is normalised or stripped.
-- Inline elements (`em`, `strong`) do not split or drop words.
-- A footnote reference mark (`sup > a[epub:type=noteref]`) is not a word; its position is recorded as `after_word`. Footnote bodies are listed separately and are not in the chapter's word stream.
-- Figures, tables and code blocks contribute no words; their position is `after_word` and their inner text is listed in their block entry.
-- Indices are 0-based over a whole document. A section's start anchor belongs immediately before its `first_word`, its end anchor immediately after its `last_word`.
+The file (format `rsvp-fixture-expected`, `version` 2, `rules_version` 1):
+
+| Member | Content |
+| --- | --- |
+| `rules_version` | Version of the word rules (section 5 plus NOTE regions). Raised whenever a rule change can move a word index; the firmware's `.wix` `rulesVersion` should carry the same number |
+| `rules` | What each part means, in prose |
+| `documents[]` | Per spine document: `href`, `zip_path`, `word_count`, and the members below |
+| `.words` | The whole word stream, texts only, in order. Indexes below are 0-based into it |
+| `.flags` | Each flag (`PARA_END`, `LINE_END`, `NONPROSE`, `NOTEREF`, `HEADING`, `BYTE_SPLIT`) mapped to the `[start, end)` runs of word indexes that carry it. No `SENT_END`: the firmware decides sentence ends |
+| `.markers` | In document order, `{kind, start, end}`: `IMAGE` (`start == end`, the index of the next word), `TABLE`, `CODE` and `NOTE` as `[start, end)` |
+| `.blocks` | Every block `prep extract` numbers, main series then footnote series: `paragraph` (`d02-p004`), `id` (XHTML id), `kind`, `element`, `first_word`, `word_count`, plus the source data of figures (`image_href`, `alt`, `caption`), tables (`caption`, `header`, `rows`) and code (`lines`) |
+| `.noterefs` | Each footnote mark: `note`, `mark` (its text), `form` (`noteref`, `sup-link` or `link-sup` markup), `block`, `word` (the word with its `NOTEREF` flag) |
+| `.footnotes` | Each footnote body: `id`, `mark`, its `NOTE` region `start`/`end`, its `paragraphs` |
+| `.inline_elements`, `.page_breaks` | Where the `em`/`strong` words and the page-break marker sit |
+| `sections[]` | Per draft section: `start` and `end` (the word indexes of its anchors), `word_count` (`end - start`, what `prep build` writes), first and last paragraph, anchor names, first and last word text |
+| `token_cases[]` | One named case per word rule the book exercises, with the word, its index and its flags |
+
+A firmware test can compare its word list with `words`, its flags with `flags` and its markers with `markers` for each chapter of `fixture.epub`, and the anchors of the prepared fixture (`prep build fixtures/books/fixture.epub fixtures/books/fixture.draft.json`) with `sections[].start` and `end`. Rules with no case in the book (the 255-byte split, U+FEFF, `rt`, `hidden`) are covered by `tests/test_words.py` only.
 
 ## EPUBCheck
 

@@ -4,7 +4,7 @@
   "book": {
     "title": "The Lighthouse Keeper's Almanac",
     "language": "en",
-    "source_sha256": "b07c3ea9857b00644d284c0eae083bc504bfc895525d0a864c183b916e17c82c",
+    "source_sha256": "6adf04106f6e00142f3f19a92b64f835c8c1afb15afa985d61b434115a363b01",
     "instructions_version": "fixture"
   },
   "excluded": [
