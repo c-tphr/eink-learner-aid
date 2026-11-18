@@ -1482,7 +1482,7 @@ void EpubReaderActivity::showSpeedReadItem() {
 }
 
 bool EpubReaderActivity::checkpointBeforeTurn(const bool forward) {
-  if (!readingSession) return false;  // always without the RSVP flag
+  if (!RSVP_FEATURE_ENABLED || !readingSession) return false;  // always without the RSVP flag
   if (forward && openPageCheckpoint()) return true;
   readingsession::notePageMove(*readingSession,
                                forward ? readingsession::PageMove::NextPage : readingsession::PageMove::PreviousPage);
@@ -1490,6 +1490,7 @@ bool EpubReaderActivity::checkpointBeforeTurn(const bool forward) {
 }
 
 bool EpubReaderActivity::openPageCheckpoint() {
+  if (!RSVP_FEATURE_ENABLED || !readingSession) return false;
   std::shared_ptr<readingsession::CheckpointRun> run;
   std::unique_ptr<Activity> activity;
   {
