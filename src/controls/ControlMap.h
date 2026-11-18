@@ -94,6 +94,16 @@ enum class Item : uint8_t {
   WordsUp,
   SaveDefault,
   SaveBook,
+  // Device test screens (task D3a): the rows of a ChoiceList, and the Controls check's Finish button.
+  ChoiceRow0,
+  ChoiceRow1,
+  ChoiceRow2,
+  ChoiceRow3,
+  ChoiceRow4,
+  ChoiceRow5,
+  ChoiceRow6,
+  ChoiceRow7,
+  ControlsFinish,
 };
 
 struct Zone {
@@ -119,6 +129,25 @@ inline constexpr Zone PAUSE_ZONES[] = {
     {Item::SaveDefault, 16, 640, 216, 64, false}, {Item::SaveBook, 248, 640, 216, 64, false},
 };
 inline constexpr Screen PAUSE{PAUSE_ZONES, static_cast<uint8_t>(sizeof(PAUSE_ZONES) / sizeof(PAUSE_ZONES[0])), 4};
+
+// Device test lists (S4 row 34; task D3a): rows 448x72 from y=72, 8 px apart, in focus order.
+// A ChoiceList (src/activities/devicetest/ChoiceList.h) shows the first `count` of them; which rows
+// repeat while held is the list's own choice.
+inline constexpr uint8_t CHOICE_ROWS_MAX = 8;
+inline constexpr Zone CHOICE_ZONES[CHOICE_ROWS_MAX] = {
+    {Item::ChoiceRow0, 16, 72, 448, 72, false},  {Item::ChoiceRow1, 16, 152, 448, 72, false},
+    {Item::ChoiceRow2, 16, 232, 448, 72, false}, {Item::ChoiceRow3, 16, 312, 448, 72, false},
+    {Item::ChoiceRow4, 16, 392, 448, 72, false}, {Item::ChoiceRow5, 16, 472, 448, 72, false},
+    {Item::ChoiceRow6, 16, 552, 448, 72, false}, {Item::ChoiceRow7, 16, 632, 448, 72, false},
+};
+constexpr Screen choiceScreen(const uint8_t count, const uint8_t defaultIndex) {
+  return Screen{CHOICE_ZONES, count < CHOICE_ROWS_MAX ? count : CHOICE_ROWS_MAX, defaultIndex};
+}
+
+// The Controls check (task D3a; S4 section 7): every input is recorded, and a tap on Finish (or a
+// 3 s hold of any key, src/activities/devicetest/ControlsCheck.h) leaves.
+inline constexpr Zone CONTROLS_CHECK_ZONES[] = {{Item::ControlsFinish, 16, 672, 448, 72, false}};
+inline constexpr Screen CONTROLS_CHECK{CONTROLS_CHECK_ZONES, 1, 0};
 
 // Zone under a tap, or nullptr.
 const Zone* hit(const Screen& screen, int x, int y);

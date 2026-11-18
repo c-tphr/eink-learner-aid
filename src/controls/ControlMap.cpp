@@ -55,6 +55,24 @@ const char* itemName(const Item item) {
       return "SaveDefault";
     case Item::SaveBook:
       return "SaveBook";
+    case Item::ChoiceRow0:
+      return "Row0";
+    case Item::ChoiceRow1:
+      return "Row1";
+    case Item::ChoiceRow2:
+      return "Row2";
+    case Item::ChoiceRow3:
+      return "Row3";
+    case Item::ChoiceRow4:
+      return "Row4";
+    case Item::ChoiceRow5:
+      return "Row5";
+    case Item::ChoiceRow6:
+      return "Row6";
+    case Item::ChoiceRow7:
+      return "Row7";
+    case Item::ControlsFinish:
+      return "ControlsFinish";
   }
   return "?";
 }
