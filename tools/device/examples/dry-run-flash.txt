@@ -1,0 +1,82 @@
+# Transcript produced by tools/device/tests/make_examples.py against SYNTHETIC images
+# (no real firmware, no device). identify and backup were run beforehand against the
+# in-memory fake device, so the work folder holds a passing identify and a verified backup.
+
+$ python -m piccoflash make-plan --bootloader <tmp>/build/bootloader.bin --partitions <tmp>/build/partitions.bin --boot-app0 <tmp>/build/boot_app0.bin --app <tmp>/build/firmware.bin --version 0.1.0-synthetic --build-id synthetic-images -o <tmp>/kit
+Flash plan: <tmp>/kit/flash-plan.json
+Firmware version: 0.1.0-synthetic   build: synthetic-images   created: 2026-11-18T22:28:24Z
+Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
+
+Region           Offset     Erase end        Size  File            SHA-256 (first 16)
+bootloader       0x00000000 0x00004FFF      18720  bootloader.bin  28c725581bf2029b
+partition_table  0x00008000 0x00008FFF       3072  partitions.bin  0d3fad517e642121
+boot_app0        0x00015000 0x00016FFF       8192  boot_app0.bin   f94c5d786a7a8fab
+app              0x00020000 0x00542FFF    5386144  firmware.bin    2b5ee61699b6d954
+app uses 65.2% of its 0x7E0000-byte slot
+
+Plan written and verified: <tmp>/kit/flash-plan.json
+[process exit code 0]
+
+$ python -m piccoflash flash --dry-run --port COM5 --work-dir <tmp>/work --plan <tmp>/kit
+piccoflash 1.0.0 (Python 3.13.18, esptool 5.6.0 pinned)  DRY RUN
+
+Flash: replace Onyx with the two-slot firmware
+----------------------------------------------
+Flash plan: <tmp>/kit/flash-plan.json
+Firmware version: 0.1.0-synthetic   build: synthetic-images   created: 2026-11-18T22:28:24Z
+Made with: piccoflash 1.0.0, esptool 5.6.0, Python 3.13.18
+
+Region           Offset     Erase end        Size  File            SHA-256 (first 16)
+bootloader       0x00000000 0x00004FFF      18720  bootloader.bin  28c725581bf2029b
+partition_table  0x00008000 0x00008FFF       3072  partitions.bin  0d3fad517e642121
+boot_app0        0x00015000 0x00016FFF       8192  boot_app0.bin   f94c5d786a7a8fab
+app              0x00020000 0x00542FFF    5386144  firmware.bin    2b5ee61699b6d954
+app uses 65.2% of its 0x7E0000-byte slot
+Guard: the plan and all four files pass (bootloader, partition_table, boot_app0, app).
+
+Preconditions in the work folder <tmp>/work
+-----------------------------------------------------------------------
+[ok]   identify passed for MAC 24:58:7c:12:34:56 (identify-20261118T222825.295Z.json)
+[ok]   verified backup picco-backup-24587c123456-20261118T222825.330Z.bin, SHA-256 re-checked: 175e8fce3c05ff2f82dd5dd03120a810cdd7ee655776c36f236b6b6d9951caca
+[ok]   owner confirmed the backup copy
+
+DRY RUN: the device is not contacted and nothing is written
+-----------------------------------------------------------
+What a real run would destroy:
+  Onyx's second-stage bootloader            0x000000-0x007FFF
+  the stock partition table                 0x008000-0x008FFF
+  the stock otadata (which Onyx app boots)  0x015000-0x016FFF
+  the vendor recovery app 'safeboot'        0x020000-0x0DFFFF
+  the start of the Onyx main app            0x0E0000-0x542FFF
+  (the rest of the Onyx app and its spiffs data stay as unused bytes; NVS 0x9000-0x14FFF is kept)
+A real run would then:
+  1. ask you to type exactly: REPLACE ONYX
+  2. connect:
+       esptool.cmds.detect_chip(port='COM5', baud=115200, connect_mode='default-reset', connect_attempts=7)
+       esptool.cmds.run_stub(esp)
+       esptool.cmds.attach_flash(esp)
+  3. re-identify read-only: same MAC as the backup, still the stock table, bootloader and table
+     equal to the backup (reads 0x0+0x8000, 0x8000+0xC00, 0x15000+0x2000)
+  4. write and verify, in this order, stopping at the first failure:
+     [1/4] app -> 0x20000 (erases 0x20000-0x542FFF); guard: APPROVED (5386144 bytes, sha256 2b5ee61699b6d954...)
+           esptool.cmds.write_flash(esp, [(0x20000, <5386144 bytes, sha256 2b5ee61699b6d954...>)], flash_freq='keep', flash_mode='keep', flash_size='keep', erase_all=False, encrypt=False, force=False)
+           CLI: esptool --chip esp32s3 --port COM5 --baud 115200 --before default-reset --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep 0x20000 firmware.bin
+           then esptool.cmds.read_flash(esp, 0x20000, 0x523000, output=None, flash_size='keep', no_progress=False) and compare SHA-256
+     [2/4] boot_app0 -> 0x15000 (erases 0x15000-0x16FFF); guard: APPROVED (8192 bytes, sha256 f94c5d786a7a8fab...)
+           esptool.cmds.write_flash(esp, [(0x15000, <8192 bytes, sha256 f94c5d786a7a8fab...>)], flash_freq='keep', flash_mode='keep', flash_size='keep', erase_all=False, encrypt=False, force=False)
+           CLI: esptool --chip esp32s3 --port COM5 --baud 115200 --before default-reset --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep 0x15000 boot_app0.bin
+           then esptool.cmds.read_flash(esp, 0x15000, 0x2000, output=None, flash_size='keep', no_progress=False) and compare SHA-256
+     [3/4] partition_table -> 0x8000 (erases 0x8000-0x8FFF); guard: APPROVED (3072 bytes, sha256 0d3fad517e642121...)
+           esptool.cmds.write_flash(esp, [(0x8000, <3072 bytes, sha256 0d3fad517e642121...>)], flash_freq='keep', flash_mode='keep', flash_size='keep', erase_all=False, encrypt=False, force=False)
+           CLI: esptool --chip esp32s3 --port COM5 --baud 115200 --before default-reset --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep 0x8000 partitions.bin
+           then esptool.cmds.read_flash(esp, 0x8000, 0x1000, output=None, flash_size='keep', no_progress=False) and compare SHA-256
+     [4/4] bootloader -> 0x0 (erases 0x0-0x4FFF); guard: APPROVED (18720 bytes, sha256 28c725581bf2029b...)
+           esptool.cmds.write_flash(esp, [(0x0, <18720 bytes, sha256 28c725581bf2029b...>)], flash_freq='keep', flash_mode='keep', flash_size='keep', erase_all=False, encrypt=False, force=False)
+           CLI: esptool --chip esp32s3 --port COM5 --baud 115200 --before default-reset --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep 0x0 bootloader.bin
+           then esptool.cmds.read_flash(esp, 0x0, 0x5000, output=None, flash_size='keep', no_progress=False) and compare SHA-256
+  5. esptool.cmds.reset_chip(esp, 'hard-reset')
+
+DRY RUN RESULT: READY. A real run would ask for the phrase and then write the 4 images above.
+[exit 0: OK]
+Log: <tmp>/work/logs/flash-dryrun-20261118T222825.636Z.log
+[process exit code 0]
