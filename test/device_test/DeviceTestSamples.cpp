@@ -1,6 +1,7 @@
 // Writes sample results files for test_results_schema.py: <dir>/0001-bench.json (a run with a
-// profile skipped part-way, ended by the owner), <dir>/0012-bench.json (a complete SE0400NQW47 run)
-// and <dir>/0002-controls.json.
+// profile skipped part-way, ended by the owner), <dir>/0012-bench.json (a complete SE0400NQW47 run),
+// <dir>/0002-controls.json, <dir>/0005-acceptance.json (a guided acceptance part-way),
+// <dir>/0014-acceptance.json (a complete one on SE0400NQW47) and <dir>/0015-choice.json.
 
 #include <sys/stat.h>
 
@@ -30,7 +31,10 @@ int main(int argc, char** argv) {
   mkdir(dir.c_str(), 0755);
   const bool ok = save(dir, "0001-bench.json", devicetest_samples::skippedRunJson()) &&
                   save(dir, "0012-bench.json", devicetest_samples::se0400RunJson()) &&
-                  save(dir, "0002-controls.json", devicetest_samples::controlsJson());
-  std::printf("%s three sample results files in %s\n", ok ? "wrote" : "FAILED to write", dir.c_str());
+                  save(dir, "0002-controls.json", devicetest_samples::controlsJson()) &&
+                  save(dir, "0005-acceptance.json", devicetest_samples::acceptancePartWayJson()) &&
+                  save(dir, "0014-acceptance.json", devicetest_samples::acceptanceCompleteJson()) &&
+                  save(dir, "0015-choice.json", devicetest_samples::choiceJson());
+  std::printf("%s six sample results files in %s\n", ok ? "wrote" : "FAILED to write", dir.c_str());
   return ok ? 0 : 1;
 }

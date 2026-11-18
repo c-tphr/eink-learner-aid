@@ -245,6 +245,46 @@ void writeCommon(JsonWriter& w, const RecordHeader& h, const char* kind, const R
   }
 }
 
+// The figures of one series: "updates", "clears", "promotions", "duration_ms", "playback" (each null
+// when the series never ran).
+void writeFigures(JsonWriter& w, const bool hasFigures, const StepFigures& f) {
+  if (!hasFigures) {
+    w.memberNull("updates");
+    w.memberNull("clears");
+    w.memberNull("promotions");
+    w.memberNull("duration_ms");
+    w.memberNull("playback");
+    return;
+  }
+  writeSeries(w, "updates", f.updates);
+  writeSeries(w, "clears", f.clears);
+  w.memberU("promotions", f.promotions);
+  w.memberU("duration_ms", f.durationMs);
+  w.key("playback");
+  if (!f.hasPlayback) {
+    w.null();
+    return;
+  }
+  const PlaybackFigures& p = f.playback;
+  w.beginObject();
+  w.key("delivered_wpm");
+  w.tenths(p.deliveredWpmTenths);
+  w.memberU("words_shown", p.wordsShown);
+  w.memberU("frames", p.frames);
+  w.memberU("clearing_refreshes", p.clearingRefreshes);
+  w.memberU("active_ms", p.activeMs);
+  w.key("order");
+  w.beginObject();
+  w.memberB("in_order", p.inOrder);
+  w.memberU("words_drawn", p.wordsDrawn);
+  w.memberU("segments", p.segments);
+  w.memberU("violations", p.violations);
+  w.memberU("gaps", p.gaps);
+  w.memberU("repeats", p.repeats);
+  w.endObject();
+  w.endObject();
+}
+
 void writeStep(JsonWriter& w, const StepSpec& spec, const StepRecord& r) {
   w.beginObject();
   w.member("step", spec.key);
@@ -260,42 +300,7 @@ void writeStep(JsonWriter& w, const StepSpec& spec, const StepRecord& r) {
     w.memberNull("words_per_update");
   }
 
-  if (r.hasFigures) {
-    const StepFigures& f = r.figures;
-    writeSeries(w, "updates", f.updates);
-    writeSeries(w, "clears", f.clears);
-    w.memberU("promotions", f.promotions);
-    w.memberU("duration_ms", f.durationMs);
-    w.key("playback");
-    if (f.hasPlayback) {
-      const PlaybackFigures& p = f.playback;
-      w.beginObject();
-      w.key("delivered_wpm");
-      w.tenths(p.deliveredWpmTenths);
-      w.memberU("words_shown", p.wordsShown);
-      w.memberU("frames", p.frames);
-      w.memberU("clearing_refreshes", p.clearingRefreshes);
-      w.memberU("active_ms", p.activeMs);
-      w.key("order");
-      w.beginObject();
-      w.memberB("in_order", p.inOrder);
-      w.memberU("words_drawn", p.wordsDrawn);
-      w.memberU("segments", p.segments);
-      w.memberU("violations", p.violations);
-      w.memberU("gaps", p.gaps);
-      w.memberU("repeats", p.repeats);
-      w.endObject();
-      w.endObject();
-    } else {
-      w.null();
-    }
-  } else {
-    w.memberNull("updates");
-    w.memberNull("clears");
-    w.memberNull("promotions");
-    w.memberNull("duration_ms");
-    w.memberNull("playback");
-  }
+  writeFigures(w, r.hasFigures, r.figures);
 
   if (spec.rated && r.rating != Rating::NONE) {
     w.member("rating", ratingName(r.rating));
@@ -340,6 +345,62 @@ void writeProfile(JsonWriter& w, const ProfileRecord& p, const PanelId panel) {
   w.beginArray();
   for (size_t i = 0; i < STEP_COUNT; ++i) writeStep(w, STEPS[i], p.steps[i]);
   w.endArray();
+  w.endObject();
+}
+
+// A step result, or null when nothing is known yet.
+void memberResultOrNull(JsonWriter& w, const char* k, const StepResult r) {
+  w.key(k);
+  if (r == StepResult::PASS || r == StepResult::FAIL) {
+    w.boolean(r == StepResult::PASS);
+  } else {
+    w.null();
+  }
+}
+
+void memberAnswer(JsonWriter& w, const char* k, const Answer a) {
+  if (a == Answer::NONE) {
+    w.memberNull(k);
+  } else {
+    w.member(k, answerName(a));
+  }
+}
+
+// "C2, C3" -> ["C2", "C3"].
+void writeDependsOn(JsonWriter& w, const char* text) {
+  w.key("depends_on");
+  w.beginArray();
+  char item[8];
+  size_t used = 0;
+  for (const char* p = text;; ++p) {
+    if (*p == ',' || *p == '\0') {
+      item[used] = '\0';
+      if (used > 0) w.str(item);
+      used = 0;
+      if (*p == '\0') break;
+    } else if (*p != ' ' && used + 1 < sizeof(item)) {
+      item[used++] = *p;
+    }
+  }
+  w.endArray();
+}
+
+void writeRun(JsonWriter& w, const StepSpec& spec, const RunRecord& r) {
+  w.beginObject();
+  w.member("run", spec.key);
+  w.memberU("target_wpm", spec.wpm);
+  w.memberU("words_per_update", spec.wordsPerUpdate);
+  w.memberU("requested", spec.count);
+  w.member("status", runStateName(r.state));
+  w.memberU("attempts", r.attempts);
+  writeFigures(w, r.hasFigures, r.figures);
+  w.key("measured_ok");
+  if (r.state == RunState::DONE) {
+    w.boolean(runMeasuredOk(spec, r));
+  } else {
+    w.null();
+  }
+  memberAnswer(w, "readable", r.readable);
   w.endObject();
 }
 
@@ -482,6 +543,171 @@ void writeControls(const ControlsRecord& record, JsonSink& sink) {
   }
   w.endArray();
   w.memberU("events_dropped", record.dropped);
+  w.endObject();
+  sink.write("\n", 1);
+}
+
+void writeAcceptance(const AcceptanceRecord& record, const Walkthrough& walk, JsonSink& sink) {
+  JsonWriter w(sink);
+  w.beginObject();
+  writeCommon(w, record.header, "acceptance", walk.status());
+
+  const displayprofile::ProfileInfo& info = profileInfo(record.profile);
+  w.key("profile");
+  w.beginObject();
+  w.member("key", info.key);
+  w.member("name", info.name);
+  w.member("waveform", displayprofile::wordWaveform(record.profile, record.header.device.panel).name);
+  w.memberU("trial_setting", record.trialSetting);
+  w.endObject();
+
+  w.key("part_a");
+  w.beginObject();
+  w.member("status", partAStatusName(walk.partA.status));
+  w.memberU("passage_words", PASSAGE_WORDS);
+  w.memberU("min_dwell_ms", rsvp::DEFAULT_MIN_DWELL_MS);
+  w.key("runs");
+  w.beginArray();
+  for (size_t i = 0; i < ACCEPTANCE_RUN_COUNT; ++i) writeRun(w, ACCEPTANCE_RUNS[i], walk.partA.runs[i]);
+  w.endArray();
+  memberAnswer(w, "slower", walk.partA.slower);
+  w.endObject();
+
+  w.key("part_b");
+  w.beginObject();
+  w.member("book", WALK_BOOK);
+  w.key("current");
+  if (walk.partB.current < WALK_STEP_COUNT) {
+    w.str(WALK_STEPS[walk.partB.current].id);
+  } else {
+    w.null();
+  }
+  w.memberB("away", walk.partB.away);
+  w.memberU("answered", walk.answered());
+  w.key("steps");
+  w.beginArray();
+  for (size_t i = 0; i < WALK_STEP_COUNT; ++i) {
+    const WalkStep& step = WALK_STEPS[i];
+    const StepAnswer& a = walk.partB.steps[i];
+    w.beginObject();
+    w.memberU("n", i + 1);
+    w.member("id", step.id);
+    w.key("criteria");
+    w.beginArray();
+    for (unsigned k = 1; k <= CRITERION_COUNT; ++k) {
+      if (step.criteria & criterionBit(k)) w.u(k);
+    }
+    w.endArray();
+    w.member("trace", step.trace);
+    writeDependsOn(w, step.dependsOn);
+    w.member("result", stepResultName(a.result));
+    if (a.result == StepResult::FAIL) {
+      w.member("reason", failReasonName(a.reason));
+    } else {
+      w.memberNull("reason");
+    }
+    w.memberU("answers", a.answers);
+    w.endObject();
+  }
+  w.endArray();
+  w.endObject();
+
+  w.key("criteria");
+  w.beginArray();
+  for (unsigned k = 1; k <= CRITERION_COUNT; ++k) {
+    w.beginObject();
+    w.memberU("criterion", k);
+    w.member("result", stepResultName(walk.criterion(k)));
+    w.key("evidence");
+    w.beginArray();
+    if (k == 5) w.str("part-a");
+    for (size_t i = 0; i < WALK_STEP_COUNT; ++i) {
+      if (WALK_STEPS[i].criteria & criterionBit(k)) w.str(WALK_STEPS[i].id);
+    }
+    w.endArray();
+    w.endObject();
+  }
+  w.endArray();
+
+  const Criterion5 c5 = walk.criterion5();
+  w.key("criterion_5");
+  w.beginObject();
+  memberResultOrNull(w, "measured_pass", c5.measured);
+  memberResultOrNull(w, "owner_pass", c5.owner);
+  w.member("measured", stepResultName(c5.measured));
+  w.member("owner", stepResultName(c5.owner));
+  w.member("pause_screen", stepResultName(c5.pauseScreen));
+  w.endObject();
+  w.endObject();
+  sink.write("\n", 1);
+}
+
+void writeChoice(const ChoiceRecord& record, JsonSink& sink) {
+  JsonWriter w(sink);
+  w.beginObject();
+  writeCommon(w, record.header, "choice", RunStatus::COMPLETE);
+
+  const displayprofile::TrialSetting before = displayprofile::decodeTrialSetting(record.settingBefore);
+  const displayprofile::TrialSetting after = displayprofile::decodeTrialSetting(record.settingAfter);
+  w.member("chosen", profileInfo(record.chosen).key);
+  w.memberB("saved", record.saved);
+  w.key("trial_setting");
+  w.beginObject();
+  w.memberU("before", record.settingBefore);
+  w.memberU("after", record.settingAfter);
+  writeTrialList(w, "unlocked_before", before.unlocked);
+  writeTrialList(w, "unlocked_after", after.unlocked);
+  w.member("chosen_before", profileInfo(before.chosen).key);
+  w.member("chosen_after", profileInfo(after.chosen).key);
+  w.endObject();
+  writeTrialList(w, "kept_before", record.keptBefore);
+  writeTrialList(w, "kept_after", record.keptAfter);
+  writeTrialList(w, "locked", record.locked);
+  w.memberText("benchmark_file", record.bench.file);
+
+  w.key("candidates");
+  w.beginArray();
+  for (uint8_t i = 0; i < record.candidates.count; ++i) {
+    const ProfileId id = record.candidates.ids[i];
+    const displayprofile::ProfileInfo& info = profileInfo(id);
+    const ProfileRatings& r = record.bench.profiles[static_cast<size_t>(id)];
+    w.beginObject();
+    w.member("key", info.key);
+    w.member("name", info.name);
+    w.memberB("chosen", id == record.chosen);
+    w.memberB("kept", id == ProfileId::STOCK || (record.keptAfter & displayprofile::trialBit(id)) != 0);
+    w.key("ratings");
+    if (r.found) {
+      w.beginObject();
+      size_t n = 0;
+      for (const StepSpec& s : STEPS) {
+        if (!s.rated) continue;
+        const Rating rating = n < RATED_STEP_COUNT ? r.ratings[n] : Rating::NONE;
+        if (rating == Rating::NONE) {
+          w.memberNull(s.key);
+        } else {
+          w.member(s.key, ratingName(rating));
+        }
+        ++n;
+      }
+      w.endObject();
+    } else {
+      w.null();
+    }
+    if (r.found && r.residue != Residue::NONE) {
+      w.member("residue", residueName(r.residue));
+    } else {
+      w.memberNull("residue");
+    }
+    w.key("delivered_wpm_240");
+    if (r.found && r.hasDelivered240) {
+      w.tenths(r.delivered240Tenths);
+    } else {
+      w.null();
+    }
+    w.endObject();
+  }
+  w.endArray();
   w.endObject();
   sink.write("\n", 1);
 }
