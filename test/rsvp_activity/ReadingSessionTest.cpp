@@ -122,8 +122,8 @@ TEST(ReadingSessionSections, OnlyItsOwnChapterIsKnown) {
 
 TEST(ReadingSessionRsvp, TheSectionEndFlagsNameTheWordsStopAfterWordNames) {
   Checkpoints cp;
-  for (const auto& [zip, href, spine] : {std::tuple{CH1, "text/chapter-1.xhtml", CHAPTER_1},
-                                         std::tuple{CH2, "text/chapter-2.xhtml", CHAPTER_2}}) {
+  for (const auto& [zip, href, spine] :
+       {std::tuple{CH1, "text/chapter-1.xhtml", CHAPTER_1}, std::tuple{CH2, "text/chapter-2.xhtml", CHAPTER_2}}) {
     Chapter ch(cp, zip, href, spine);
     std::set<uint32_t> sectionLast;
     for (uint16_t i = 0; i < ch.sections.count(); ++i) sectionLast.insert(ch.sections.span(i).end - 1);
@@ -266,8 +266,7 @@ TEST(ReadingSessionPage, TwoSectionEndsOnOnePageFireInTextOrder) {
   EXPECT_EQ(step.checkpoint, 1u);
   EXPECT_EQ(step.resume, (Position{0, 9}));
   reading.word = step.resume.word;
-  EXPECT_EQ(checkpoint::pageAdvance(sections, reading::pageFromWord(page, 0, reading), page.last).kind,
-            StepKind::None);
+  EXPECT_EQ(checkpoint::pageAdvance(sections, reading::pageFromWord(page, 0, reading), page.last).kind, StepKind::None);
 }
 
 TEST(ReadingSessionPage, ASectionThatEndsItsChapterFiresOnLeavingTheLastPage) {

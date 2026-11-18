@@ -54,11 +54,11 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/rsvp/RsvpLaunch.h"
 #include "activities/settings/TextSettingsActivity.h"
-#include "reading/ReadingSession.h"
 #include "clippings/ClippingText.h"
 #include "clippings/ClippingsManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "reading/ReadingSession.h"
 #include "util/BookmarkUtil.h"
 #include "util/ButtonNavigator.h"
 #include "util/ScreenshotUtil.h"
@@ -1484,8 +1484,8 @@ void EpubReaderActivity::showSpeedReadItem() {
 bool EpubReaderActivity::checkpointBeforeTurn(const bool forward) {
   if (!readingSession) return false;  // always without the RSVP flag
   if (forward && openPageCheckpoint()) return true;
-  readingsession::notePageMove(*readingSession, forward ? readingsession::PageMove::NextPage
-                                                        : readingsession::PageMove::PreviousPage);
+  readingsession::notePageMove(*readingSession,
+                               forward ? readingsession::PageMove::NextPage : readingsession::PageMove::PreviousPage);
   return false;
 }
 

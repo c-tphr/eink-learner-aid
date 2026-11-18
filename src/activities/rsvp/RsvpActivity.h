@@ -165,7 +165,7 @@ class RsvpActivity final : public Activity {
   std::atomic<uint32_t> wakeAtMs{0};
   std::atomic<uint32_t> lastLoopMs{0};
   std::atomic<bool> guardRestartPending{false};
-  std::atomic<bool> leavePending{false};  // Phase::Leaving: finish() on the next main-loop pass
+  std::atomic<bool> leavePending{false};       // Phase::Leaving: finish() on the next main-loop pass
   std::atomic<bool> checkpointPending{false};  // Phase::Checkpoint: show it on the next main-loop pass
 
   // Phase::Checkpoint (RenderLock): the step that fired, and the first word of the frame on screen,

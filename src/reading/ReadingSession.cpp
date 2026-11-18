@@ -42,8 +42,8 @@ void ReadingSession::attachLayout() {
   if (book) {
     // 8 KB while a prepared book is open: the section layout and page view's word index reader.
     layout = makeUniqueNoThrow<Layout>();
-    if (!layout) LOG_ERR("CPT", "OOM: section layout (%u bytes): checkpoints cannot fire",
-                          static_cast<unsigned>(sizeof(Layout)));
+    if (!layout)
+      LOG_ERR("CPT", "OOM: section layout (%u bytes): checkpoints cannot fire", static_cast<unsigned>(sizeof(Layout)));
   }
   LOG_DBG("CPT", "session open checkpoints=%d sha=%s session_bytes=%u layout_bytes=%u", layout ? 1 : 0,
           book ? book->sourceSha256() : "none", static_cast<unsigned>(sizeof(ReadingSession)),
@@ -314,9 +314,9 @@ void notePageMove(reading::ReadingSession& session, const PageMove move) {
   session.clearPageReading();
   if (move == PageMove::NextPage) return;  // ordinary forward reading, asked through nextPageCheckpoint()
   // These never fire, whatever section ends they pass (trigger rule 2).
-  LOG_DBG("CPT", "move source=%s",
-          move == PageMove::PreviousPage ? checkpoint::navSourceName(checkpoint::NavSource::PreviousPage)
-                                         : "chapter-skip");
+  LOG_DBG(
+      "CPT", "move source=%s",
+      move == PageMove::PreviousPage ? checkpoint::navSourceName(checkpoint::NavSource::PreviousPage) : "chapter-skip");
 }
 
 }  // namespace readingsession

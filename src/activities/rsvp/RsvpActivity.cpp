@@ -482,8 +482,8 @@ void RsvpActivity::stopAtCheckpoint() {
   logPause("checkpoint");
   pendingCheckpoint = step;
   checkpointBefore = frame.firstWordIndex;
-  LOG_DBG("RSVP", "leave to=checkpoint ch=%d first=%lu last=%lu", spine, static_cast<unsigned long>(frame.firstWordIndex),
-          static_cast<unsigned long>(frame.lastWordIndex));
+  LOG_DBG("RSVP", "leave to=checkpoint ch=%d first=%lu last=%lu", spine,
+          static_cast<unsigned long>(frame.firstWordIndex), static_cast<unsigned long>(frame.lastWordIndex));
   phase.store(Phase::Checkpoint);
   checkpointPending.store(true);
 }

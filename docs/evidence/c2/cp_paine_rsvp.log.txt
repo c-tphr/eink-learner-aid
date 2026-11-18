@@ -1,0 +1,48 @@
+   0.048 [simtest] run 1: CROSSPOINT_SIM_INPUT_SCRIPT=0:WAIT:\[CPT\] session open checkpoints=1 sha=96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561 ;0:WAIT:Progress saved: spine=0 offset=0 page=0;0:DOWN:80;200:WAIT:Progress saved: spine=1 offset=0 page=0;0:DOWN:80;200:WAIT:Progress saved: spine=1 offset=\d+ page=1;0:DOWN:80;200:WAIT:Progress saved: spine=2 offset=0 page=0;0:DOWN:80;200:WAIT:\[CPT\] sections ch=2 words=19335 sections=23 checkpoints=23 failed=0;0:WAIT:Progress saved: spine=2 offset=\d+ page=1;0:DOWN:80;200:WAIT:Progress saved: spine=2 offset=\d+ page=2;0:DOWN:80;200:WAIT:Progress saved: spine=2 offset=\d+ page=3;0:DOWN:80;200:WAIT:Progress saved: spine=2 offset=\d+ page=4;0:DOWN:80;200:WAIT:\[CPT\] page advance ch=2 first=273 from=273 last=364 step=none;0:WAIT:Progress saved: spine=2 offset=\d+ page=5;0:DOWN:900;1020:WAIT:\[RSVP\] enter ch=2 page_offset=\d+ word=365 .* from=page;0:WAIT:\[CTL\] Pause armed;0:DOWN:900;1020:WAIT:\[RSVP\] play ch=2 word=365 wpm=1000 words_per_update=1;0:WAIT:\[RSVP\] frame ch=2 first=432 last=432 words=1 ;0:WAIT:\[RSVP\] pause reason=checkpoint ch=2 word=433 .* words=68 .* audit=ok ;0:WAIT:\[CPT\] fire source=rsvp-playback checkpoint=c0001 section=s0001 ch=2 last_word=432 resume_ch=2 resume_word=433 crossed=1;0:WAIT:\[CPT\] open checkpoint=c0001 prompts=2 section=s0001 mode=rsvp resume_ch=2 resume_word=433 state=read ;0:WAIT:\[CPT\] screen=Prompt question=1/2 prompt=c0001-p1 recorded=none focus=Reveal ;0:SHOT:/home/user/eink-learner-aid/.claude/worktrees/agent-a071102a75d60a628/build/simtest-report/cp_paine_rsvp/shots/prompt.bmp;120:WAIT:\[CTL\] Prompt armed;0:DOWN:80;200:WAIT:\[CTL\] Prompt focus=SkipPrompt;0:DOWN:80;200:WAIT:\[CTL\] Prompt focus=SkipCheckpoint;0:DOWN:900;1020:WAIT:\[CPT\] end result=skipped prompt=0 ch=2 word=433 mode=rsvp saved=1;0:WAIT:\[RSVP\] pause screen focus=Play refresh=clear status="Checkpoint done · 1000 WPM target · \d+ actual";0:WAIT:\[CTL\] Pause armed;0:SHOT:/home/user/eink-learner-aid/.claude/worktrees/agent-a071102a75d60a628/build/simtest-report/cp_paine_rsvp/shots/rsvp_resume.bmp
+   0.196 [140] [DBG] [ACT] Entering activity: Boot
+   0.261 [205] [DBG] [ACT] Entering activity: EpubReader
+   0.289 [234] [DBG] [CPT] checkpoint data epub/rsvp/checkpoints.json: sections=55 checkpoints=55 prompts=130 sha=96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561 bytes=91475 copy=made book_bytes=72544 ms=11
+   0.289 [234] [DBG] [CPT] session open checkpoints=1 sha=96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561 session_bytes=56 layout_bytes=8120
+   0.316 [261] [DBG] [ERS] Progress saved: spine=0 offset=0 page=0
+   0.443 [387] [DBG] [ERS] Progress saved: spine=1 offset=0 page=0
+   0.627 [571] [DBG] [ERS] Progress saved: spine=1 offset=596 page=1
+   0.850 [794] [DBG] [ERS] Progress saved: spine=2 offset=0 page=0
+   1.043 [987] [DBG] [CPT] sections ch=2 words=19335 sections=23 checkpoints=23 failed=0
+   1.043 [987] [DBG] [CPT] page advance ch=2 first=0 from=0 last=1 step=none
+   1.064 [1009] [DBG] [ERS] Progress saved: spine=2 offset=28 page=1
+   1.243 [1188] [DBG] [CPT] page advance ch=2 first=2 from=2 last=59 step=none
+   1.258 [1203] [DBG] [ERS] Progress saved: spine=2 offset=398 page=2
+   1.443 [1388] [DBG] [CPT] page advance ch=2 first=60 from=60 last=167 step=none
+   1.461 [1406] [DBG] [ERS] Progress saved: spine=2 offset=1025 page=3
+   1.645 [1590] [DBG] [CPT] page advance ch=2 first=168 from=168 last=272 step=none
+   1.673 [1617] [DBG] [ERS] Progress saved: spine=2 offset=1661 page=4
+   1.847 [1791] [DBG] [CPT] page advance ch=2 first=273 from=273 last=364 step=none
+   1.865 [1810] [DBG] [ERS] Progress saved: spine=2 offset=2198 page=5
+   2.650 [2594] [DBG] [ACT] Entering activity: Rsvp
+   2.650 [2594] [DBG] [CPT] mode rsvp source=mode-switch
+   2.650 [2595] [DBG] [RSVP] enter ch=2 page_offset=2198 word=365 chapter_words=19335 activity_bytes=5512 from=page
+   2.970 [2914] [DBG] [CTL] Pause armed
+   3.687 [3631] [DBG] [CTL] Pause select=Play
+   3.689 [3634] [DBG] [RSVP] play ch=2 word=365 wpm=1000 words_per_update=1
+   8.464 [8409] [DBG] [RSVP] frame ch=2 first=430 last=430 words=1 hold=59 ms=2 text="February"
+   8.530 [8475] [DBG] [RSVP] frame ch=2 first=431 last=431 words=1 hold=80 ms=2 text="14,"
+   8.612 [8557] [DBG] [RSVP] frame ch=2 first=432 last=432 words=1 hold=134 ms=2 text="1776"
+   8.749 [8693] [DBG] [CPT] rsvp stop ch=2 last=432 next=433 step=fire
+   8.749 [8693] [DBG] [RSVP] pause reason=checkpoint ch=2 word=433 target=1000 delivered=807.1 words=68 active_ms=5055 updates=68 clears=1 mean_update_ms=2 max_update_ms=7 audit=ok drawn=68 segments=1 violations=0 gaps=0 repeats=0 skipped=0 declared=0
+   8.749 [8693] [DBG] [RSVP] leave to=checkpoint ch=2 first=432 last=432
+   8.770 [8715] [DBG] [CPT] fire source=rsvp-playback checkpoint=c0001 section=s0001 ch=2 last_word=432 resume_ch=2 resume_word=433 crossed=1
+   8.770 [8715] [DBG] [ACT] Entering activity: Checkpoint
+   8.770 [8715] [DBG] [CPT] open checkpoint=c0001 prompts=2 section=s0001 mode=rsvp resume_ch=2 resume_word=433 state=read grades=0 activity_bytes=4032 session_bytes=78056 accepted=1
+   8.771 [8716] [DBG] [CPT] saved after=start prompt=- grade=none active=c0001 prompt_index=0 position=2:432:rsvp ok=1
+   8.777 [8721] [DBG] [CPT] screen=Prompt question=1/2 prompt=c0001-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   9.109 [9053] [DBG] [CTL] Prompt armed
+   9.204 [9149] [DBG] [CTL] Prompt focus=SkipPrompt
+   9.208 [9153] [DBG] [CPT] screen=Prompt question=1/2 prompt=c0001-p1 recorded=none focus=SkipPrompt part=1/1 lines=0 refresh=update
+   9.403 [9348] [DBG] [CTL] Prompt focus=SkipCheckpoint
+   9.408 [9352] [DBG] [CPT] screen=Prompt question=1/2 prompt=c0001-p1 recorded=none focus=SkipCheckpoint part=1/1 lines=0 refresh=update
+  10.233 [10178] [DBG] [CTL] Prompt select=SkipCheckpoint
+  10.233 [10178] [DBG] [CPT] event=skip-checkpoint prompt=c0001-p1 accepted=1 refusal=0 state=finished grade_recorded=0 save=now
+  10.235 [10180] [DBG] [CPT] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=2:433:rsvp ok=1
+  10.235 [10180] [DBG] [CPT] end result=skipped prompt=0 ch=2 word=433 mode=rsvp saved=1
+  10.236 [10180] [DBG] [CPT] resume end=skipped mode=rsvp ch=2 word=433
+  10.554 [10499] [DBG] [CTL] Pause armed
