@@ -173,8 +173,8 @@ TEST(TimedBackend, BenchmarkSeriesGivesMedianAndP95) {
 }
 
 TEST(TimedBackend, OnlyStockOnARealPanelUntilD2) {
-  for (const PanelId panel : {PanelId::UNKNOWN, PanelId::YRD0426, PanelId::DEPG0397, PanelId::OPM040B3,
-                              PanelId::SE0400NQW47}) {
+  for (const PanelId panel :
+       {PanelId::UNKNOWN, PanelId::YRD0426, PanelId::DEPG0397, PanelId::OPM040B3, PanelId::SE0400NQW47}) {
     Rig rig(panel);
     EXPECT_EQ(rig.backend.panel(), panel);
     EXPECT_TRUE(rig.backend.allows(ProfileId::STOCK)) << panelName(panel);

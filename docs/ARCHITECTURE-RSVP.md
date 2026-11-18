@@ -9,12 +9,12 @@ The project's firmware code sits beside upstream CrossPoint, not inside it (`doc
 | `lib/RsvpCore/` | RsvpCore | Word classes, focus letter, pacing, frames, scheduler, delivered-WPM meter. Portable, host-tested (`test/rsvp_core`) | R1, R2 (done) |
 | `lib/CheckpointCore/` | CheckpointCore | Checkpoint file parser, trigger rules, checkpoint and reread state machine, grade rules, state file encoding. Portable, host-tested (`test/checkpoint_core`) | C1a, C1b (done) |
 | `lib/WordIndex/` | WordIndex | Per-chapter word stream with anchors and non-prose markers; page-to-word mapping. Portable, host-tested (`test/word_index`) | R3 (done) |
-| `lib/DisplayProfileCore/` | DisplayProfile (portable part) | Profile table and clearing limits, backend interface, statistics, the `rsvp::DisplaySink` adapter, the simulator timing model, a fake backend. Portable, host-tested (`test/display_profile`) | E3 (done) |
+| `lib/DisplayProfileCore/` | DisplayProfile (portable part) | Profile table and clearing limits, backend interface, statistics (with median and percentiles), the `rsvp::DisplaySink` adapter, the simulator timing model, the device backend's timing and timeout logic, the per-panel record, fakes. Portable, host-tested (`test/display_profile`) | E3 (done), D1 (done) |
 | `src/reading/` | ReadingSession | Position, mode, navigation source, checkpoint firing, saved state. Since R4a also the chapter word index on demand and the page/word and sentence helpers | R4a (#21, index service), C2 (#26), C4, C5 |
 | `src/activities/rsvp/` | RsvpActivity | Word band, pause screen, RSVP settings, touch and keys | R4a (#21), R4b, R5 |
 | `src/controls/` | ControlMap | The single binding table (key roles, timings, event-to-action bindings, touch zones) and the input adapter (`docs/spikes/S4-control-map.md`, section 7) | R4a (#21), C3, C4, D3a |
 | `src/activities/checkpoint/` | CheckpointActivity | Prompt, reveal, grade, reread choice, skip | C3 (#27), C4 |
-| `src/display/` | DisplayProfile | Millisecond clock, simulator backend (modelled timing), placeholder device backend, a temporary simulator self-test | E3 (done), D1, D2 |
+| `src/display/` | DisplayProfile | Millisecond clock, simulator backend (modelled timing), device backend (the stock profile's refresh, timed), a temporary simulator self-test | E3 (done), D1 (done), D2 |
 | `src/activities/devicetest/` | DeviceTestActivity | Benchmark sweep, ratings, guided acceptance, results files | D3a (#32), D3b |
 | `lib/UpdatePolicy/` | (two-slot build) | Self-update slot policy and the Wi-Fi updater's release source, asset name and version rule. Portable, host-tested (`test/update_policy`) | D4 (done) |
 | `src/update/` | (two-slot build) | Reads the running partition table through ESP-IDF and gates the update menus, the boot recovery picker and every update write; points the Wi-Fi updater at this repository | D4 (done) |

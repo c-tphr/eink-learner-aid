@@ -113,10 +113,10 @@ TEST(RefreshStats, WindowKeepsTheMostRecentSamples) {
   for (uint32_t i = 0; i < window; ++i) s.add(i + 1);
   EXPECT_EQ(s.count, 2 * window);
   EXPECT_EQ(s.windowCount(), RefreshStats::SAMPLE_WINDOW);
-  EXPECT_EQ(s.percentileMs(100), window);  // no 1000 left in the window
-  EXPECT_EQ(s.maxMs, 1000u);               // but the cumulative figures keep it
+  EXPECT_EQ(s.percentileMs(100), window);   // no 1000 left in the window
+  EXPECT_EQ(s.maxMs, 1000u);                // but the cumulative figures keep it
   EXPECT_EQ(s.medianMs(), window / 2 + 1);  // (64 + 65) / 2 rounded half up
-  s.add(500);  // wraps: overwrites the oldest sample, 1
+  s.add(500);                               // wraps: overwrites the oldest sample, 1
   EXPECT_EQ(s.windowCount(), RefreshStats::SAMPLE_WINDOW);
   EXPECT_EQ(s.percentileMs(1), 3u);  // rank ceil(1.28) = 2 among 2..128 and 500
   EXPECT_EQ(s.percentileMs(100), 500u);

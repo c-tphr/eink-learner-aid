@@ -2,18 +2,21 @@
 
 The hardware-free part of **DisplayProfile** (plan sections 6 and 9; `docs/spikes/S2-waveforms.md`,
 sections 8 and 9): the display profiles and their clearing limits, the backend interface RSVP draws
-through, refresh statistics, the simulator's timing model, and a fake backend for host tests. The
-firmware part (the millisecond clock, the simulator backend, the device backend, the self-test) is
-in `src/display/`. Host-tested in `test/display_profile`.
+through, refresh statistics, the simulator's timing model, the device backend's timing logic, what
+the backend does on each panel, and fakes for host tests. The firmware part (the millisecond clock,
+the simulator backend, the device backend's two hardware calls, the self-test) is in `src/display/`.
+Host-tested in `test/display_profile`.
 
 | File | What it holds |
 | --- | --- |
 | `DisplayProfiles.h/.cpp` | `ProfileId`, `ProfileInfo`, `PROFILES` (ids, names, clearing limits, simulator defaults), `findProfile`, `PanelId`, `panelName`, `panelFromVariant`, `defaultProfileAllowed` |
 | `DisplayBackend.h/.cpp` | `DisplayBackend` (the interface and its calling contract), `Presenter`, `Sleeper`, `ModelledCall`, `ModelledBackend` |
-| `DisplayStats.h/.cpp` | `RefreshStats` (count, min, max, mean, last), `DisplayStats` (updates, clears) |
+| `DisplayStats.h/.cpp` | `RefreshStats` (count, min, max, mean, last, timeouts, and median and percentiles over the last 128 calls), `DisplayStats` (updates, clears) |
+| `TimedBackend.h/.cpp` | The device backend's logic (task D1): `RefreshPort` (the two hardware calls), `TimedBackend` (timing window, timeouts), `UPDATE_TIMEOUT_MS`, `CLEAR_TIMEOUT_MS`, `TimedCall` |
+| `PanelRecords.h/.cpp` | `Controller`, `PanelRecord`, `PANEL_RECORDS` (one per panel: controller, recognised, async split, predicted times, waveforms), `panelRecord`, `resolvePanel` |
 | `DisplayTiming.h/.cpp` | The timing model: `TimingModel`, `TimingFile`, `TimingOverrides`, `parseOverrideMs`, `checkTimingFile`, `remainderToSleepMs` |
 | `ProfileDisplaySink.h/.cpp` | `ProfileDisplaySink` (an `rsvp::DisplaySink` over a backend) and `FramePainter` |
-| `FakeDisplayBackend.h` | Host tests only: `FakeClock`, `FakeDisplayBackend` (the modelled backend with a fake presenter and sleeper, and an event log) |
+| `FakeDisplayBackend.h` | Host tests only: `FakeClock`, `FakeDisplayBackend` (the modelled backend with a fake presenter and sleeper, and an event log), `FakeRefreshPort` (the device backend's hardware calls, with a transfer time, a BUSY time and a pending refresh) |
 
 Everything is in namespace `displayprofile`. It depends on `lib/RsvpCore` headers only
 (`ClearingLimits`, `Clock`, `DisplaySink`, `Frame`). Like RsvpCore it has no Arduino, HAL, SDK,
@@ -65,7 +68,7 @@ tried there), and allows no trial on a real panel. D2 overrides it on the device
 | `profile()`, `info()` | The selected profile and its table entry |
 | `update()` | Presents the frame buffer as one word update; blocks until finished; returns ms |
 | `clear()` | One clearing refresh; blocks until finished; returns ms |
-| `stats()`, `resetStats()` | Count, min, max, mean and last duration of updates and of clears |
+| `stats()`, `resetStats()` | Count, min, max, mean, last, median, percentiles and timeouts of updates and of clears |
 
 The calling contract (who draws, who refreshes, which task, blocking) is at the top of
 `DisplayBackend.h` and repeated in `src/display/DisplayProfile.h`. In short: the caller draws the
@@ -171,10 +174,62 @@ Check a file by hand: `python3 scripts/display_timings.py check [FILE]`.
 
 ## Statistics
 
-`RefreshStats::add()` keeps count, min, max, last and a 64-bit total; `meanMs()` rounds half up.
-`DisplayBackend` keeps one for updates and one for clears, from construction or `resetStats()`. The
-pause screen can show the last or mean update time; D3a's benchmark adds its percentiles on top.
-`src/display/DisplayProfile.h`'s `logStats()` logs them as one line.
+`RefreshStats::add()` keeps count, min, max, last and a 64-bit total over every call; `meanMs()`
+rounds half up. It also keeps the last `SAMPLE_WINDOW` (128) durations in a fixed ring of 16-bit
+values, for:
+
+- `medianMs()`: the middle duration, or the mean of the two middle ones rounded half up;
+- `percentileMs(p)`: nearest rank, the smallest duration that at least p % of the window do not
+  exceed (`percentileMs(95)` is the 95th percentile, `percentileMs(100)` the window's maximum).
+
+Both are exact while the window holds every call since `resetStats()`: the benchmark's largest
+series is 100 updates (plan section 10), so D3a resets before each series and reads exact figures.
+Over a longer run they describe the most recent 128 calls; count, min, max and mean still cover all
+of them. A duration above 65,535 ms is kept as 65,535 in the window only. `timeouts` counts calls
+the device backend classed as timed out (below); their durations are recorded like any other call.
+
+`DisplayBackend` keeps one `RefreshStats` for updates and one for clears, from construction or
+`resetStats()`. RAM: `sizeof(DisplayStats)` is 576 bytes (2 x 256-byte window plus counters), inside
+the one backend object, allocated statically; no heap. The median and percentiles are computed
+when asked (a selection over the window, at most 16,384 comparisons, no copy and no stack buffer),
+never per refresh. `src/display/DisplayProfile.h`'s `logStats()` logs them as one line.
+
+## Device backend logic
+
+`TimedBackend` is the device backend without hardware: `src/display/DeviceDisplayBackend` is this
+with a `RefreshPort` over `HalDisplay` and the renderer, and `MillisClock`; the host tests use
+`FakeRefreshPort` and `FakeClock`. Each `update()` or `clear()`:
+
+1. calls `RefreshPort::finishPending()`, which returns once no refresh started elsewhere is still
+   running (device: `HalDisplay::waitRefreshComplete()`). Time spent here is `TimedCall::waitedMs`
+   and is not part of the call's duration;
+2. reads the clock, calls `RefreshPort::refresh(kind)` (the frame transfer, then the driver's wait
+   for BUSY), reads the clock again: that difference is the duration returned and recorded;
+3. classes the call as timed out when it lasted `UPDATE_TIMEOUT_MS` (5,000 ms) or longer for an
+   update, `CLEAR_TIMEOUT_MS` (10,000 ms) for a clear, and counts it in `stats().<kind>.timeouts`.
+
+The limits equal the largest medians the timings file accepts, so a measured median is never a
+timeout. Why a timeout can only be classed after the call returns, and why the call does return:
+`src/display/README.md`, "Timeouts".
+
+## Panel records
+
+`PANEL_RECORDS` holds one `PanelRecord` per panel the SDK's Picco probe can report (`UNKNOWN`,
+`YRD0426`, `DEPG0397`, `OPM040B3`, `SE0400NQW47`) plus the simulator. It is the one place D2 and D3a
+read from:
+
+| Field | Meaning |
+| --- | --- |
+| `controller` | The SDK driver for the panel: `SSD1677` for the three SSD1677 panels and for an unrecognised one (generic configuration), `SSD2677` for SE0400NQW47 |
+| `recognised` | One of the four panels with stock Picco waveforms. D2 keeps every trial off on an unrecognised panel |
+| `asyncSplit` | `displayBufferAsync()` returns before the waveform ends and the driver keeps its own previous frame, so a benchmark can time transfer and waveform apart: the three recognised SSD1677 panels only |
+| `predictedUpdateMs`, `predictedClearMs` | S2's waveform-only predictions (DEPG0397: 380 and 960 ms); 0 where the SDK runs OTP or undocumented tables |
+| `updateWaveform`, `clearWaveform` | What a stock word update and a clearing refresh run, as text for logs and results files |
+
+`resolvePanel(variant, driverName)` gives the panel the device backend acts on: the probe's variant
+(`BoardConfig::ACTIVE.displayControllerVariant`), kept only when the driver the SDK selected
+(`HalDisplay::controllerName()`) is the record's controller. Anything else is `UNKNOWN`: the stock
+path, no trial. The per-call behaviour with source lines is in `src/display/README.md`.
 
 ## What later tasks do with this
 
@@ -184,10 +239,13 @@ pause screen can show the last or mean update time; D3a's benchmark adds its per
   and use `MillisClock` as the scheduler's clock. Run `clear()` (with the pause screen drawn) on
   pause and before the first update of a playback. Remove the self-test hook and its `main.cpp`
   call when the activity scenario covers the timing model.
-- **D1:** replace `DeviceDisplayBackend`'s placeholder refresh with stock's real path (FAST inside
-  `ReaderRefreshScope`, HALF to clear), keep returning the measured `millis()` duration.
-- **D2:** load and release trial tables in `presentUpdate()`, release before `presentClear()`,
-  and override `allows()` with S2's rule. The fake's event log can check the safety sequence on the
-  host (`FakeDisplayBackend::events`).
+- **D1 (done):** `DeviceDisplayBackend` runs stock's real path (FAST with the reader flag, HALF to
+  clear) through `TimedBackend`, with timeouts, percentiles and the panel records.
+- **D2:** load and release trial tables around the port's refresh (a second `RefreshPort` call, or
+  a port that knows the selected profile), release before a clear, and override `allows()` with
+  S2's rule, reading `panelRecord(panel()).recognised` and `controller`. The fakes' logs can check
+  the safety sequence on the host (`FakeDisplayBackend::events`, `FakeRefreshPort::log`).
+- **D3a:** reset the statistics before each series and read `medianMs()`, `percentileMs(95)`,
+  `maxMs` and `timeouts`; record `panelName(panel())` and the record's `controller`.
 - **Device session:** commit `docs/device/picco-timings.json` from the benchmark; the next simulator
   build uses it.

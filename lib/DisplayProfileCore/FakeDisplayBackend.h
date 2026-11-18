@@ -11,6 +11,13 @@
 //
 // The event log records every select, update and clear with its profile and clock times, so tests
 // can check call sequences (for example that a clear runs on pause, as D2's safety rules require).
+//
+// FakeRefreshPort (at the end) is the device backend's hardware side for TimedBackend tests:
+//
+//   FakeRefreshPort port(clock);
+//   TimedBackend display(port, clock, PanelId::DEPG0397);
+//   port.updateTransferMs = 38; port.updateBusyMs = 380;
+//   display.update();                           // returns 418, the transfer start to BUSY end
 
 #include <Clock.h>
 

@@ -36,7 +36,8 @@ DeviceDisplayBackend::DeviceDisplayBackend(GfxRenderer& renderer)
                    resolvePanel(BoardConfig::ACTIVE.displayControllerVariant, display.controllerName())) {
   const PanelRecord& record = panelRecord(panel());
   const char* driver = display.controllerName();
-  LOG_DBG("DSP", "Device backend: panel=%s variant=%u driver=%s recognised=%d async_split=%d update=\"%s\" clear=\"%s\"",
+  LOG_DBG("DSP",
+          "Device backend: panel=%s variant=%u driver=%s recognised=%d async_split=%d update=\"%s\" clear=\"%s\"",
           panelName(panel()), static_cast<unsigned>(BoardConfig::ACTIVE.displayControllerVariant),
           driver != nullptr ? driver : "none", record.recognised ? 1 : 0, record.asyncSplit ? 1 : 0,
           record.updateWaveform, record.clearWaveform);
@@ -63,8 +64,7 @@ void DeviceDisplayBackend::logCall() {
   logRefresh(*this, call.kind, call.ms);
   if (call.timedOut) {
     LOG_ERR("DSP", "%s timed out: ms=%lu limit=%lu panel=%s; the panel's BUSY line did not report the end", kind,
-            static_cast<unsigned long>(call.ms), static_cast<unsigned long>(timeoutMs(call.kind)),
-            panelName(panel()));
+            static_cast<unsigned long>(call.ms), static_cast<unsigned long>(timeoutMs(call.kind)), panelName(panel()));
   }
 }
 
