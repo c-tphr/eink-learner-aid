@@ -73,6 +73,15 @@ InputFrame ControlInput::sample() const {
     f.x = clampCoordinate(x);
     f.y = clampCoordinate(y);
   }
+  int swipeX = 0;
+  int swipeY = 0;
+  const MappedInputManager::SwipeDir swipe = input.wasSwipe(&swipeX, &swipeY);
+  if (swipe == MappedInputManager::SwipeDir::Up || swipe == MappedInputManager::SwipeDir::Down) {
+    f.swipeUp = swipe == MappedInputManager::SwipeDir::Up;
+    f.swipeDown = !f.swipeUp;
+    f.x = clampCoordinate(swipeX);
+    f.y = clampCoordinate(swipeY);
+  }
   f.back = input.wasPressed(Btn::Back);
   f.home = input.wasHomeGesture();
   return f;

@@ -16,8 +16,9 @@ namespace reading {
 // offset. wordCount() when the page holds no word (or on a read error).
 uint32_t entryWord(wordindex::WordIndexReader& reader, uint32_t pageStartOffset);
 
-// Where RSVP opens (task R4b; src/activities/rsvp/README.md, "Where RSVP opens").
-enum class EntryFrom : uint8_t { Page, Saved, Resumed };
+// Where RSVP opens (task R4b; src/activities/rsvp/README.md, "Where RSVP opens"). Continued: after
+// a non-prose item shown in page view, at the first prose word after it (task R5).
+enum class EntryFrom : uint8_t { Page, Saved, Resumed, Continued };
 struct EntryChoice {
   uint32_t word;
   EntryFrom from;
@@ -44,6 +45,14 @@ const char* entryFromName(EntryFrom from);
 // The visible offset page view jumps to for `position` (the next word RSVP would show): that word's
 // start, or the last word's start when `position` is at the chapter end. False for an empty chapter.
 bool pageViewOffset(wordindex::WordIndexReader& reader, uint32_t position, uint32_t& offset);
+
+// The image, table or code block RSVP stopped before (task R5): the first such marker outside the
+// notes that starts at or after word `from` and not after word `next` (the first prose word after
+// the stop). When several items follow each other with no prose between, this is the first of them.
+// False when there is none or on a read error.
+bool itemBefore(wordindex::WordIndexReader& reader, uint32_t from, uint32_t next, wordindex::Marker& out);
+// "image", "table" or "code" for the log lines.
+const char* itemKindName(uint8_t kind);
 
 // Progress through the chapter, 0..100, for the pause screen.
 uint8_t chapterPercent(uint32_t position, uint32_t wordCount);

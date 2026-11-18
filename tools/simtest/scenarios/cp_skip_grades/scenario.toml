@@ -1,0 +1,113 @@
+# Grades across skips, restarts and later passes (task C3a; docs/PLAN.md section 7, grade rules and
+# "every transition saves state first"). The prepared fixture's three-prompt checkpoint c0002 opens
+# through the temporary simulator entry each time the book opens; each run ends with SIGKILL (no
+# shutdown code runs) right after a screen has appeared, so the state file read after the kill is
+# what was written before that screen showed.
+#
+# Run 1: p1 Incorrect, Continue; p2 Skip question; the p3 prompt appears; kill.
+#        File: p1 incorrect, p2 ungraded, the checkpoint in progress at prompt 3 (index 2).
+# Run 2: the checkpoint opens again at p1, shown as "Recorded earlier: Incorrect". Correct this time;
+#        the p2 prompt appears; kill. File: p1 still incorrect (the first grade survives).
+# Run 3: p1 Skip question; p2 Correct (a prompt skipped before takes its first grade); the p3 prompt
+#        appears; kill. File: p2 correct.
+# Run 4: p1 and p2 Skip question; p3 Skip checkpoint. File: p3 never graded, nothing in progress, the
+#        reading position after the section's break (chapter 3, word 0).
+description = "Skipped prompts stay ungraded, the first grade survives a later different answer, every grade is in the file before the next screen"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0", CROSSPOINT_SIM_CHECKPOINT = "c0002" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+]
+
+steps = [
+  # Run 1.
+  { wait_log = "\\[CPT\\] checkpoint data OEBPS/rsvp/checkpoints.json: .* copy=made" },
+  { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=page resume_ch=3 resume_word=0 state=missing grades=0 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CPT\\] saved after=incorrect prompt=c0002-p1 grade=incorrect active=c0002 prompt_index=0 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect " },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 440], note = "Continue" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [364, 712], note = "Skip question" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal " },
+  { kill = true, note = "right after the p3 prompt appeared" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "incorrect" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint/id", equals = "c0002" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint/prompt_index", equals = 2 },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint/resume", equals = { chapter = 3, word = 0, mode = "page" } },
+  { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_skip_grades/run1.schema.json", note = "p2 was skipped: no grade" },
+
+  # Run 2.
+  { start = true },
+  { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
+  { press = "ENTER", note = "reopen the book; the entry opens c0002 again" },
+  { wait_log = "\\[CPT\\] checkpoint data OEBPS/rsvp/checkpoints.json: .* copy=cached" },
+  { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=page .* state=read grades=1 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { screen_has = "Recorded earlier: Incorrect" },
+  { shot = "run2_prompt1_recorded" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [120, 620], note = "Correct, this time" },
+  { wait_log = "\\[CPT\\] event=correct prompt=c0002-p1 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now" },
+  { wait_log = "\\[CPT\\] saved after=correct prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { kill = true },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "incorrect", note = "the first grade survives a different second answer" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint/prompt_index", equals = 1 },
+  { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_skip_grades/run1.schema.json" },
+
+  # Run 3.
+  { start = true },
+  { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
+  { press = "ENTER", note = "reopen the book; the entry opens c0002 again" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [364, 712], note = "Skip question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [120, 620], note = "Correct" },
+  { wait_log = "\\[CPT\\] saved after=correct prompt=c0002-p2 grade=correct active=c0002 prompt_index=2 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal " },
+  { kill = true },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "incorrect" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p2/first", equals = "correct", note = "a prompt skipped earlier takes its first grade" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint/prompt_index", equals = 2 },
+
+  # Run 4.
+  { start = true },
+  { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
+  { press = "ENTER", note = "reopen the book; the entry opens c0002 again" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [364, 712], note = "Skip question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=correct focus=Reveal " },
+  { screen_has = "Recorded earlier: Correct" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [364, 712], note = "Skip question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=3:0:page ok=1" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=2 ch=3 word=0 mode=page saved=1" },
+  { quit = true },
+  { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_skip_grades/final.schema.json", note = "p3 never graded; nothing in progress" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "incorrect" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p2/first", equals = "correct" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "page" } },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/book_sha256", equals = "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+  { expect_no_file = "books/fixture.prepared.epub.rsvp-state.json.*", note = "no temporary or set-aside file left" },
+  { compare = "run2_prompt1_recorded" },
+]

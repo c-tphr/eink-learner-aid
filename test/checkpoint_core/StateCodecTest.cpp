@@ -145,7 +145,7 @@ TEST(StateCodec, PlanExampleDecodesAndReencodesToTheSameDocument) {
   // The example as written has a placeholder hash, which is refused.
   auto raw = std::make_unique<BookState>();
   std::string placeholder = example;
-  placeholder.replace(placeholder.find(SHA), SHA.size(), "<hash of the prepared file's source>");
+  placeholder.replace(placeholder.find(SHA), SHA.size(), "<the checkpoint file's book.source_sha256>");
   EXPECT_EQ(decodeString(placeholder, *raw).status, DecodeStatus::Schema);
 }
 

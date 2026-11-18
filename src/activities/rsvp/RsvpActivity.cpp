@@ -66,6 +66,10 @@ bool reached(const uint32_t now, const uint32_t at) { return static_cast<int32_t
 
 const char* itemLabel(const Item item) {
   switch (item) {
+    case Item::Continue:
+      return tr(STR_RSVP_CONTINUE);
+    case Item::Stay:
+      return tr(STR_RSVP_STAY);
     case Item::Exit:
       return tr(STR_RSVP_EXIT);
     case Item::Menu:
@@ -87,6 +91,25 @@ const char* itemLabel(const Item item) {
     case Item::WordsDown:
     case Item::WordsUp:
       return nullptr;  // a drawn minus or plus
+    case Item::Reveal:
+    case Item::SkipPrompt:
+    case Item::SkipCheckpoint:
+    case Item::AnswerBox:
+    case Item::Correct:
+    case Item::Incorrect:
+    case Item::RereadRsvp:
+    case Item::RereadPage:
+    case Item::ContinueOn:
+    case Item::ChoiceRow0:
+    case Item::ChoiceRow1:
+    case Item::ChoiceRow2:
+    case Item::ChoiceRow3:
+    case Item::ChoiceRow4:
+    case Item::ChoiceRow5:
+    case Item::ChoiceRow6:
+    case Item::ChoiceRow7:
+    case Item::ControlsFinish:
+      break;  // checkpoint and device test screens draw their own labels
   }
   return "";
 }
@@ -226,6 +249,8 @@ void RsvpActivity::render(RenderLock&&) {
     case Phase::Playing:
       stepOnce();
       return;
+    case Phase::Leaving:
+      return;
   }
 }
 
@@ -277,6 +302,13 @@ reading::SavedWord RsvpActivity::loadState() {
 void RsvpActivity::load() {
   scheduler.resetSession();
   focus = controls::PAUSE.defaultIndex;
+  if (entry.after) {
+    loadContinued();
+    drawPauseScreen(true);
+    phase.store(Phase::Paused);
+    guardRestartPending.store(true);
+    return;
+  }
   const reading::SavedWord saved = loadState();
   if (entry.resume && saved.valid && saved.chapter < epub->getSpineItemsCount()) spine = saved.chapter;
   if (openChapter(spine)) {
@@ -297,9 +329,34 @@ void RsvpActivity::load() {
   guardRestartPending.store(true);
 }
 
+void RsvpActivity::loadContinued() {
+  // Continue on the banner over a non-prose item: the same session, at the first prose word after the
+  // item, with the pace that was in use (README.md, "Non-prose items"). The state file already holds
+  // this position.
+  const rsvpentry::ItemStop& item = entry.after->item;
+  values = item.values;
+  scheduler.setWpm(values.wpm);
+  scheduler.setWordsPerFrame(values.wordsPerUpdate);
+  spine = entry.after->spineIndex;
+  if (!openChapter(spine)) {
+    note = Note::ChapterFailed;
+    LOG_ERR("RSVP", "enter ch=%d failed: no word index", spine);
+    return;
+  }
+  source.seek(item.nextWord);
+  scheduler.reposition();
+  scheduler.continueSession(item.meter, item.audit, item.afterNonProseStop);
+  LOG_DBG("RSVP", "enter ch=%d page_offset=%lu word=%lu chapter_words=%lu activity_bytes=%u from=%s", spine,
+          static_cast<unsigned long>(entry.pageStartOffset), static_cast<unsigned long>(source.position()),
+          static_cast<unsigned long>(index.reader().wordCount()), static_cast<unsigned>(sizeof(RsvpActivity)),
+          reading::entryFromName(reading::EntryFrom::Continued));
+}
+
 void RsvpActivity::startPlayback() {
   note = Note::None;
   status = Status::Paused;
+  timeoutWatch.arm(backend.stats().updates.timeouts);
+  timeoutPause = false;
   if (!playbackScreenShown) {
     paintPlaybackScreen();
     backend.clear();
@@ -317,20 +374,34 @@ void RsvpActivity::stepOnce() {
   if (reached(static_cast<uint32_t>(millis()), lastLoopMs.load() + COVERED_MS)) {
     scheduler.requestPause();  // another screen covered this one
   }
-  const rsvp::StepResult r = scheduler.step();
+  rsvp::StepResult r = scheduler.step();
   switch (r.event) {
     case rsvp::StepEvent::SHOWED_FRAME:
       logFrame();
+      if (timeoutWatch.rose(backend.stats().updates.timeouts)) {
+        // The panel took 5 s or more: pause before the next word rather than risk that per word.
+        LOG_ERR("RSVP", "display timeout ch=%d word=%lu: pausing", spine,
+                static_cast<unsigned long>(source.position()));
+        scheduler.requestPause();
+        timeoutPause = true;
+        r.wakeAtMs = static_cast<uint32_t>(millis());
+      }
       break;
     case rsvp::StepEvent::CLEARED:
       LOG_DBG("RSVP", "clear ch=%d ms=%lu", spine, static_cast<unsigned long>(backend.stats().clears.lastMs));
       break;
     case rsvp::StepEvent::PAUSED:
-      enterPause(Note::None, "pause");
+      if (timeoutPause) {
+        enterPause(Note::DisplayTimeout, "display-timeout");
+      } else {
+        enterPause(Note::None, "pause");
+      }
       return;
     case rsvp::StepEvent::STOPPED:
-      if (r.stops & (rsvp::STOP_NON_PROSE | rsvp::STOP_CHECKPOINT)) {
-        enterPause(Note::ItemSkipped, "non-prose");
+      if (r.stops & rsvp::STOP_CHECKPOINT) {
+        enterPause(Note::None, "checkpoint");  // checkpoints are task C2's
+      } else if (r.stops & rsvp::STOP_NON_PROSE) {
+        showItem(scheduler.lastFrame().lastWordIndex + 1, true);
       } else {
         advanceChapter();
       }
@@ -346,6 +417,7 @@ void RsvpActivity::enterPause(const Note pauseNote, const char* reason) {
   playing.store(false);
   wakeValid.store(false);
   pauseRequested.store(false);
+  timeoutPause = false;
   note = pauseNote;
   focus = controls::PAUSE.defaultIndex;
   logPause(reason);
@@ -353,6 +425,44 @@ void RsvpActivity::enterPause(const Note pauseNote, const char* reason) {
   savePosition(checkpoint::ReadingMode::Rsvp, reason);
   phase.store(Phase::Paused);
   guardRestartPending.store(true);
+}
+
+void RsvpActivity::showItem(const uint32_t from, const bool afterStop) {
+  const uint32_t next = source.position();
+  wordindex::Marker marker;
+  if (!reading::itemBefore(index.reader(), from, next, marker)) {
+    LOG_ERR("RSVP", "non-prose stop ch=%d word=%lu: no item found", spine, static_cast<unsigned long>(next));
+    enterPause(Note::None, "non-prose");
+    return;
+  }
+  playing.store(false);
+  wakeValid.store(false);
+  pauseRequested.store(false);
+  timeoutPause = false;
+  // The meter and audit of the session so far; the item's viewing time is outside it (README.md).
+  logPause("non-prose");
+  // Reopening the book while page view shows the item continues after it, in RSVP.
+  savePosition(checkpoint::ReadingMode::Rsvp, "non-prose");
+
+  rsvpentry::ItemStop& item = handOff->item;
+  item.kind = marker.kind;
+  item.nextWord = next;
+  item.values = values;
+  item.meter = scheduler.meter();
+  item.audit = scheduler.audit();
+  item.afterNonProseStop = afterStop;
+  handOff->then = rsvpentry::HandOff::Then::ShowItem;
+  handOff->spineIndex = spine;
+  handOff->visibleTextOffset = marker.offsetStart;
+  LOG_DBG("RSVP", "leave to=item kind=%s ch=%d word=%lu offset=%lu", reading::itemKindName(marker.kind), spine,
+          static_cast<unsigned long>(next), static_cast<unsigned long>(marker.offsetStart));
+  if (backend.info().experimental) {
+    // A trial waveform is always followed by a clearing refresh when playback ends (plan section 6).
+    renderer.clearScreen();
+    backend.clear();
+  }
+  phase.store(Phase::Leaving);
+  leavePending.store(true);
 }
 
 void RsvpActivity::advanceChapter() {
@@ -393,14 +503,10 @@ void RsvpActivity::advanceChapter() {
   savePosition(checkpoint::ReadingMode::Rsvp, "chapter");
   // An image, table or code block before the first prose word cannot be flagged by the source.
   wordindex::Marker marker;
-  const uint8_t nonProse = wordindex::kindBit(wordindex::MARKER_IMAGE) | wordindex::kindBit(wordindex::MARKER_TABLE) |
-                           wordindex::kindBit(wordindex::MARKER_CODE);
-  const bool leadingItem = index.reader().nextMarker(0, nonProse, marker) &&
-                           (marker.flags & wordindex::MARKER_IN_NOTE) == 0 && marker.wordStart <= source.position();
   if (pauseRequested.load()) {
     enterPause(Note::None, "pause");
-  } else if (leadingItem) {
-    enterPause(Note::ItemSkipped, "non-prose");
+  } else if (reading::itemBefore(index.reader(), 0, source.position(), marker)) {
+    showItem(0, false);
   } else {
     startPlayback();
     wakeAtMs.store(static_cast<uint32_t>(millis()));
@@ -528,8 +634,8 @@ void RsvpActivity::paintPauseScreen() {
 
   const char* noteText = nullptr;
   switch (note) {
-    case Note::ItemSkipped:
-      noteText = tr(STR_RSVP_ITEM_SKIPPED);
+    case Note::DisplayTimeout:
+      noteText = tr(STR_RSVP_DISPLAY_TIMEOUT);
       break;
     case Note::EndOfBook:
       noteText = tr(STR_RSVP_END_OF_BOOK);
@@ -621,6 +727,9 @@ void RsvpActivity::loop() {
       return;
     case Phase::Paused:
       loopPaused();
+      return;
+    case Phase::Leaving:
+      if (leavePending.exchange(false)) finish();
       return;
     case Phase::Loading:
       return;
@@ -725,6 +834,28 @@ void RsvpActivity::activate(const Item item) {
     case Item::SaveBook:
       saveForBook();
       return;
+    case Item::Continue:
+    case Item::Stay:
+      return;  // banner items (ItemBanner.cpp)
+    case Item::Reveal:
+    case Item::SkipPrompt:
+    case Item::SkipCheckpoint:
+    case Item::AnswerBox:
+    case Item::Correct:
+    case Item::Incorrect:
+    case Item::RereadRsvp:
+    case Item::RereadPage:
+    case Item::ContinueOn:
+    case Item::ChoiceRow0:
+    case Item::ChoiceRow1:
+    case Item::ChoiceRow2:
+    case Item::ChoiceRow3:
+    case Item::ChoiceRow4:
+    case Item::ChoiceRow5:
+    case Item::ChoiceRow6:
+    case Item::ChoiceRow7:
+    case Item::ControlsFinish:
+      return;  // not on the pause screen
   }
 }
 

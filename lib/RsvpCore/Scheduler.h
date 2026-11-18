@@ -88,6 +88,13 @@ class Scheduler {
   // Starts a new meter session and a new audit. Call while not playing.
   void resetSession();
 
+  // Carries on a session that another scheduler stopped (RSVP closed to show a non-prose item in
+  // page view, then reopened after it): the meter and audit as they were at the stop. Call after
+  // moving the source to the word after the stop and calling reposition(), while not playing.
+  // `afterNonProse`: the stop was STOP_NON_PROSE, so the next play() allows the audit's one forward
+  // skip, as play() at that stop would have; the audit's open segment carries on.
+  void continueSession(const DeliveredWpmMeter& meter, const WordOrderAudit& audit, bool afterNonProse);
+
   // --- Safe from any task ---
 
   // Asks playback to pause. Takes effect at the next step(), before any further frame is drawn,

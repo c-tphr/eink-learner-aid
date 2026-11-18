@@ -1,0 +1,30 @@
+{
+  "description": "The fixture's state file after cp_screens_touch and cp_screens_keys: exactly these first grades (c0002-p3 was only skipped, so it has none), each with the grade time when the clock is set.",
+  "type": "object",
+  "required": ["version", "book_sha256", "grades"],
+  "properties": {
+    "version": { "const": 1 },
+    "book_sha256": { "const": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+    "grades": {
+      "type": "object",
+      "required": ["c0001-p1", "c0002-p1", "c0002-p2"],
+      "additionalProperties": false,
+      "properties": {
+        "c0001-p1": { "type": "object" },
+        "c0002-p1": { "type": "object" },
+        "c0002-p2": { "type": "object" }
+      },
+      "patternProperties": {
+        "^c000[12]-p[0-9]$": {
+          "type": "object",
+          "required": ["first"],
+          "additionalProperties": false,
+          "properties": {
+            "first": { "enum": ["correct", "incorrect"] },
+            "at": { "type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$" }
+          }
+        }
+      }
+    }
+  }
+}

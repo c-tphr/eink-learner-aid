@@ -31,6 +31,10 @@ int indexOf(const Screen& screen, const Item item) {
 
 const char* itemName(const Item item) {
   switch (item) {
+    case Item::Continue:
+      return "Continue";
+    case Item::Stay:
+      return "Stay";
     case Item::Exit:
       return "Exit";
     case Item::Menu:
@@ -73,6 +77,25 @@ const char* itemName(const Item item) {
       return "Row7";
     case Item::ControlsFinish:
       return "ControlsFinish";
+    // Checkpoint screens (task C3a).
+    case Item::Reveal:
+      return "Reveal";
+    case Item::SkipPrompt:
+      return "SkipPrompt";
+    case Item::SkipCheckpoint:
+      return "SkipCheckpoint";
+    case Item::AnswerBox:
+      return "AnswerBox";
+    case Item::Correct:
+      return "Correct";
+    case Item::Incorrect:
+      return "Incorrect";
+    case Item::RereadRsvp:
+      return "RereadRsvp";
+    case Item::RereadPage:
+      return "RereadPage";
+    case Item::ContinueOn:
+      return "Continue";
   }
   return "?";
 }

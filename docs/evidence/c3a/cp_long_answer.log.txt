@@ -1,0 +1,65 @@
+   0.815 [742] [DBG] [CPT] checkpoint data epub/rsvp/checkpoints.json: sections=55 checkpoints=55 prompts=130 sha=96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561 bytes=91475 copy=made book_bytes=72544 ms=13
+   0.824 [751] [DBG] [CPT] sim entry checkpoint=c0038 mode=page ch=6 start=8225 end=8704
+   0.839 [766] [DBG] [CPT] open checkpoint=c0038 prompts=1 section=s0038 mode=page resume_ch=7 resume_word=0 state=missing grades=0 activity_bytes=4016 session_bytes=78056 accepted=1
+   0.844 [770] [DBG] [CPT] saved after=start prompt=- grade=none active=c0038 prompt_index=0 position=none ok=1
+   0.847 [774] [DBG] [CPT] screen=Prompt question=1/1 prompt=c0038-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   1.170 [1096] [DBG] [CTL] Prompt armed
+   1.272 [1199] [DBG] [CTL] Prompt select=Reveal
+   1.272 [1199] [DBG] [CPT] event=reveal prompt=c0038-p1 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+   1.277 [1203] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=1/3 lines=23 refresh=clear
+   1.589 [1516] [DBG] [CTL] Answer armed
+   1.691 [1617] [DBG] [CTL] Answer select=AnswerBox
+   1.691 [1618] [DBG] [CPT] answer part=2/3 move=cycle changed=1
+   1.698 [1625] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=2/3 lines=23 refresh=update
+   2.188 [2112] [DBG] [CPT] answer part=3/3 move=swipe-next changed=1
+   2.189 [2116] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=3/3 lines=23 refresh=update
+   2.677 [2604] [DBG] [CPT] answer part=3/3 move=swipe-next changed=0
+   3.048 [2975] [DBG] [CPT] answer part=2/3 move=swipe-previous changed=1
+   3.053 [2980] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=2/3 lines=23 refresh=update
+   3.422 [3349] [DBG] [CPT] answer part=1/3 move=swipe-previous changed=1
+   3.427 [3354] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=1/3 lines=23 refresh=update
+   3.915 [3842] [DBG] [CPT] answer part=1/3 move=swipe-previous changed=0
+   4.118 [4044] [DBG] [CTL] Answer select=AnswerBox
+   4.118 [4045] [DBG] [CPT] answer part=2/3 move=cycle changed=1
+   4.122 [4049] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=2/3 lines=23 refresh=update
+   4.324 [4251] [DBG] [CTL] Answer select=AnswerBox
+   4.324 [4251] [DBG] [CPT] answer part=3/3 move=cycle changed=1
+   4.328 [4255] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=3/3 lines=23 refresh=update
+   4.530 [4457] [DBG] [CTL] Answer select=AnswerBox
+   4.530 [4457] [DBG] [CPT] answer part=1/3 move=cycle changed=1
+   4.537 [4463] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=1/3 lines=23 refresh=update
+   4.736 [4663] [DBG] [CTL] Answer select=SkipCheckpoint
+   4.736 [4663] [DBG] [CPT] event=skip-checkpoint prompt=c0038-p1 accepted=1 refusal=0 state=finished grade_recorded=0 save=now
+   4.768 [4694] [DBG] [CPT] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=7:0:page ok=1
+   4.768 [4695] [DBG] [CPT] end result=skipped prompt=0 ch=7 word=0 mode=page saved=1
+   5.278 [5205] [DBG] [CPT] checkpoint data epub/rsvp/checkpoints.json: sections=55 checkpoints=55 prompts=130 sha=96d9e4c1356048ed87bc5ebd2dcbcfa21db28e5679de16f70d35ebaac6529561 bytes=91475 copy=cached book_bytes=72544 ms=4
+   5.278 [5205] [DBG] [CPT] sim entry checkpoint=c0038 mode=page ch=6 start=8225 end=8704
+   5.290 [5217] [DBG] [CPT] open checkpoint=c0038 prompts=1 section=s0038 mode=page resume_ch=7 resume_word=0 state=read grades=0 activity_bytes=4016 session_bytes=78056 accepted=1
+   5.296 [5223] [DBG] [CPT] saved after=start prompt=- grade=none active=c0038 prompt_index=0 position=none ok=1
+   5.299 [5226] [DBG] [CPT] screen=Prompt question=1/1 prompt=c0038-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   5.620 [5547] [DBG] [CTL] Prompt armed
+   6.338 [6265] [DBG] [CTL] Prompt select=Reveal
+   6.339 [6265] [DBG] [CPT] event=reveal prompt=c0038-p1 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+   6.346 [6273] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=1/3 lines=23 refresh=clear
+   6.660 [6587] [DBG] [CTL] Answer armed
+   7.497 [7423] [DBG] [CTL] Answer select=AnswerBox
+   7.497 [7423] [DBG] [CPT] answer part=2/3 move=cycle changed=1
+   7.504 [7431] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=2/3 lines=23 refresh=update
+   8.652 [8578] [DBG] [CTL] Answer select=AnswerBox
+   8.652 [8579] [DBG] [CPT] answer part=3/3 move=cycle changed=1
+   8.658 [8584] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=3/3 lines=23 refresh=update
+   9.788 [9714] [DBG] [CTL] Answer select=AnswerBox
+   9.788 [9715] [DBG] [CPT] answer part=1/3 move=cycle changed=1
+   9.794 [9721] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=AnswerBox part=1/3 lines=23 refresh=update
+  10.196 [10123] [DBG] [CTL] Answer focus=Correct
+  10.202 [10128] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=Correct part=1/3 lines=23 refresh=update
+  10.399 [10326] [DBG] [CTL] Answer focus=Incorrect
+  10.404 [10331] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=Incorrect part=1/3 lines=23 refresh=update
+  10.605 [10531] [DBG] [CTL] Answer focus=SkipPrompt
+  10.609 [10536] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=SkipPrompt part=1/3 lines=23 refresh=update
+  10.810 [10737] [DBG] [CTL] Answer focus=SkipCheckpoint
+  10.815 [10742] [DBG] [CPT] screen=Answer question=1/1 prompt=c0038-p1 recorded=none focus=SkipCheckpoint part=1/3 lines=23 refresh=update
+  11.632 [11559] [DBG] [CTL] Answer select=SkipCheckpoint
+  11.632 [11559] [DBG] [CPT] event=skip-checkpoint prompt=c0038-p1 accepted=1 refusal=0 state=finished grade_recorded=0 save=now
+  11.640 [11566] [DBG] [CPT] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=7:0:page ok=1
+  11.640 [11566] [DBG] [CPT] end result=skipped prompt=0 ch=7 word=0 mode=page saved=1

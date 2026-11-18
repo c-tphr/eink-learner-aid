@@ -63,6 +63,10 @@ Event GestureReader::pollFocus(const InputFrame& f) {
     e.y = f.y;
   } else if (f.back) {
     e.ev = Ev::BackGesture;
+  } else if (f.swipeUp || f.swipeDown) {
+    e.ev = f.swipeUp ? Ev::SwipeUp : Ev::SwipeDown;
+    e.x = f.x;
+    e.y = f.y;
   }
   return e;
 }

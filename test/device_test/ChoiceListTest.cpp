@@ -111,3 +111,16 @@ TEST(ChoiceList, CountIsClampedToTheRowsThereAre) {
   list.reset(0);
   EXPECT_EQ(list.count(), 1);
 }
+
+TEST(ChoiceList, EveryControlMapItemHasAName) {
+  // The binding table is shared by the RSVP, checkpoint and device test screens: every item, whichever
+  // task added it, has a [CTL] log name. ContinueOn (after Incorrect) logs as "Continue", like the banner's.
+  const int last = static_cast<int>(controls::Item::ContinueOn);
+  for (int i = 0; i <= last; ++i) {
+    const char* name = controls::itemName(static_cast<controls::Item>(i));
+    ASSERT_NE(name, nullptr);
+    EXPECT_STRNE(name, "?") << i;
+  }
+  EXPECT_STREQ(controls::itemName(controls::Item::ChoiceRow0), "Row0");
+  EXPECT_STREQ(controls::itemName(controls::Item::ControlsFinish), "ControlsFinish");
+}
