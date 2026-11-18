@@ -14,12 +14,12 @@ import traceback
 from typing import Callable, List, Optional
 
 from . import PINNED_ESPTOOL_VERSION, __version__, backup, flash, guard, identify, monitor, plan as planmod, ports
-from . import restore, workdir
+from . import restore, summary, workdir
 from .common import ALREADY_CONVERTED, NOT_REACHED, OK, STOP, Context, EXIT_NAMES, PortProblem, not_reached_help
 from .device import Device, DeviceError, DeviceNotReached
 from .ui import UI
 
-COMMANDS = ("identify", "backup", "plan", "flash", "monitor", "restore", "make-plan", "ports")
+COMMANDS = ("identify", "backup", "plan", "flash", "monitor", "restore", "summary", "make-plan", "ports")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,6 +63,8 @@ def build_parser() -> argparse.ArgumentParser:
     mk.add_argument("-o", "--out", required=True, help="kit folder to create (must not exist or be empty)")
     mk.add_argument("--dry-run", action="store_true", help="check the inputs only; write nothing")
     common(sub.add_parser("ports", help="list serial ports (opens none)"), plan=False)
+    common(sub.add_parser("summary", help="write one text file, safe to post publicly, from the work folder"),
+           plan=False)
     return p
 
 
@@ -102,6 +104,8 @@ def main(argv: Optional[List[str]] = None, device_factory: Optional[Callable[[st
             code = monitor.run(ctx, args.reset, port_factory=monitor_port_factory)
         elif args.command == "ports":
             code = ports.print_ports(ui)
+        elif args.command == "summary":
+            code = summary.run(ctx)
         else:  # pragma: no cover
             code = STOP
     except KeyboardInterrupt:

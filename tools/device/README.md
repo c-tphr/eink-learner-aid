@@ -27,6 +27,7 @@ The owner runs one script, `session.ps1`. Everything that decides what may be wr
 .\session.ps1 monitor [-Reset]            # serial log until Ctrl+C
 .\session.ps1 restore <backup.bin> [-DryRun]
 .\session.ps1 ports                       # list serial ports
+.\session.ps1 summary                     # one text file, safe to post publicly (no device contact)
 common options: -Port COMn  -DryRun  -Plan <kit folder or flash-plan.json>  -WorkDir <folder>
 ```
 
@@ -149,6 +150,8 @@ Erase granularity: esptool erases every 4 KiB sector a write touches (documented
 
 **restore**: needs the backup's `.json` record (verified, same file name) and a file of exactly 16 MiB with the recorded SHA-256. It does not need identify to pass. After the phrase it checks: ESP32-S3, 16MB, no flash encryption, no secure download mode, and the MAC (a different MAC needs a second phrase). Writes at 0x0 with `keep`, reads all 16 MB back, compares SHA-256, resets.
 
+**summary** (no device contact): writes `work\early-check-summary-<time>.txt` from the work folder's records and logs: chip and revision, MAC with the last three bytes masked, flash id and size, security flags, identify's checks, bootloader header fields, partition table rows, otadata records, SHA-256 (never contents) of identify's blobs and of the backup, backup status, every command run with its exit code, and the last 40 lines of the latest identify and backup logs with user names removed from paths. A test checks that it contains no run of 31 or more bytes of the backup, or of 23 or more bytes of the blobs, raw or as hex. The owner's early-check sheet is `docs/DEVICE_EARLY_CHECK.md`.
+
 **monitor**: opens the port with DTR and RTS off (so opening it does not reset the chip), copies everything to `work\serial-<time>.log` and the console until Ctrl+C, and waits for the port to come back when it disappears (USB-Serial/JTAG re-enumerates on every chip reset). It never sends data; `-Reset` pulses the RTS line once.
 
 ## How dry run works
@@ -214,8 +217,8 @@ Other things the checklist should say:
 * The identify stop list, in the owner's words: different chip, flash not 16 MB, octal flash, Secure Boot, flash encryption (or burned encryption or Secure Boot keys), secure download mode or restricted download mode, a signed or unreadable bootloader, a partition table that differs from `partitions_picco.csv`. All mean: stop, nothing changed, attach the work folder to the issue.
 * identify and backup reset the chip into download mode and back; the Picco's screen may freeze or the Picco may restart while they run. If it stays frozen afterwards, restart it with the power button.
 * `backup` takes two full reads; the duration over USB is unknown until the session. Keep the cable still.
-* Copy the backup `.bin` and its `.json` together to a second place before flashing.
-* Where the files are: `work\identify-*.json` and blobs, `work\picco-backup-*.bin/.json`, `work\*-MISMATCH.json`, `work\flash-result-*.json`, `work\serial-*.log`, `work\logs\<command>-*.log` (everything shown and typed, plus esptool's output and every esptool call). Attach `work\` (without the 16 MB backup, which holds the owner's device data) to the results issue.
+* Copy the backup `.bin` and its `.json` together to a second place the owner controls (USB stick or another disk) before flashing. Never upload it anywhere: the repository is public, and the backup holds the device's settings area (possibly Wi-Fi details) and Onyx's firmware.
+* Where the files are: `work\identify-*.json` and blobs, `work\picco-backup-*.bin/.json`, `work\*-MISMATCH.json`, `work\flash-result-*.json`, `work\serial-*.log`, `work\logs\<command>-*.log` (everything shown and typed, plus esptool's output and every esptool call). Never attach `work\` or any `.bin` from it to an issue (the backup and identify's blobs hold the device's own data). Attach only the file written by `summary`, which holds parsed fields and SHA-256 hashes, with the MAC partly masked and user names removed from paths.
 * If more than one Espressif device is connected, or none is found, the tool lists the ports and asks for `-Port COMn`; it never guesses.
 * Run from a plain folder (for example `C:\picco`), not a OneDrive-synced one, with about 100 MB free.
 

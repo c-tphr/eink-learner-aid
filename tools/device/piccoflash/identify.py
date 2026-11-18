@@ -236,4 +236,5 @@ def print_summary(res: IdentifyResult, ui: UI) -> None:
         ui.say("RESULT: STOP. Do not continue with backup or flash.")
         for chk in res.evaluation.stops:
             ui.say("  - %s: %s" % (chk.name, chk.detail))
-        ui.say("Nothing on the device was changed. Report this output (and the work folder) in the issue.")
+        ui.say("Nothing on the device was changed. Run the 'summary' command and attach the summary file it")
+        ui.say("writes to the issue. Never attach the .bin files from the work folder.")

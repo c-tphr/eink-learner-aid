@@ -165,7 +165,8 @@ def ask_ack(ui: UI, sidecar_path: str, rec: dict) -> bool:
     sha = rec["sha256"]
     ui.say("")
     ui.say("This file is the ONLY way to put the Picco back to its original Onyx firmware.")
-    ui.say("Copy it now to a second place (a USB stick or cloud storage), next to this record:")
+    ui.say("Copy it now, together with this record, to a second place you control (a USB stick or another")
+    ui.say("disk). Never upload it or attach it anywhere: it holds the Picco's own data and Onyx's firmware.")
     ui.say("    %s" % os.path.abspath(os.path.join(os.path.dirname(sidecar_path), rec["file"])))
     ui.say("    %s" % os.path.abspath(sidecar_path))
     ui.say("Its SHA-256 is:")
