@@ -16,21 +16,31 @@ namespace {
 
 const char* AT = "2026-12-01T19:04:00";
 
-// A state with c0002 (s0004 = chapter 3, [255, 550)) on prompt 1, resume
-// (4, 0) in RSVP, position (3, 549) and, if asked, a reread at (3, 300) in
-// page view.
+// Positions of c0002's section s0004 (reader chapter 3) in fixture.expected.json.
+Position lastWord(const FixtureBook& book) { return book.lastWordOf("s0004"); }
+// s0004 ends its chapter: the first word after the break is the next chapter's word 0.
+Position resume(const FixtureBook& book) { return Position{book.nextChapter(lastWord(book).chapter), 0}; }
+// A word inside the section, for a reread in progress.
+Position inside(const FixtureBook& book) {
+  const SectionRange r = book.range("s0004");
+  return Position{r.chapter, r.start + 45};
+}
+
+// A state with c0002 on prompt 1, resume after s0004's break in RSVP,
+// position on s0004's last word and, if asked, a reread inside s0004 in page
+// view.
 void activeState(BookState& s, const FixtureBook& book, bool reread) {
   s.reset();
   memcpy(s.bookSha256, book.index->sourceSha256(), SHA256_HEX_CHARS + 1);
   s.hasPosition = true;
-  s.position = Place{Position{3, 549}, ReadingMode::Rsvp};
+  s.position = Place{lastWord(book), ReadingMode::Rsvp};
   s.grades.recordFirst("c0002-p1", Grade::Correct, AT);
   s.hasActive = true;
   strcpy(s.active.id, "c0002");
   s.active.promptIndex = 1;
-  s.active.resume = Place{Position{4, 0}, ReadingMode::Rsvp};
+  s.active.resume = Place{resume(book), ReadingMode::Rsvp};
   s.active.rereading = reread;
-  if (reread) s.active.reread = Place{Position{3, 300}, ReadingMode::Page};
+  if (reread) s.active.reread = Place{inside(book), ReadingMode::Page};
 }
 
 }  // namespace
@@ -46,7 +56,7 @@ TEST(StateRestore, RestoreOrder_ActiveRereadThenActivePromptThenPositionThenBook
   EXPECT_EQ(plan.notes, 0);
   EXPECT_EQ(plan.checkpoint, book.checkpoint("c0002"));
   EXPECT_EQ(plan.section.section, book.section("s0004"));
-  EXPECT_EQ(plan.place, (Place{Position{3, 300}, ReadingMode::Page}));
+  EXPECT_EQ(plan.place, (Place{inside(book), ReadingMode::Page}));
   CheckpointFlow flow(*s, *book.index);
   Transition t = flow.restore(plan);
   EXPECT_TRUE(t.accepted);
@@ -65,7 +75,7 @@ TEST(StateRestore, RestoreOrder_ActiveRereadThenActivePromptThenPositionThenBook
   s->hasActive = false;
   plan = planRestore(*s, book.index.get(), book.layout);
   EXPECT_EQ(plan.view, OpenView::Position);
-  EXPECT_EQ(plan.place, (Place{Position{3, 549}, ReadingMode::Rsvp}));
+  EXPECT_EQ(plan.place, (Place{lastWord(book), ReadingMode::Rsvp}));
   CheckpointFlow flow3(*s, *book.index);
   EXPECT_EQ(flow3.restore(plan).refusal, Refusal::BadRestore);
 
@@ -94,13 +104,16 @@ TEST(StateRestore, UnrestorableCheckpointsFallBackSafelyAndSaySo) {
        OpenView::Position, NOTE_SECTION_UNRESOLVED},
       {"resume outside the book", [](BookState& st, FixtureBook&) { st.active.resume.position = Position{9, 0}; },
        OpenView::Position, NOTE_RESUME_OUTSIDE_BOOK},
-      {"resume past the chapter end", [](BookState& st, FixtureBook&) { st.active.resume.position = Position{3, 551}; },
+      {"resume past the chapter end",
+       [](BookState& st, FixtureBook& b) { st.active.resume.position = Position{3, b.chapterWords(3) + 1}; },
        OpenView::Position, NOTE_RESUME_OUTSIDE_BOOK},
-      {"reread before the section", [](BookState& st, FixtureBook&) { st.active.reread.position.word = 254; },
+      {"reread before the section",
+       [](BookState& st, FixtureBook& b) { st.active.reread.position.word = b.range("s0004").start - 1; },
        OpenView::Prompt, NOTE_REREAD_OUTSIDE_SECTION},
       {"reread in another chapter", [](BookState& st, FixtureBook&) { st.active.reread.position.chapter = 2; },
        OpenView::Prompt, NOTE_REREAD_OUTSIDE_SECTION},
-      {"reread at the section end", [](BookState& st, FixtureBook&) { st.active.reread.position.word = 550; },
+      {"reread at the section end",
+       [](BookState& st, FixtureBook& b) { st.active.reread.position.word = b.range("s0004").end; },
        OpenView::Prompt, NOTE_REREAD_OUTSIDE_SECTION},
   };
   for (const Case& c : cases) {
@@ -115,8 +128,8 @@ TEST(StateRestore, UnrestorableCheckpointsFallBackSafelyAndSaySo) {
       EXPECT_FALSE(s->hasActive) << c.what;
       // Reading continues after the break when the resume position is good,
       // else at the saved position.
-      const Place expected = c.notes == NOTE_RESUME_OUTSIDE_BOOK ? Place{Position{3, 549}, ReadingMode::Rsvp}
-                                                                 : Place{Position{4, 0}, ReadingMode::Rsvp};
+      const Place expected = c.notes == NOTE_RESUME_OUTSIDE_BOOK ? Place{lastWord(fresh), ReadingMode::Rsvp}
+                                                                 : Place{resume(fresh), ReadingMode::Rsvp};
       EXPECT_EQ(plan.place, expected) << c.what;
     } else {
       EXPECT_TRUE(s->hasActive);
@@ -133,7 +146,7 @@ TEST(StateRestore, UnrestorableCheckpointsFallBackSafelyAndSaySo) {
   EXPECT_EQ(plan.notes, NOTE_NO_CHECKPOINT_DATA);
   EXPECT_EQ(s->grades.count(), 1);
   // Positions outside the book.
-  for (Position bad : {Position{9, 0}, Position{3, 551}, Position{0xFFFE, 0}}) {
+  for (Position bad : {Position{9, 0}, Position{3, book.chapterWords(3) + 1}, Position{0xFFFE, 0}}) {
     s->reset();
     s->hasPosition = true;
     s->position = Place{bad, ReadingMode::Page};

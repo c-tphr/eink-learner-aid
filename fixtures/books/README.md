@@ -8,9 +8,9 @@ A tiny made-up book by the made-up author Mara Ellery Quill, used by automated t
 
 | File | What it is |
 | --- | --- |
-| `fixture.epub` | The original (unprepared) EPUB 3: title page plus three chapters, nav document and NCX. Every zip entry is stored (no compression) with a fixed timestamp, so the bytes do not depend on the zlib build. |
+| `fixture.epub` | The original (unprepared) EPUB 3: title page, three chapters and an endnotes document, nav document and NCX. Every zip entry is stored (no compression) with a fixed timestamp, so the bytes do not depend on the zlib build. |
 | `fixture.draft.json` | The draft a drafter session would write for it (plan section 8, step 2): sections as ranges of `prep extract` paragraph references, excluded front matter, checkpoints with cited paragraphs. Schema: `tools/prep/schema/draft.schema.json`, documented in `tools/prep/README.md`. |
-| `fixture.expected.json` | Ground truth for other layers, computed from the source data (not by parsing the EPUB): each spine document's word stream, block boundaries, non-prose blocks, footnote marks and bodies, and the first and last word of every draft section. Its `rules` member defines a word. |
+| `fixture.expected.json` | Ground truth for other layers, including the firmware's WordIndex tests, computed from the generator's content model (not by parsing the EPUB) and cross-checked against the preparation tools' word pass: each spine document's whole word stream, word flags, IMAGE/TABLE/CODE/NOTE markers, blocks with their paragraph references, footnote marks, and every draft section's `[start, end)` word range. Word rules version 1 (`docs/spikes/S1-word-stream.md` section 5 plus NOTE regions); its `rules` member explains each part. |
 | `README.md` | This file. |
 
 Regenerate after editing `tools/prep/fixture/content.py`:
@@ -21,66 +21,85 @@ python3 tools/prep/fixture/generate.py --check  # exit 1 if a committed file is 
 python3 -m pytest tools/prep -q                 # includes tools/prep/tests/test_fixture.py
 ```
 
+`fixture.epub` SHA-256: `9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c`.
+
 ### Documents and word counts
 
-Word counts follow the rules in `fixture.expected.json` (headings included, footnote bodies and the inner text of figures, tables and code excluded).
+Words are counted as the firmware will count them: every word of the document, including headings, figure captions, table cells, code and footnote bodies. Prose words exclude the TABLE, CODE and NOTE regions.
 
-| Spine | File (relative to `OEBPS/`) | Role | Title | Paragraphs (XHTML ids) | Words |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `text/title.xhtml` | front-matter | Title page | d01-p001 to d01-p003 (fm-p001 to fm-p003) | 20 |
-| 2 | `text/chapter-1.xhtml` | chapter | The Lamp Room | d02-p001 to d02-p010 (c1-p001 to c1-p010) | 417 |
-| 3 | `text/chapter-2.xhtml` | chapter | The Fog Season | d03-p001 to d03-p013 (c2-p001 to c2-p013) | 550 |
-| 4 | `text/chapter-3.xhtml` | chapter | The Keeper's Log | d04-p001 to d04-p008 (c3-p001 to c3-p008) | 294 |
+| Spine | File (relative to `OEBPS/`) | Role | Title | Paragraphs (XHTML ids) | Words | Prose words |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `text/title.xhtml` | front-matter | Title page | d01-p001 to d01-p003 (fm-p001 to fm-p003) | 20 | 20 |
+| 2 | `text/chapter-1.xhtml` | chapter | The Lamp Room | d02-p001 to d02-p010 (c1-p001 to c1-p010) | 451 | 427 |
+| 3 | `text/chapter-2.xhtml` | chapter | The Fog Season | d03-p001 to d03-p013 (c2-p001 to c2-p013) | 608 | 566 |
+| 4 | `text/chapter-3.xhtml` | chapter | The Keeper's Log | d04-p001 to d04-p008 (c3-p001 to c3-p008) | 321 | 296 |
+| 5 | `text/endnotes.xhtml` | endnotes | Notes | none; footnote blocks d05-n001 to d05-n003 (en-n001 to en-n003) | 34 | 0 |
 
 ### Sections and checkpoints (from the draft)
 
-| Section | Chapter | Paragraphs | Words (index range) | Ends chapter | Checkpoint |
+| Section | Chapter | Paragraphs | Words `[start, end)` | Ends chapter | Checkpoint |
 | --- | --- | --- | --- | --- | --- |
-| s0001 Arrival at Gannet Rock | `text/chapter-1.xhtml` | d02-p001 to d02-p006 | 223 (0 to 222) | no | c0001, 1 prompt |
-| s0002 Winding the clockwork | `text/chapter-1.xhtml` | d02-p007 to d02-p010 | 194 (223 to 416) | yes | none |
-| s0003 Fog signals | `text/chapter-2.xhtml` | d03-p001 to d03-p007 | 255 (0 to 254) | no | none |
-| s0004 The visitor from the mainland | `text/chapter-2.xhtml` | d03-p008 to d03-p013 | 295 (255 to 549) | yes | c0002, 3 prompts |
-| s0005 The keeper's log | `text/chapter-3.xhtml` | d04-p001 to d04-p008 | 294 (0 to 293) | yes | none |
+| s0001 Arrival at Gannet Rock | `text/chapter-1.xhtml` | d02-p001 to d02-p006 | 233 `[0, 233)` | no | c0001, 1 prompt |
+| s0002 Winding the clockwork | `text/chapter-1.xhtml` | d02-p007 to d02-p010 | 194 `[233, 427)` | yes | none |
+| s0003 Fog signals | `text/chapter-2.xhtml` | d03-p001 to d03-p007 | 311 `[0, 311)` | no | none |
+| s0004 The visitor from the mainland | `text/chapter-2.xhtml` | d03-p008 to d03-p013 | 297 `[311, 608)` | yes | c0002, 3 prompts |
+| s0005 The keeper's log | `text/chapter-3.xhtml` | d04-p001 to d04-p008 | 321 `[0, 321)` | yes | none |
 
-`text/title.xhtml` (d01-p001 to d01-p003) is excluded front matter.
+`text/title.xhtml` (d01-p001 to d01-p003) is excluded front matter. Footnote bodies after a chapter's last section are in no section. `text/endnotes.xhtml` has no reading-stream block (all its words are one NOTE region), so the draft neither covers nor excludes it.
+
+The book has both note forms on purpose: chapter 1's note body is an in-chapter `<aside>` after a section without a checkpoint (s0002), and chapter 2's notes are endnotes in their own document, so the multi-prompt checkpoint's section (s0004) still ends its chapter, as it does in most real prepared books.
 
 ### Content inventory
 
-| Content | Document | Block | Detail |
+| Content | Document | Block | Words or position |
 | --- | --- | --- | --- |
-| Image | `text/chapter-1.xhtml` | d02-p004 (c1-p004) | `<figure>` with `<img>` of `images/gannet-rock.png` (120x160 1-bit PNG, alt text) and `<figcaption>`; after word 107 |
-| Footnote 1 | `text/chapter-1.xhtml` | d02-p005 (c1-p005) | `<sup><a epub:type="noteref" href="#fn1">`, after word 173 ("one."); body in `<aside epub:type="footnote" id="fn1">` at chapter end |
-| Table | `text/chapter-2.xhtml` | d03-p005 (c2-p005) | `<table>` with caption, header row and 3 body rows; after word 160 |
-| Footnote 2 | `text/chapter-2.xhtml` | d03-p010 (c2-p010) | `<sup><a epub:type="noteref" href="#fn2">`, after word 396 ("disturbed."); body in `<aside epub:type="footnote" id="fn2">` at chapter end |
-| Footnote 3 | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | `<sup><a epub:type="noteref" href="#fn3">`, after word 533 ("engine."); body in `<aside epub:type="footnote" id="fn3">` at chapter end |
-| `<em>` word | `text/chapter-2.xhtml` | d03-p011 (c2-p011) | "not" is word 406 ("not,") |
-| `<strong>` word | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | "never" is word 522 ("never") |
-| Code | `text/chapter-3.xhtml` | d04-p004 (c3-p004) | `<pre><code>`, 6 lines; after word 113 |
+| Image | `text/chapter-1.xhtml` | d02-p004 (c1-p004) | `<figure>` with `<img>` of `images/gannet-rock.png` (120x160 1-bit PNG, alt text, never a word) and `<figcaption>` (prose words); IMAGE marker at word 108 `[108, 118)` |
+| Footnote 1 | `text/chapter-1.xhtml` | d02-p005 (c1-p005) | `<sup><a epub:type="noteref" role="doc-noteref" href="#fn1">`: NOTEREF on word 183 ("one."); body `<aside epub:type="footnote" id="fn1">` at the chapter end, NOTE region `[427, 451)` |
+| Table | `text/chapter-2.xhtml` | d03-p005 (c2-p005) | `<table>` with caption, header row and 3 body rows; TABLE region `[161, 203)` |
+| Footnote 2 | `text/chapter-2.xhtml` | d03-p010 (c2-p010) | `<sup><a href="endnotes.xhtml#fn2">` (no epub:type): NOTEREF on word 454 ("disturbed."); body `<li epub:type="endnote" id="fn2">` in `text/endnotes.xhtml`, words `[1, 15)` of its NOTE region |
+| Footnote 3 | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | `<a href="endnotes.xhtml#fn3"><sup>` (no epub:type): NOTEREF on word 591 ("engine."); body `<li epub:type="endnote" id="fn3">` in `text/endnotes.xhtml`, words `[15, 34)` of its NOTE region |
+| `<em>` word | `text/chapter-2.xhtml` | d03-p011 (c2-p011) | "not" is in word 464 ("not,") |
+| `<strong>` word | `text/chapter-2.xhtml` | d03-p013 (c2-p013) | "never" is in word 580 ("never") |
+| Code | `text/chapter-3.xhtml` | d04-p004 (c3-p004) | `<pre><code>`, 6 lines; CODE region `[116, 141)` |
+| Page-break marker | `text/chapter-3.xhtml` | d04-p007 (c3-p007) | `<span epub:type="pagebreak" role="doc-pagebreak" id="page12">12</span>` inside word 248 ("lighthouse"); its text is in no word |
 
-### Tokenisation cases
+### Word rule cases
 
-Each case is a word of the named block, exactly as it appears in `fixture.expected.json`. Everything else is plain ASCII with single spaces. Prose blocks with non-ASCII characters: `c2-p009`.
+Each case is a word of the named block, exactly as it appears in `fixture.expected.json`, with the flags it carries. The XHTML writes U+00A0, U+00AD and combining marks as numeric character references.
 
-| Case | Block | Word index | Word |
-| --- | --- | --- | --- |
-| Sentence ending in a full stop | c1-p002 | 12 | `noon.` |
-| Decimal number (the point is not a sentence end) | c1-p002 | 19 | `3.5` |
-| Abbreviation with a full stop (not a sentence end) | c1-p002 | 32 | `Dr.` |
-| Sentence ending in a question mark | c1-p002 | 60 | `winter?` |
-| Comma | c1-p003 | 62 | `Hartwell,` |
-| Quoted sentence: opening ASCII double quote attached to the first word | c1-p003 | 87 | `"The` |
-| Quoted sentence: closing double quote after the full stop | c1-p003 | 100 | `weather."` |
-| Semicolon | c1-p006 | 213 | `seconds;` |
-| Sentence ending in an exclamation mark | c1-p009 | 348 | `turns!` |
-| Apostrophe inside a word | c1-p009 | 353 | `doctor's` |
-| Hyphenated compound (one word) | c2-p009 | 279 | `half-frozen` |
-| Em dash U+2014 with no spaces: joins its neighbours into one word | c2-p009 | 302 | `alone—two` |
-| Em dash U+2014 with no spaces (second) | c2-p009 | 309 | `again—until` |
-| Non-ASCII letter: precomposed e acute U+00E9 | c2-p009 | 329 | `café` |
-| Colon | c2-p010 | 383 | `it:` |
-| Long word (15 letters) with trailing comma | c2-p010 | 384 | `phosphorescence,` |
-| Word inside an em element, comma outside it | c2-p011 | 406 | `not,` |
-| Word inside a strong element | c2-p013 | 522 | `never` |
+| Case | Block | Word index | Word | Flags |
+| --- | --- | --- | --- | --- |
+| Sentence ending in a full stop | c1-p002 | 12 | `noon.` | - |
+| Decimal number | c1-p002 | 19 | `3.5` | - |
+| Abbreviation with a full stop | c1-p002 | 32 | `Dr.` | - |
+| No-break space U+00A0 (numeric reference) separates words: 'Dr.' and 'Vane' are two | c1-p002 | 33 | `Vane` | - |
+| Sentence ending in a question mark | c1-p002 | 60 | `winter?` | PARA_END |
+| Comma | c1-p003 | 62 | `Hartwell,` | - |
+| Quoted sentence: opening ASCII double quote attached to the first word | c1-p003 | 87 | `"The` | - |
+| Quoted sentence: closing double quote after the full stop | c1-p003 | 100 | `weather."` | - |
+| Figure caption: ordinary prose words after the IMAGE marker | c1-p004 | 108 | `Figure` | - |
+| Word followed by a footnote mark (epub:type noteref form) | c1-p005 | 183 | `one.` | NOTEREF, PARA_END |
+| Semicolon | c1-p006 | 223 | `seconds;` | - |
+| Sentence ending in an exclamation mark | c1-p009 | 358 | `turns!` | - |
+| Apostrophe inside a word | c1-p009 | 363 | `doctor's` | - |
+| Table cell: a word in the TABLE region | c2-p005 | 186 | `Skerry` | NONPROSE |
+| Word before a `<br/>` line break | c2-p006 | 253 | `lines:` | LINE_END |
+| Word before the second `<br/>` | c2-p006 | 256 | `flashes.` | LINE_END |
+| Hyphenated compound (one word) | c2-p009 | 335 | `half-frozen` | - |
+| Em dash U+2014 with no spaces: a word ends after the dash | c2-p009 | 358 | `alone—` | - |
+| Word after an unspaced em dash | c2-p009 | 359 | `two` | - |
+| Em dash U+2014 with no spaces (second) | c2-p009 | 366 | `again—` | - |
+| Decomposed e + U+0301 is composed (NFC) to U+00E9 | c2-p009 | 387 | `café` | - |
+| Colon | c2-p010 | 441 | `it:` | - |
+| Soft hyphens U+00AD are removed and never split | c2-p010 | 442 | `phosphorescence,` | - |
+| Word followed by a footnote mark (sup > a href, no epub:type) | c2-p010 | 454 | `disturbed.` | NOTEREF, PARA_END |
+| Word inside an em element, comma outside it | c2-p011 | 464 | `not,` | - |
+| Word inside a strong element | c2-p013 | 580 | `never` | - |
+| Word followed by a footnote mark (a href > sup, no epub:type) | c2-p013 | 591 | `engine.` | NOTEREF |
+| En dash U+2013 with no spaces: a word ends after the dash | c3-p002 | 32 | `1907–` | - |
+| Word after an unspaced en dash | c3-p002 | 33 | `1925,` | - |
+| Code in pre: a word in the CODE region | c3-p004 | 116 | `fog_hours` | NONPROSE |
+| Page-break marker inside a word: its text is in no word and does not split it | c3-p007 | 248 | `lighthouse` | - |
 
 ### Fixed values
 

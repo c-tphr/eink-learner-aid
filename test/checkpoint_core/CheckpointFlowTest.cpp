@@ -23,14 +23,16 @@ static_assert(sizeof(ALL_EVENTS) / sizeof(ALL_EVENTS[0]) == FLOW_EVENT_COUNT);
 
 const char* AT = "2026-12-01T19:05:10";
 
-// A flow over the fixture book with c0002 (three prompts, section s0004 =
-// chapter 3 words [255, 550), ends its chapter) fired in `mode`.
+// A flow over the fixture book with c0002 (three prompts, section s0004 in
+// reader chapter 3, ends its chapter) fired in `mode`, with the section's last
+// word on screen. Word positions come from fixture.expected.json.
 struct Fixture {
   FixtureBook book;
   std::unique_ptr<BookState> state = std::make_unique<BookState>();
   std::unique_ptr<ChapterSections> chapter = std::make_unique<ChapterSections>();
   std::unique_ptr<CheckpointFlow> flow;
   uint16_t c2 = NO_INDEX;
+  SectionRange s4;
 
   explicit Fixture(ReadingMode mode = ReadingMode::Rsvp) {
     EXPECT_TRUE(book.ok);
@@ -38,8 +40,9 @@ struct Fixture {
     c2 = book.checkpoint("c0002");
     book.loadChapter(*chapter, 3);
     state->hasPosition = true;
-    state->position = Place{Position{3, 549}, mode};
-    const Step fire = rsvpStep(*chapter, 549);
+    s4 = book.range("s0004");
+    state->position = Place{Position{3, s4.end - 1}, mode};
+    const Step fire = rsvpStep(*chapter, s4.end - 1);
     EXPECT_EQ(fire.kind, StepKind::Fire);
     const Transition t = flow->start(fire, mode);
     EXPECT_TRUE(t.accepted);
@@ -164,17 +167,19 @@ TEST(CheckpointFlow, FlowStep5_RereadStartsAtSectionStartAndReturnsToTheSameProm
       EXPECT_EQ(r.state, FlowState::Rereading);
       EXPECT_EQ(r.save, Save::Now);
       EXPECT_TRUE(f.state->active.rereading);
-      EXPECT_EQ(f.state->active.reread.position, (Position{3, 255}));
+      EXPECT_EQ(f.state->active.reread.position, (Position{3, f.s4.start}));
       EXPECT_EQ(f.state->active.reread.mode, reread == FlowEvent::RereadRsvp ? ReadingMode::Rsvp : ReadingMode::Page);
       EXPECT_EQ(f.flow->rereadSection(), f.book.section("s0004"));
-      EXPECT_EQ(f.flow->section().start, 255u);
-      EXPECT_EQ(f.flow->section().end, 550u);
+      EXPECT_EQ(f.flow->section().start, f.s4.start);
+      EXPECT_EQ(f.flow->section().end, f.s4.end);
       // Move within the section: only the reread place changes.
+      const uint32_t inside = f.s4.start + 45;
+      ASSERT_LT(inside, f.s4.end);
       const Transition m =
-          f.flow->rereadMoved(Place{Position{3, 300}, f.state->active.reread.mode}, NavSource::RsvpPlayback);
+          f.flow->rereadMoved(Place{Position{3, inside}, f.state->active.reread.mode}, NavSource::RsvpPlayback);
       EXPECT_TRUE(m.accepted);
       EXPECT_EQ(m.save, Save::Position);
-      EXPECT_EQ(f.state->active.reread.position.word, 300u);
+      EXPECT_EQ(f.state->active.reread.position.word, inside);
       const Transition b = f.flow->handle(back);
       ASSERT_TRUE(b.accepted);
       EXPECT_EQ(b.state, FlowState::PromptHidden);
@@ -215,6 +220,7 @@ TEST(CheckpointFlow, FlowStep6_FinishOrSkipCheckpointResumesAfterTheBreakInTheOr
       EXPECT_EQ(t.state, FlowState::Finished);
       EXPECT_EQ(t.save, Save::Now);
       // s0004 ends chapter 3: the first word after the break is chapter 4, word 0.
+      EXPECT_EQ(f.s4.end, f.book.chapterWords(3)) << "s0004 no longer ends its chapter";
       EXPECT_EQ(t.resume.position, (Position{4, 0}));
       EXPECT_EQ(t.resume.mode, mode);
       EXPECT_EQ(f.state->position, t.resume);
@@ -261,7 +267,7 @@ TEST(CheckpointFlow, StartAndRestoreAreRefusedWhileACheckpointIsInProgress) {
   Fixture f;
   ChapterSections c;
   f.book.loadChapter(c, 2);
-  const Step other = rsvpStep(c, 222);
+  const Step other = rsvpStep(c, f.book.range("s0001").end - 1);
   ASSERT_EQ(other.kind, StepKind::Fire);
   EXPECT_EQ(f.flow->start(other, ReadingMode::Page).refusal, Refusal::InvalidInState);
   RestorePlan plan;
@@ -292,12 +298,14 @@ TEST(CheckpointFlow, RereadMovesOutOfTheSectionReturnToThePrompt) {
     NavSource source;
     bool leftSection;
   };
+  FixtureBook book;
+  const SectionRange s4 = book.range("s0004");
   const Case cases[] = {
-      {{3, 600}, NavSource::NextPage, false},       // forward past the end
-      {{4, 0}, NavSource::RsvpPlayback, false},     // forward into the next chapter
-      {{3, 254}, NavSource::PreviousPage, true},    // back before the start
-      {{2, 10}, NavSource::TableOfContents, true},  // another chapter
-      {{3, 550}, NavSource::GoToPercent, true},     // a jump past the end does not count as reaching it
+      {{3, s4.end + 10}, NavSource::NextPage, false},  // forward past the end (old fixture: 600 for end 550)
+      {{4, 0}, NavSource::RsvpPlayback, false},        // forward into the next chapter
+      {{3, s4.start - 1}, NavSource::PreviousPage, true},  // back before the start
+      {{2, 10}, NavSource::TableOfContents, true},         // another chapter
+      {{3, s4.end}, NavSource::GoToPercent, true},  // a jump past the end does not count as reaching it
   };
   for (const Case& c : cases) {
     Fixture f;
@@ -312,7 +320,7 @@ TEST(CheckpointFlow, RereadMovesOutOfTheSectionReturnToThePrompt) {
   // A mode switch inside the section is saved at once and keeps the reread.
   Fixture f;
   driveTo(f, FlowState::Rereading);
-  const Transition t = f.flow->rereadMoved(Place{Position{3, 255}, ReadingMode::Rsvp}, NavSource::ModeSwitch);
+  const Transition t = f.flow->rereadMoved(Place{Position{3, s4.start}, ReadingMode::Rsvp}, NavSource::ModeSwitch);
   EXPECT_EQ(t.state, FlowState::Rereading);
   EXPECT_EQ(t.save, Save::Now);
   EXPECT_EQ(f.state->active.reread.mode, ReadingMode::Rsvp);
@@ -353,7 +361,7 @@ TEST(CheckpointFlow, AGradeIsRefusedNotLostWhenThePromptIdCannotBeRead) {
   CheckpointFlow flow(*state, *index);
   ChapterSections c;
   book.loadChapter(c, 2);
-  ASSERT_TRUE(flow.start(rsvpStep(c, 222), ReadingMode::Rsvp).accepted);
+  ASSERT_TRUE(flow.start(rsvpStep(c, book.range("s0001").end - 1), ReadingMode::Rsvp).accepted);
   flow.handle(FlowEvent::Reveal);
   source.failing = true;
   const Transition t = flow.handle(FlowEvent::Correct, AT);

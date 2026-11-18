@@ -1,0 +1,34 @@
+# Transcript produced by tools/device/tests/make_examples.py against SYNTHETIC images
+# (no real firmware, no device). identify and backup were run beforehand against the
+# in-memory fake device, so the work folder holds a passing identify and a verified backup.
+
+$ python -m piccoflash restore --dry-run --port COM5 --work-dir <tmp>/work <tmp>/work/picco-backup-24587c123456-20261118T222825.330Z.bin
+piccoflash 1.0.0 (Python 3.13.18, esptool 5.6.0 pinned)  DRY RUN
+
+Restore: write a full backup back to the Picco
+----------------------------------------------
+Backup file: <tmp>/work/picco-backup-24587c123456-20261118T222825.330Z.bin
+Taken from:  MAC 24:58:7c:12:34:56 at 20261118T222825.330Z
+SHA-256:     175e8fce3c05ff2f82dd5dd03120a810cdd7ee655776c36f236b6b6d9951caca (matches the record)
+Its partition table is: stock
+Guard: one image of exactly 16,777,216 bytes at 0x0. APPROVED.
+
+DRY RUN: the device is not contacted and nothing is written
+-----------------------------------------------------------
+A real run would:
+  1. ask you to type exactly: RESTORE BACKUP
+  2. connect:
+       esptool.cmds.detect_chip(port='COM5', baud=115200, connect_mode='default-reset', connect_attempts=7)
+       esptool.cmds.run_stub(esp)
+       esptool.cmds.attach_flash(esp)
+  3. check: ESP32-S3, 16 MB flash, no flash encryption, no secure download mode,
+     MAC 24:58:7c:12:34:56 (a different MAC needs the phrase: RESTORE TO A DIFFERENT DEVICE)
+  4. write: esptool.cmds.write_flash(esp, [(0x0, <16777216 bytes, sha256 175e8fce3c05ff2f...>)], flash_freq='keep', flash_mode='keep', flash_size='keep', erase_all=False, encrypt=False, force=False)
+     CLI:   esptool --chip esp32s3 --port COM5 --baud 115200 --before default-reset --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep 0x0 picco-backup-24587c123456-20261118T222825.330Z.bin
+  5. read back: esptool.cmds.read_flash(esp, 0x0, 0x1000000, output=None, flash_size='keep', no_progress=False) and compare SHA-256
+  6. esptool.cmds.reset_chip(esp, 'hard-reset')
+
+DRY RUN RESULT: READY. The backup passes the guard.
+[exit 0: OK]
+Log: <tmp>/work/logs/restore-dryrun-20261118T222826.217Z.log
+[process exit code 0]

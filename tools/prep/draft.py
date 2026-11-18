@@ -69,8 +69,20 @@ class PlannedSection:
         return self.doc.blocks[self.first : self.last + 1]
 
     @property
+    def start(self) -> int:
+        """Word index of the start anchor: words started before the first block's start tag."""
+        return self.blocks[0].start
+
+    @property
+    def end(self) -> int:
+        """Word index of the end anchor: words started before the last block's end tag."""
+        return self.blocks[-1].end
+
+    @property
     def word_count(self) -> int:
-        return sum(b.word_count for b in self.blocks)
+        """Words in ``[start, end)``, as the firmware counts them: every word between the anchors, including
+        caption, table, code and footnote-body words that fall inside."""
+        return self.end - self.start
 
     @property
     def start_anchor(self) -> str:
@@ -210,7 +222,7 @@ def check_cross_references(data: dict[str, Any], book: Book) -> tuple[list[Issue
         previous = position
         section = PlannedSection(i, sid, entry["label"], sd, first, last)
         if section.word_count == 0:
-            issues.append(Issue(EMPTY_SECTION, base, f"section {sid} has no words (only non-prose blocks)"))
+            issues.append(Issue(EMPTY_SECTION, base, f"section {sid} has no words between its anchors"))
         for block, side in ((section.blocks[0], "start"), (section.blocks[-1], "end")):
             if block.placement == "none":
                 issues.append(Issue(ANCHOR_PLACEMENT, base,
