@@ -173,6 +173,42 @@ TEST(ReadingSessionRsvp, AGroupOfTwoNeverCrossesASectionEnd) {
   EXPECT_TRUE(stopped);
 }
 
+TEST(ReadingSessionRsvp, AGroupNeverCrossesASectionEndInTheMiddleOfASentence) {
+  // The fixtures' section ends all fall on sentence ends; here the end anchor sits mid-sentence.
+  const std::string xhtml =
+      "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p><span id=\"rsvp-s1-start\"></span>One two three "
+      "four<span id=\"rsvp-s1-end\"></span> five six seven eight.</p></body></html>";
+  wixtest::Built built = wixtest::buildIndex(xhtml);
+  ASSERT_EQ(built.status, wordindex::BuildStatus::Ok);
+  wordindex::WordIndexReader reader;
+  ASSERT_EQ(reader.open(built.file), wordindex::ReadStatus::Ok);
+  wordindex::Anchor start;
+  wordindex::Anchor end;
+  ASSERT_TRUE(reader.findAnchor("rsvp-s1-start", start));
+  ASSERT_TRUE(reader.findAnchor("rsvp-s1-end", end));
+  ASSERT_EQ(end.wordIndex, 4u);
+  ChapterSections sections;
+  sections.reset(0, reader.wordCount(), NO_CHAPTER);
+  ASSERT_EQ(sections.add(0, start.wordIndex, end.wordIndex, 0), ChapterSections::AddResult::Added);
+  wordindex::IndexWordSource source(
+      reader,
+      [](void* context, uint32_t first, uint32_t last) {
+        return reading::sectionEndFlags(*static_cast<const ChapterSections*>(context), first, last);
+      },
+      &sections);
+  rsvp::FrameBuilder frames(source);
+  frames.setWordsPerFrame(2);
+  rsvp::Frame frame;
+  std::vector<std::pair<uint32_t, uint32_t>> groups;
+  while (frames.next(frame)) {
+    groups.emplace_back(frame.firstWordIndex, frame.lastWordIndex);
+    if (frame.lastWordIndex == 3) EXPECT_TRUE(frame.stops & rsvp::STOP_CHECKPOINT);
+  }
+  // "One two", "three four" (stop), then "five six", "seven eight.": never "four five".
+  const std::vector<std::pair<uint32_t, uint32_t>> expected = {{0, 1}, {2, 3}, {4, 5}, {6, 7}};
+  EXPECT_EQ(groups, expected);
+}
+
 TEST(ReadingSessionRsvp, TheStopFiresWithTheResumeAfterTheBreak) {
   Checkpoints cp;
   Chapter ch1(cp, CH1, "text/chapter-1.xhtml", CHAPTER_1);
