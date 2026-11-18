@@ -78,6 +78,9 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `.github/workflows/pr-firmware-links.yml` | **Modified**: `&& github.repository == ...` added to its job's `if:` | Comments on pull requests (needs `pull-requests: write`) with links to "CI (build)" artifacts and upstream's flash tool; nothing to link here, and no writes from CI in this project (task F3) |
 | `.github/workflows/release.yml` | **Modified**: `if:` as above on both jobs | Builds and attaches upstream's eight-device release assets on a published release, with upstream's `FREEINK_LCP_RELEASE_KEY` secret and `contents: write`; this project's release workflow is task A0 (task F3) |
 | `.github/workflows/release-fonts.yml` | **Modified**: `if:` as above on its job | Manual only, but needs the `FONTS_REPO_TOKEN` secret and publishes to `crosspoint-reader/crosspoint-fonts`; cannot work here (task F3) |
+| `.github/FUNDING.yml` | **Deleted** | It pointed GitHub's "Sponsor" button at upstream's funding page. This repository takes no funding and points donations nowhere (task H1) |
+| `.github/ISSUE_TEMPLATE/config.yml` | **Modified**: upstream's contact links (its discussions, `SCOPE.md`, `ROADMAP.md`) removed; `blank_issues_enabled` became `true` | Neutral for this repository, whose scope is `docs/PRD.md` and `docs/PLAN.md`. The issue forms themselves (`bug_report.yml`, `feature_request.yml`) are unchanged (task H1) |
+| `.github/PULL_REQUEST_TEMPLATE.md` | **Replaced** | Upstream's scope checklist and AI-usage question replaced by this repository's structure (`docs/IMPLEMENTER_GUIDE.md`): "Closes #n", what changed, upstream files touched, acceptance commands with output, evidence, what could not be done (task H1) |
 
 Upstream's own `docs/` files are merged into `docs/` unchanged; no file names collided. Files that later tasks add in their own directories (for example `tools/prep/`) are new files, not changes to upstream files; `git diff --diff-filter=MD` (step 3 below) lists only upstream files that were modified or deleted.
 
@@ -108,6 +111,8 @@ The simulator replaces the firmware's `lib/hal` (and the SDK's `SecureNet`) with
 No older simulator commit builds either; each is older still. `scripts/simulator_patches/0001-compat-firmware-490813ff.patch` adds the missing members (25 lines in three headers, additive, no-op or pass-through); its header says which firmware change each hunk answers.
 
 `scripts/simulator_patches/0002-mutex-zero-timeout-take.patch` (task R4a) fixes a fidelity gap rather than a missing member: the simulator's `xSemaphoreTake()` ignored the timeout on a mutex and always blocked, so `RenderLock(RenderLock::Mode::Try)` in the main loop waited for every render. With the display timing model a render can hold the lock for a 540 ms word update, which stopped the simulated main loop (keys, touch, scripted screenshots) for that long. A zero timeout now polls with `try_lock()`, as FreeRTOS does on the device.
+
+`scripts/simulator_patches/0003-qrcode-c17.patch` (task H1) makes the simulator build with GCC 15 (Ubuntu 26.04, GitHub's `ubuntu-latest`). The firmware's QR code library, `ricmoo/QRCode` 0.0.1, does `typedef unsigned char bool;` in `src/qrcode.h` when compiled as C, and GCC 15 compiles C as C23 by default, where `bool` is a keyword: `qrcode.h:37:23: error: 'bool' cannot be defined via 'typedef'`. QRCode is a registry dependency in `[env:simulator]` `lib_deps`, not part of the simulator library, so `qrcode.h` cannot be patched here: `patch_simulator.py` patches only the simulator's own git checkout, pinned by commit, and QRCode is an unpacked registry archive. The patch instead changes the simulator's build script `run_simulator.py`, which already adjusts other libraries' builders (its GfxRenderer screen-text hook): QRCode's builder alone gets `-std=gnu17` in its `CFLAGS`. Every other file keeps the compiler's default dialect. With GCC 13 (Ubuntu 24.04), whose default is already `gnu17`, `qrcode.o` is byte-identical with and without the flag. The device build is unaffected (its own toolchain, and the simulator library is not in it).
 
 ### How the patches are applied
 
@@ -147,8 +152,9 @@ git submodule status
 #    src/network/OtaUpdater.cpp (registration points, task D4), the RSVP registration points of task
 #    R4a (src/CrossPointSettings.h, src/SettingsList.cpp, the reader and its menu,
 #    lib/I18n/translations/english.yaml), .gitignore (two lines), AGENTS.md (a preamble under the
-#    title) and five .github/workflows files (job conditions), all in the table above; everything else
-#    listed is an added file from the table above
+#    title), five .github/workflows files (job conditions), and .github/FUNDING.yml (deleted),
+#    .github/ISSUE_TEMPLATE/config.yml and .github/PULL_REQUEST_TEMPLATE.md (task H1), all in the
+#    table above; everything else listed is an added file from the table above
 git diff --stat --diff-filter=MD 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 git diff --stat 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 
