@@ -163,11 +163,12 @@ void RsvpActivity::onEnter() {
 
 void RsvpActivity::onExit() {
   Activity::onExit();
-  // The caller holds the RenderLock. Leaving by an item has saved already (savePosition() skips the
-  // same place); the Home gesture and sleep did not return to the reader, so its progress is saved too.
-  if (phase.load() != Phase::Loading) {
+  // The caller holds the RenderLock. Leaving by an item saved in leave(); the Home gesture (and sleep,
+  // already saved in prepareForSleep(), which savePosition() then skips) does not return to the
+  // reader, so the reader's progress is saved here too.
+  if (phase.load() != Phase::Loading && handOff->then == rsvpentry::HandOff::Then::None) {
     savePosition(checkpoint::ReadingMode::Rsvp, "home");
-    if (handOff->then == rsvpentry::HandOff::Then::None) saveReaderProgress();
+    saveReaderProgress();
   }
   playing.store(false);
   index.close();
@@ -745,6 +746,7 @@ void RsvpActivity::stepSentence(const bool forward) {
 void RsvpActivity::stepValue(const Item item) {
   {
     RenderLock lock;  // the scheduler belongs to the render task; the values take effect at the next Play
+    const reading::RsvpValues before = values;
     if (item == Item::WpmDown || item == Item::WpmUp) {
       values.wpm = reading::stepWpm(values.wpm, item == Item::WpmUp);
       scheduler.setWpm(values.wpm);
@@ -753,7 +755,8 @@ void RsvpActivity::stepValue(const Item item) {
       scheduler.setWordsPerFrame(values.wordsPerUpdate);
     }
     status = Status::Paused;
-    LOG_DBG("RSVP", "values wpm=%u words_per_update=%u", values.wpm, values.wordsPerUpdate);
+    LOG_DBG("RSVP", "values wpm=%u words_per_update=%u changed=%d", values.wpm, values.wordsPerUpdate,
+            values == before ? 0 : 1);
   }
   requestUpdate();
 }
