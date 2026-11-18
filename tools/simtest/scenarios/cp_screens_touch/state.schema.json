@@ -1,7 +1,8 @@
 {
-  "description": "The fixture's state file after cp_screens_touch and cp_screens_keys: exactly these first grades (c0002-p3 was only skipped, so it has none), each with the grade time when the clock is set.",
+  "description": "The fixture's state file after cp_screens_touch and cp_screens_keys: exactly these first grades (c0002-p3 was only skipped, so it has none), each with the grade time when the clock is set; no checkpoint in progress (until task C4, a reread request resumes after the break).",
   "type": "object",
   "required": ["version", "book_sha256", "grades"],
+  "not": { "required": ["active_checkpoint"] },
   "properties": {
     "version": { "const": 1 },
     "book_sha256": { "const": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
