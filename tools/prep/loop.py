@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import os
 import re
 import shutil
 from dataclasses import dataclass, field
@@ -451,23 +452,52 @@ def extract_check(reply: str) -> str | None:
     return None
 
 
+def reply_fault(folder: Path, number: int, raw: bytes | None, record_format: str = guard.RECORD_FORMAT,
+                prepared_sha256: str | None = None) -> str | None:
+    """Why ``folder/checker-reply.txt`` is not the file the checker wrote through its guard, as a code; else ``None``.
+
+    ``no-result``: there is no file. ``no-record``: the guard recorded no write (no ``checker-write.json``).
+    ``other-record``: that file is not a record of the kind ``record_format`` names. ``other-round``,
+    ``other-file``, ``other-book``: it records a write for another round, another file or (checked only when
+    ``prepared_sha256`` is given) another book. ``changed``: the file is not what the guard saw being written.
+    ``save-check`` and the guard probe (``probe.py``) both judge a result by this.
+    """
+    if raw is None:
+        return "no-result"
+    if not os.path.lexists(folder / guard.RECORD):
+        return "no-record"
+    record = _load(folder / guard.RECORD)
+    if not (isinstance(record, dict) and record.get("format") == record_format):
+        return "other-record"
+    if record.get("round") != number:
+        return "other-round"
+    if record.get("file") != REPLY:
+        return "other-file"
+    if prepared_sha256 is not None and record.get("prepared_sha256") != prepared_sha256:
+        return "other-book"
+    if record.get("sha256") != guard.reply_digest(raw):
+        return "changed"
+    return None
+
+
 def reply_problem(folder: Path, number: int, raw: bytes | None) -> str | None:
     """Why ``checker-reply.txt`` is not the file the checker wrote through its guard, else ``None``."""
     reply_path = folder / REPLY
-    if raw is None:
+    fault = reply_fault(folder, number, raw)
+    if fault is None:
+        return None
+    if fault == "no-result":
         return (f"the checker wrote no result file ({reply_path} does not exist); the checker must write its "
                 "result there with one Write call")
-    record = _load(folder / guard.RECORD)
-    if not (isinstance(record, dict) and record.get("format") == guard.RECORD_FORMAT):
+    if fault in ("no-record", "other-record"):
         return (f"{folder / guard.RECORD} is missing, so the checker's guard did not approve the writing of "
                 f"{reply_path}. Only the checker may write that file, through the hook in "
                 ".claude/agents/prep-checker.md (Claude Code runs it only in a trusted workspace)")
-    if record.get("round") != number or record.get("file") != REPLY:
+    if fault in ("other-round", "other-file"):
+        record = _load(folder / guard.RECORD)
         return f"{folder / guard.RECORD} is for round {record.get('round')!r}, not round {number}"
-    if record.get("sha256") != guard.reply_digest(raw):
-        return (f"{reply_path} is not the file the checker wrote (its SHA-256 differs from the one its guard "
-                "recorded); nobody else may write or change it")
-    return None
+    return (f"{reply_path} is not the file the checker wrote (its SHA-256 differs from the one its guard "
+            "recorded); nobody else may write or change it")
 
 
 def save_check(work: Path) -> tuple[Path, bool]:
