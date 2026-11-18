@@ -59,6 +59,25 @@ const char* itemName(const Item item) {
       return "SaveDefault";
     case Item::SaveBook:
       return "SaveBook";
+    // Checkpoint screens (task C3a).
+    case Item::Reveal:
+      return "Reveal";
+    case Item::SkipPrompt:
+      return "SkipPrompt";
+    case Item::SkipCheckpoint:
+      return "SkipCheckpoint";
+    case Item::AnswerBox:
+      return "AnswerBox";
+    case Item::Correct:
+      return "Correct";
+    case Item::Incorrect:
+      return "Incorrect";
+    case Item::RereadRsvp:
+      return "RereadRsvp";
+    case Item::RereadPage:
+      return "RereadPage";
+    case Item::ContinueOn:
+      return "Continue";
   }
   return "?";
 }

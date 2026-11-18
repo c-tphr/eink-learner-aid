@@ -1,0 +1,13 @@
+{
+  "description": "cp_skip_grades after run 1: only c0002-p1 is graded; c0002-p2 was skipped and has no grade.",
+  "type": "object",
+  "required": ["grades", "active_checkpoint"],
+  "properties": {
+    "grades": {
+      "type": "object",
+      "required": ["c0002-p1"],
+      "additionalProperties": false,
+      "properties": { "c0002-p1": { "type": "object", "required": ["first"] } }
+    }
+  }
+}

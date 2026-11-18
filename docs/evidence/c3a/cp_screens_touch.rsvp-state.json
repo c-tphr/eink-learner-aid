@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "book_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "overrides": {},
+  "position": { "chapter": 3, "word": 0, "mode": "page" },
+  "grades": {
+    "c0001-p1": { "first": "correct", "at": "2026-11-17T13:23:22" },
+    "c0002-p1": { "first": "incorrect", "at": "2026-11-17T13:23:24" },
+    "c0002-p2": { "first": "incorrect", "at": "2026-11-17T13:23:30" }
+  },
+  "active_checkpoint": {
+    "id": "c0002",
+    "prompt_index": 0,
+    "resume": { "chapter": 3, "word": 0, "mode": "rsvp" },
+    "reread": { "mode": "page", "chapter": 2, "word": 311 }
+  }
+}

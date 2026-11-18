@@ -28,6 +28,9 @@ struct InputFrame {
   int16_t y = 0;
   bool back = false;  // left-edge swipe or header back tap
   bool home = false;  // bottom-edge swipe
+  // A vertical swipe ended this frame; (x, y) is where it started (checkpoint answer box, task C3a).
+  bool swipeUp = false;
+  bool swipeDown = false;
 };
 
 struct Event {
@@ -43,7 +46,7 @@ class GestureReader {
   void restartGuard(uint32_t nowMs);
   bool armed() const { return isArmed; }
 
-  // Focus screens: guard, short/hold classification, hold repeat, Confirm, tap, Back.
+  // Focus screens: guard, short/hold classification, hold repeat, Confirm, tap, Back, vertical swipe.
   Event pollFocus(const InputFrame& frame);
 
   // Playback: no guard, press and touch-down edges only.
