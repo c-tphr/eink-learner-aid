@@ -8,6 +8,7 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
+#include <CheckpointTrigger.h>
 #include <CheckpointTypes.h>
 #include <IndexWordSource.h>
 #include <Scheduler.h>
@@ -21,12 +22,17 @@
 #include "activities/Activity.h"
 #include "controls/ControlInput.h"
 #include "display/DisplayProfile.h"
+#include "reading/BookStateFile.h"
 #include "reading/ChapterWordIndex.h"
 #include "reading/RsvpPosition.h"
 #include "reading/RsvpValues.h"
 #include "reading/UpdateTimeoutWatch.h"
 
 class Epub;
+
+namespace readingsession {
+struct CheckpointRun;
+}
 
 class RsvpActivity final : public Activity {
  public:
@@ -45,17 +51,20 @@ class RsvpActivity final : public Activity {
 
  private:
   // Leaving: handed over to page view at a non-prose item; the main task finishes the activity.
-  enum class Phase : uint8_t { Loading, Paused, Playing, Leaving };
+  // Checkpoint: stopped at a checkpoint (task C2); the main task shows CheckpointActivity over RSVP.
+  enum class Phase : uint8_t { Loading, Paused, Playing, Leaving, Checkpoint };
   // The one-line note on the pause screen.
   enum class Note : uint8_t { None, EndOfBook, ChapterFailed, DisplayTimeout };
-  // What the status line starts with: "Paused", or the outcome of a save button.
-  enum class Status : uint8_t { Paused, SavedDefault, SavedBook, SaveFailed };
+  // What the status line starts with: "Paused", the outcome of a save button, or "Checkpoint done".
+  enum class Status : uint8_t { Paused, SavedDefault, SavedBook, SaveFailed, CheckpointDone };
 
   // The scheduler's word source: an IndexWordSource over the open chapter, made anew per chapter
-  // (it caches marker lookups of the chapter it was made for).
+  // (it caches marker lookups of the chapter it was made for), with the chapter's section ends.
   class ChapterSource final : public rsvp::WordSource {
    public:
-    void reset(wordindex::WordIndexReader& reader) { source.emplace(reader); }
+    void reset(wordindex::WordIndexReader& reader, wordindex::SectionEndFn ends, void* context) {
+      source.emplace(reader, ends, context);
+    }
     bool peek(rsvp::Token& out) override { return source && source->peek(out); }
     void advance() override {
       if (source) source->advance();
@@ -91,6 +100,13 @@ class RsvpActivity final : public Activity {
   void showItem(uint32_t from, bool afterStop);
   void advanceChapter();
   bool openChapter(int spineIndex);
+  // The word source over the open chapter, with its section ends when the book has checkpoints.
+  void resetSource();
+  // A STOP_CHECKPOINT stop: the session's step; the main task then shows the checkpoint.
+  void stopAtCheckpoint();
+  // After a checkpoint: to the first word after the break (another chapter when the section ended
+  // its chapter), paused.
+  void moveAfterCheckpoint(const checkpoint::Position& resume);
   void drawPauseScreen(bool clearing);
   void paintPauseScreen();
   void paintPlaybackScreen();
@@ -112,13 +128,18 @@ class RsvpActivity final : public Activity {
   void stepValue(controls::Item item);
   void saveAsDefault();
   void saveForBook();
+  void openCheckpoint();
+  void returnFromCheckpoint(const readingsession::CheckpointRun& run);
 
   // --- Either task, holding the RenderLock (the render task holds it inside render()) ---
   // Writes the position (the next word) and `mode` to the book's state file, unless it is what was
   // written last.
   void savePosition(checkpoint::ReadingMode mode, const char* reason);
-  // Home gesture and sleep: the reader's own progress, through HandOff (once).
+  // Home gesture and sleep: the reader's own progress, through HandOff (once), at the next word or,
+  // while a checkpoint shows, at the word before the break.
   void saveReaderProgress();
+  // The state file as the session sees it (book_sha256 and checkpoint index of a prepared book).
+  reading::BookIdentity identity() const;
 
   std::shared_ptr<Epub> epub;
   std::shared_ptr<rsvpentry::HandOff> handOff;
@@ -145,6 +166,12 @@ class RsvpActivity final : public Activity {
   std::atomic<uint32_t> lastLoopMs{0};
   std::atomic<bool> guardRestartPending{false};
   std::atomic<bool> leavePending{false};  // Phase::Leaving: finish() on the next main-loop pass
+  std::atomic<bool> checkpointPending{false};  // Phase::Checkpoint: show it on the next main-loop pass
+
+  // Phase::Checkpoint (RenderLock): the step that fired, and the first word of the frame on screen,
+  // which is the reading position before the break.
+  checkpoint::Step pendingCheckpoint;
+  uint32_t checkpointBefore = 0;
 
   // Pause-screen state: written by the main task under the RenderLock, read by the render task.
   int focus = 0;

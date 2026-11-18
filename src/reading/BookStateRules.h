@@ -5,6 +5,7 @@
 // BookStateFile.h does the file I/O around it.
 
 #include <BookState.h>
+#include <CheckpointIndex.h>
 #include <StateCodec.h>
 
 #include <cstddef>
@@ -32,8 +33,13 @@ const char* stateSourceName(StateSource source);
 // (see BookStateFile.h). An invalid file gives a fresh state (Invalid). When the file names another edition
 // (both hashes set and different), the state takes the open book's hash and drops the reading
 // position and the checkpoint in progress, whose word positions may not fit this edition; overrides
-// and grades are kept. That is checkpoint::applyBookChangeRule() without the grade filter, which needs
-// the open checkpoint index (task C2).
-StateLoad decodeForUse(const uint8_t* data, size_t size, const char* bookSha256, checkpoint::BookState& out);
+// are kept. With the open book's checkpoint index (`index`: a prepared book) this is
+// checkpoint::applyBookChangeRule(), which also keeps only the grades of prompt ids the book still
+// has; without it (an ordinary book) every grade is kept.
+StateLoad decodeForUse(const uint8_t* data, size_t size, const char* bookSha256,
+                       const checkpoint::CheckpointIndex* index, checkpoint::BookState& out);
+inline StateLoad decodeForUse(const uint8_t* data, size_t size, const char* bookSha256, checkpoint::BookState& out) {
+  return decodeForUse(data, size, bookSha256, nullptr, out);
+}
 
 }  // namespace reading

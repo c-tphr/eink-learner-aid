@@ -22,6 +22,10 @@ class Epub;
 class GfxRenderer;
 class MappedInputManager;
 
+namespace reading {
+class ReadingSession;
+}
+
 namespace rsvpentry {
 
 #if CROSSPOINT_RSVP_ENABLED
@@ -59,6 +63,8 @@ struct HandOff {
 
 #if CROSSPOINT_RSVP_ENABLED
   ItemStop item;  // ShowItem and Continue
+  // The reader's session (Entry::session), for the banner's state file write.
+  std::shared_ptr<reading::ReadingSession> session;
 #endif
 };
 
@@ -69,6 +75,9 @@ struct Entry {
   uint32_t pageEndOffset = UINT32_MAX;  // where the next page starts; UINT32_MAX on the chapter's last page
   bool resume = false;                  // the book opened in RSVP mode (openedInRsvp())
   std::shared_ptr<HandOff> after;       // Continue after a non-prose item: its HandOff (task R5)
+  // The open book's reading session (src/reading/ReadingSession.h, task C2): its checkpoint data and
+  // the section ends RSVP stops at. Null for a book whose session could not be made.
+  std::shared_ptr<reading::ReadingSession> session;
 };
 
 #if CROSSPOINT_RSVP_ENABLED
@@ -79,8 +88,8 @@ std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& inpu
                                  const Entry& entry, std::shared_ptr<HandOff> handOff);
 
 // True when the book's state file says it was left in RSVP: the reader then opens RSVP by itself once
-// its first page is shown. Reads the state file (src/reading/BookStateFile.h).
-bool openedInRsvp(const Epub& epub);
+// its first page is shown. Reads the state file (src/reading/BookStateFile.h) for `session`'s book.
+bool openedInRsvp(const Epub& epub, const reading::ReadingSession* session);
 
 // The banner over the page that shows a non-prose item (HandOff::Then::ShowItem; README.md,
 // "Non-prose items"). Pushed by the reader once that page is on screen; it draws over it. On leaving
@@ -96,7 +105,7 @@ inline std::unique_ptr<Activity> create(GfxRenderer&, MappedInputManager&, std::
   return nullptr;
 }
 
-inline bool openedInRsvp(const Epub&) { return false; }
+inline bool openedInRsvp(const Epub&, const reading::ReadingSession*) { return false; }
 
 inline std::unique_ptr<Activity> createItemBanner(GfxRenderer&, MappedInputManager&, std::shared_ptr<Epub>,
                                                   std::shared_ptr<HandOff>) {

@@ -22,6 +22,7 @@
 #include "activities/Activity.h"
 #include "controls/ControlInput.h"
 #include "display/DisplayProfile.h"
+#include "reading/BookStateFile.h"
 
 namespace reading {
 class CheckpointBook;
@@ -54,7 +55,10 @@ class CheckpointActivity final : public Activity {
   void activate(controls::Item item);
   void apply(checkpoint::FlowEvent event);
   void page(checkpointui::PageMove move, const char* how);
-  void persist(const checkpoint::Transition& t, const char* promptId, const char* reason);
+  // `position`, when given, is also written as the reading position.
+  void persist(const checkpoint::Transition& t, const char* promptId, const char* reason,
+               const checkpoint::Place* position = nullptr);
+  reading::BookIdentity identity() const;
   // `prompt`: the prompt the ending event was given on.
   void end(checkpointui::End how, const checkpoint::Transition& t, uint16_t prompt);
   // The screen for the flow's state, with the prompt's text loaded when the prompt changed.

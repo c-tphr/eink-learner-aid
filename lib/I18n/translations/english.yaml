@@ -709,6 +709,7 @@ STR_RSVP_SAVE_BOOK: "Save for this book"
 STR_RSVP_SAVED_DEFAULT: "Saved as default"
 STR_RSVP_SAVED_BOOK: "Saved for this book"
 STR_RSVP_SAVE_FAILED: "Could not save"
+STR_RSVP_CHECKPOINT_DONE: "Checkpoint done"
 
 STR_CP_CHECKPOINT: "Checkpoint"
 STR_CP_QUESTION_OF: "question %u of %u"

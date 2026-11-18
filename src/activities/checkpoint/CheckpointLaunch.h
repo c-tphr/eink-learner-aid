@@ -2,8 +2,8 @@
 
 // The way into the checkpoint screens (task C3a): a caller that knows "this checkpoint of this book
 // fired" creates the activity, pushes it, and reads how it ended from the shared Outcome once it has
-// finished (in its result handler when it used startActivityForResult()). Until task C2 fires
-// checkpoints, only the simulator-only entry (CheckpointSimEntry.h) calls this.
+// finished (in its result handler when it used startActivityForResult()). reading::ReadingSession
+// calls this when ordinary forward reading fires a checkpoint (task C2), in RSVP and in page view.
 
 #include "RsvpFeature.h"
 
@@ -34,6 +34,11 @@ struct Request {
   checkpoint::Step fire;
   // The mode in use when it fired: where reading resumes, and the default reread after Incorrect.
   checkpoint::ReadingMode mode = checkpoint::ReadingMode::Page;
+  // The reading position before the break, written with the checkpoint in progress when the activity
+  // starts: a book closed while the checkpoint shows reopens before the break, where reading on fires
+  // it again (restoring the prompt itself is task C5).
+  bool hasBefore = false;
+  checkpoint::Place before;
 };
 
 // How the checkpoint ended, filled when the activity finishes.

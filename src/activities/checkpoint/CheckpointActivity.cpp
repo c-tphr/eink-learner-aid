@@ -187,8 +187,8 @@ bool CheckpointActivity::start() {
     LOG_ERR("CPT", "OOM: checkpoint session (%u bytes)", static_cast<unsigned>(sizeof(Session)));
     return false;
   }
-  const reading::StateLoad load = reading::loadBookState(bookPath, book->sourceSha256(), session->state);
-  checkpoint::applyBookChangeRule(session->state, &book->index());
+  // The library's rule for another edition (applyBookChangeRule()) applies as the file is read.
+  const reading::StateLoad load = reading::loadBookState(bookPath, identity(), session->state);
 
   const checkpoint::Transition t = session->flow.start(request.fire, request.mode);
   const checkpoint::CheckpointIndex& index = book->index();
@@ -204,9 +204,17 @@ bool CheckpointActivity::start() {
     LOG_ERR("CPT", "open refused: refusal=%u", static_cast<unsigned>(t.refusal));
     return false;
   }
-  persist(t, nullptr, "start");  // the checkpoint in progress
+  // The checkpoint in progress, and the reading position before the break.
+  persist(t, nullptr, "start", request.hasBefore ? &request.before : nullptr);
   enterScreen();
   return true;
+}
+
+reading::BookIdentity CheckpointActivity::identity() const {
+  reading::BookIdentity id;
+  id.sha256 = book->sourceSha256();
+  id.index = &book->index();
+  return id;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -332,14 +340,19 @@ void CheckpointActivity::apply(const FlowEvent event) {
   }
 }
 
-void CheckpointActivity::persist(const checkpoint::Transition& t, const char* gradedPrompt, const char* reason) {
-  const checkpointui::StateChange change = checkpointui::changeFor(session->state, t, gradedPrompt);
+void CheckpointActivity::persist(const checkpoint::Transition& t, const char* gradedPrompt, const char* reason,
+                                 const checkpoint::Place* position) {
+  checkpointui::StateChange change = checkpointui::changeFor(session->state, t, gradedPrompt);
+  if (position != nullptr) {
+    change.positionMoved = true;
+    change.position = *position;
+  }
   struct Edit {
     const checkpointui::StateChange* change;
     const char* sha;
   } edit{&change, book->sourceSha256()};
   const bool ok = reading::editBookState(
-      bookPath, book->sourceSha256(),
+      bookPath, identity(),
       [](checkpoint::BookState& state, const void* context) {
         const auto* e = static_cast<const Edit*>(context);
         checkpointui::applyChange(state, *e->change, e->sha);
