@@ -1,0 +1,150 @@
+# Choose a profile, and the Settings row it makes appear (task D3b; plan section 10, step 11; section 6,
+# "Outcome"). The SD card holds the benchmark results file devicetest_sweep wrote (task D3a's evidence:
+# Stock and Trial B rated, Trial A skipped part-way, Trials C and D not run) and the stored byte that
+# benchmark left (15: every trial unlocked, Stock chosen). Touch only.
+#
+# 1. Settings > Display has no "Speed read display" row: a benchmark alone keeps nothing.
+# 2. Choose a profile lists Stock and the four unlocked trials with the ratings from 0001-bench.json;
+#    the owner chooses Trial B and keeps Trial C. The byte becomes 38 (B and C unlocked, B chosen), the
+#    kept mask 6; Trials A and D are locked again; 0002-choice.json records it.
+# 3. The Settings row appears with "Trial B"; RSVP on an ordinary book plays its words on Trial B.
+# 4. The Settings row's popup chooses Trial C: only the chosen profile changes (byte 54).
+# 5. Choose a profile again lists Stock, Trial B and Trial C only; the owner chooses Stock and keeps
+#    none: the byte and the kept mask are 0 (the factory state) and the row is gone.
+description = "Choose a profile: Trial B chosen and Trial C kept, Settings row shown, RSVP plays on Trial B, the row picks Trial C; then Stock and none: byte 0, row gone"
+timeout_s = 300
+wait_timeout_ms = 30000
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+  { src = "docs/evidence/d3a/devicetest_sweep-0001-bench.json", dst = "rsvp-bench/0001-bench.json" },
+  { json = { rsvpDisplayProfile = 15 }, dst = ".crosspoint/settings.json" },
+]
+
+steps = [
+  { wait_screen = "Browse Files | Library | File Transfer | Settings" },
+  { tap = [240, 562], note = "Settings on Home" },
+  { wait_screen = "Settings | dev-simulator | System" },
+  { tap = [240, 200], note = "Display" },
+  { wait_screen = "Display | Device test" },
+  { screen_lacks = "Speed read display", note = "a benchmark alone keeps nothing" },
+  { shot = "settings_display_before" },
+  { tap = [240, 138], note = "Device test" },
+  { wait_log = "\\[DTS\\] open panel=simulator setting=15" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=menu" },
+  { tap = [240, 348], note = "Choose a profile" },
+  { wait_log = "\\[DTS\\] choose open candidates=stock,trial-a,trial-b,trial-c,trial-d current=stock setting=15 kept=0 bench=0001-bench.json" },
+  { wait_log = "\\[DTS\\] screen choose-profile focus=0" },
+  { screen_has = "Choose a profile | Now: Stock" },
+  { screen_has = "Ratings from /rsvp-bench/0001-bench.json" },
+  { shot = "choose_profile" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=choose-profile" },
+  { tap = [240, 268], note = "Trial B" },
+  { wait_log = "\\[DTS\\] choose chosen=trial-b keepable=3" },
+  { wait_log = "\\[DTS\\] screen keep-trials focus=0" },
+  { screen_has = "Trial A: lock again | Trial C: lock again | Trial D: lock again | Save the choice | Back" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=keep-trials" },
+  { tap = [240, 188], note = "Trial C: keep" },
+  { wait_log = "\\[DTS\\] choose keep trial-c=1" },
+  { wait_log = "\\[DTS\\] screen keep-trials focus=1" },
+  { screen_has = "Trial C: keep" },
+  { shot = "keep_trials" },
+  { tap = [240, 348], note = "Save the choice" },
+  { wait_log = "\\[DTS\\] choice run=2 file=/rsvp-bench/0002-choice.json chosen=trial-b kept=trial-b,trial-c locked=trial-a,trial-d setting_before=15 setting_after=38 kept_before=0 kept_after=6 settings_saved=1 row=shown" },
+  { wait_log = "\\[DTS\\] saved file=/rsvp-bench/0002-choice.json bytes=\\d+ status=complete ok=1" },
+  { wait_log = "\\[DTS\\] screen choice-done focus=0" },
+  { screen_has = "Profile saved | Saved as /rsvp-bench/0002-choice.json" },
+  { shot = "choice_done" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=choice-done" },
+  { tap = [240, 108], note = "Back to the device test menu" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=menu" },
+  { tap = [240, 508], note = "Leave the device test" },
+  { wait_screen = "Display | Device test | Speed read display | Trial B" },
+  { shot = "settings_row" },
+
+  # RSVP plays on the chosen profile
+  { swipe = [240, 780, 240, 300], note = "Home" },
+  { wait_log = "Entering activity: Home" },
+  { tap = [240, 346], note = "Browse Files" },
+  { wait_screen = "SD card | books | rsvp-bench" },
+  { tap = [240, 138], note = "the books folder" },
+  { wait_screen = "fixture | .epub" },
+  { tap = [240, 138], note = "open the fixture" },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400], note = "chapter 1" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [385, 752], note = "More" },
+  { wait_screen = "More | 1/3" },
+  { tap = [240, 388], note = "Speed read" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { tap = [240, 340], note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=0 wpm=240 words_per_update=1" },
+  { wait_log = "\\[DSP\\] update n=\\d+ profile=trial-b", note = "word frames on the chosen trial" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=3 last=3 " },
+  { tap = [240, 600], note = "pause" },
+  { wait_log = "\\[RSVP\\] pause reason=pause " },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { swipe = [240, 780, 240, 300], note = "Home" },
+  { wait_log = "Entering activity: Home" },
+  { wait_log = "No known cover image for thumbnail" },
+
+  # The Settings row picks Trial C: only the chosen profile changes
+  { tap = [240, 562], note = "Settings" },
+  { wait_screen = "Settings | dev-simulator | System" },
+  { tap = [240, 200], note = "Display" },
+  { wait_screen = "Display | Device test | Speed read display | Trial B" },
+  { tap = [240, 200], note = "Speed read display" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { shot = "settings_popup" },
+  { tap = [240, 487], note = "Trial C" },
+  { wait_log = "\\[DTS\\] speed read display chosen=trial-c setting_before=38 setting_after=54 saved=1" },
+  { wait_screen = "Display | Device test | Speed read display | Trial C" },
+
+  # Choose Stock and keep nothing: the factory state, and the row is gone
+  { tap = [240, 138], note = "Device test" },
+  { wait_log = "\\[DTS\\] open panel=simulator setting=54" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=menu" },
+  { tap = [240, 348], note = "Choose a profile" },
+  { wait_log = "\\[DTS\\] choose open candidates=stock,trial-b,trial-c current=trial-c setting=54 kept=6 bench=0001-bench.json" },
+  { wait_log = "\\[DTS\\] screen choose-profile focus=2", note = "the current profile is the default row" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=choose-profile" },
+  { tap = [240, 108], note = "Stock" },
+  { wait_log = "\\[DTS\\] choose chosen=stock keepable=2" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=keep-trials" },
+  { screen_has = "Trial B: lock again | Trial C: lock again | Save the choice | Back" },
+  { tap = [240, 268], note = "Save the choice: nothing kept" },
+  { wait_log = "\\[DTS\\] choice run=3 file=/rsvp-bench/0003-choice.json chosen=stock kept=none locked=trial-b,trial-c setting_before=54 setting_after=0 kept_before=6 kept_after=0 settings_saved=1 row=hidden" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=choice-done" },
+  { screen_has = "Kept: none | Locked again: Trial B, Trial C | Only Stock is kept" },
+  { tap = [240, 108], note = "Back to the device test menu" },
+  { wait_log = "\\[CTL\\] DeviceTest armed screen=menu" },
+  { tap = [240, 508], note = "Leave the device test" },
+  { wait_screen = "Display | Device test | Sleep Screen" },
+  { screen_lacks = "Speed read display" },
+  { quit = true },
+
+  { expect_json = ".crosspoint/settings.json", pointer = "/rsvpDisplayProfile", equals = 0 },
+  { expect_json = ".crosspoint/settings.json", pointer = "/rsvpProfilesKept", equals = 0 },
+  { expect_schema = "rsvp-bench/0002-choice.json", schema = "tools/device/schema/rsvp-bench.schema.json" },
+  { expect_schema = "rsvp-bench/0003-choice.json", schema = "tools/device/schema/rsvp-bench.schema.json" },
+  { expect_no_file = "rsvp-bench/*.tmp" },
+  { expect_json = "rsvp-bench/0002-choice.json", pointer = "/chosen", equals = "trial-b" },
+  { expect_json = "rsvp-bench/0002-choice.json", pointer = "/trial_setting/after", equals = 38 },
+  { expect_json = "rsvp-bench/0002-choice.json", pointer = "/kept_after", equals = ["trial-b", "trial-c"] },
+  { expect_json = "rsvp-bench/0002-choice.json", pointer = "/locked", equals = ["trial-a", "trial-d"] },
+  { expect_json = "rsvp-bench/0002-choice.json", pointer = "/benchmark_file", equals = "0001-bench.json" },
+  { expect_json = "rsvp-bench/0002-choice.json", pointer = "/candidates/2/ratings/playback-300-1", equals = "unreadable" },
+  { expect_json = "rsvp-bench/0002-choice.json", pointer = "/candidates/2/delivered_wpm_240", equals = 52.1 },
+  { expect_json = "rsvp-bench/0003-choice.json", pointer = "/chosen", equals = "stock" },
+  { expect_json = "rsvp-bench/0003-choice.json", pointer = "/trial_setting/before", equals = 54 },
+  { expect_json = "rsvp-bench/0003-choice.json", pointer = "/trial_setting/after", equals = 0 },
+  { expect_json = "rsvp-bench/0003-choice.json", pointer = "/kept_after", equals = [] },
+  { compare = "settings_display_before" },
+  { compare = "keep_trials" },
+  { compare = "settings_row" },
+  { compare = "settings_popup" },
+]
