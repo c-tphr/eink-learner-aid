@@ -21,6 +21,10 @@ Nov 16, 2026 · @Christopher
 
 - Sections 8 and 14: *Common Sense* is the first essay of the Standard Ebooks collection *Essays*, not a title of its own there; the collection is committed unmodified as `fixtures/books/paine-essays.epub` and prepared as a whole (READY after two rounds), because the instructions allow only front and back matter to be excluded.
 
+**2026-11-18.** The checker's guard and where `/prep-book` runs (tasks P7 and P8, issues #75 and #84; the owner's decision recorded on #75). Section 1 is unchanged. This entry is the newest: the two entries above dated 2026-11-19 were written earlier, with dates that ran ahead of the calendar.
+
+- Section 8, "Controls": the checker no longer has read-only tools. Since P7 it writes its own result through one guarded write, and a result without the guard's record is refused. The first real run showed that Claude Code does not run the guard's hook in a cloud session, so the plan now says that `/prep-book` needs a local Claude Code session in a trusted folder and starts with a probe that proves the guard is active. The owner chose this over a repository-wide hook.
+
 ## 1. Summary and confirmed decisions
 
 The reader is built as a public fork of mainline CrossPoint: RSVP works on any EPUB, and checkpoints come from prepared EPUBs that carry their own prompt data. This plan turns the v1 PRD into work that a Fable 5.2 orchestrator can split into GitHub issues for Opus 5.5 implementers. Everything is developed and verified in a simulator, then proven on the physical Picco in one final hands-on session.
@@ -349,7 +353,8 @@ Preparation is one Claude Code command, `/prep-book <path to EPUB>`, that runs a
 
 ### Controls
 
-- **Fresh session.** The checker runs as a separate Claude Code subagent defined in `.claude/agents/`, with read-only tools and no access to the drafter's conversation. It sees only files.
+- **Fresh session.** The checker runs as a separate Claude Code subagent defined in `.claude/agents/`, with no access to the drafter's conversation. It sees only files. A guard (a hook in the agent's definition, `tools/prep/checker_guard.py`) lets it read only its own folder and write exactly one file, its result, and records that write; a result without the guard's record is refused.
+- **Where it runs.** `/prep-book` needs a Claude Code session started on the user's own computer, in this repository, in a folder the user has trusted: Claude Code runs the guard's hook only there. In a Claude Code cloud session the hook does not run, so no book can become ready (seen in issue #75). The command's first step is a one-minute probe with the real checker on a made-up text; it stops with instructions when the guard is not active. The scripts themselves (`extract`, `build`, `validate`, `verify-check`, `report`) run anywhere.
 - **No pass, no delivery.** `prep report` refuses to mark a book ready unless the latest validator run and the latest checker run both passed against the current prepared file's hash.
 - **Bounded loop.** After three failed rounds the command stops and delivers a failed report listing the open issues.
 - **Report contents.** Every check with its final status, the number of rounds, each issue raised and how it was resolved, the instructions version, the source hash and the models used.
