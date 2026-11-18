@@ -341,11 +341,11 @@ void CheckpointActivity::apply(const FlowEvent event) {
 }
 
 void CheckpointActivity::persist(const checkpoint::Transition& t, const char* gradedPrompt, const char* reason,
-                                 const checkpoint::Place* position) {
+                                 const checkpoint::Place* place) {
   checkpointui::StateChange change = checkpointui::changeFor(session->state, t, gradedPrompt);
-  if (position != nullptr) {
+  if (place != nullptr) {
     change.positionMoved = true;
-    change.position = *position;
+    change.position = *place;
   }
   struct Edit {
     const checkpointui::StateChange* change;

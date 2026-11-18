@@ -63,9 +63,9 @@ enum class PageMove : uint8_t { NextPage, PreviousPage, ChapterSkip };
 // when out of memory; reading then goes on without checkpoints.
 std::shared_ptr<reading::ReadingSession> open(const std::shared_ptr<Epub>& epub);
 
-// Whether a next-page action may need the next page's start offset (a prepared book): the reader then
-// lays it out before asking nextPageCheckpoint().
-bool wantsNextPageOffset(const reading::ReadingSession& session);
+// Whether a next-page action in chapter `spine` may need the next page's start offset (a prepared
+// book's chapter with a checkpoint): the reader then lays it out before asking nextPageCheckpoint().
+bool wantsNextPageOffset(const reading::ReadingSession& session, int spine);
 
 // A next-page action is about to leave `page`. When it carries the position past the end of a section
 // with a checkpoint (checkpoint::pageAdvance()), returns CheckpointActivity, to be pushed before the
@@ -85,7 +85,7 @@ void notePageMove(reading::ReadingSession& session, PageMove move);
 #else
 
 inline std::shared_ptr<reading::ReadingSession> open(const std::shared_ptr<Epub>&) { return nullptr; }
-inline bool wantsNextPageOffset(const reading::ReadingSession&) { return false; }
+inline bool wantsNextPageOffset(const reading::ReadingSession&, int) { return false; }
 inline std::unique_ptr<Activity> nextPageCheckpoint(GfxRenderer&, MappedInputManager&, reading::ReadingSession&,
                                                     const PageSpan&, std::shared_ptr<CheckpointRun>&) {
   return nullptr;
@@ -134,6 +134,8 @@ class ReadingSession {
   ReadingSession& operator=(const ReadingSession&) = delete;
 
   bool hasCheckpoints() const { return book != nullptr; }
+  // A checkpoint can fire in chapter `spine` (as far as is known without its word index).
+  bool mayFireIn(int spine) const;
   const std::shared_ptr<CheckpointBook>& checkpointBook() const { return book; }
   // What the state file is read and written with (BookStateFile.h).
   BookIdentity identity() const;
@@ -193,6 +195,8 @@ class ReadingSession {
 
   bool openPageIndex(int spine);
   int hrefChapterOf(int spine) const;
+  // The loaded chapter has a section with a checkpoint (layout must exist).
+  bool hasCheckpointSection() const;
 
   std::shared_ptr<Epub> epub;
   std::shared_ptr<CheckpointBook> book;

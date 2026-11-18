@@ -1495,7 +1495,7 @@ bool EpubReaderActivity::openPageCheckpoint() {
   {
     RenderLock lock;
     if (!section) return false;
-    if (readingsession::wantsNextPageOffset(*readingSession)) {
+    if (readingsession::wantsNextPageOffset(*readingSession, currentSpineIndex)) {
       // The trigger needs the next page's start: lay it out now, as the turn would right after.
       const uint32_t loans = renderer.frameBufferLoanCount();
       while (section->isBuilding() && section->currentPage + 1 >= section->pageCount && section->buildSomeMore(1)) {

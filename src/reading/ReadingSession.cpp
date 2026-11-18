@@ -103,6 +103,19 @@ bool ReadingSession::loadSections(const int spine, wordindex::WordIndexReader& r
   return layout->sections.count() > 0;
 }
 
+bool ReadingSession::mayFireIn(const int spine) const {
+  if (!layout) return false;
+  if (layout->sectionsLoaded && layout->sectionsSpine == spine) return hasCheckpointSection();
+  return hrefChapterOf(spine) >= 0;
+}
+
+bool ReadingSession::hasCheckpointSection() const {
+  for (uint16_t i = 0; i < layout->sections.count(); ++i) {
+    if (layout->sections.span(i).checkpoint != checkpoint::NO_INDEX) return true;
+  }
+  return false;
+}
+
 uint8_t ReadingSession::sectionEnds(void* context, const uint32_t firstAnchorIndex, const uint32_t lastAnchorIndex) {
   const auto* self = static_cast<const ReadingSession*>(context);
   if (!self->layout) return 0;
@@ -127,9 +140,11 @@ bool ReadingSession::openPageIndex(const int spine) {
 checkpoint::Step ReadingSession::nextPage(const readingsession::PageSpan& page, PageWords& words, uint32_t& from) {
   words = PageWords{};
   from = 0;
-  if (!layout || !openPageIndex(page.spine)) return checkpoint::Step{};
+  if (!layout) return checkpoint::Step{};
+  if (!mayFireIn(page.spine)) return checkpoint::Step{};  // no word index needed
+  if (!openPageIndex(page.spine)) return checkpoint::Step{};
   wordindex::WordIndexReader& reader = layout->pageIndex.reader();
-  if (!loadSections(page.spine, reader)) return checkpoint::Step{};
+  if (!loadSections(page.spine, reader) || !hasCheckpointSection()) return checkpoint::Step{};
   words = pageWords(reader, page.startOffset, page.nextStartOffset);
   if (!words.any) return checkpoint::Step{};
   from = pageFromWord(words, static_cast<uint16_t>(page.spine), pageReading);
@@ -244,7 +259,7 @@ std::shared_ptr<reading::ReadingSession> open(const std::shared_ptr<Epub>& epub)
   return session;
 }
 
-bool wantsNextPageOffset(const reading::ReadingSession& session) { return session.hasCheckpoints(); }
+bool wantsNextPageOffset(const reading::ReadingSession& session, const int spine) { return session.mayFireIn(spine); }
 
 std::unique_ptr<Activity> nextPageCheckpoint(GfxRenderer& renderer, MappedInputManager& input,
                                              reading::ReadingSession& session, const PageSpan& page,
