@@ -2,18 +2,18 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "ProfileChoice.h"
-
 #include <cstdio>
 #include <cstring>
+
+#include "ProfileChoice.h"
 
 namespace devicetest {
 
 using displayprofile::decodeTrialSetting;
 using displayprofile::encodeTrialSetting;
 using displayprofile::isTrial;
-using displayprofile::PROFILES;
 using displayprofile::profileAllowed;
+using displayprofile::PROFILES;
 using displayprofile::trialBit;
 
 bool ProfileList::contains(const ProfileId id) const {
@@ -81,8 +81,7 @@ SpeedReadOptions speedReadOptions(const uint8_t setting, const TrialMask kept, c
   return out;
 }
 
-uint8_t selectSpeedReadProfile(const uint8_t setting, const TrialMask kept, const PanelId panel,
-                               const ProfileId id) {
+uint8_t selectSpeedReadProfile(const uint8_t setting, const TrialMask kept, const PanelId panel, const ProfileId id) {
   const SpeedReadOptions options = speedReadOptions(setting, kept, panel);
   if (!options.list.contains(id)) return setting;
   TrialSetting s = decodeTrialSetting(setting);

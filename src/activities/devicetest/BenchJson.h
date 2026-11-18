@@ -93,8 +93,8 @@ struct ChoiceRecord {
   TrialMask keptBefore = 0;
   TrialMask keptAfter = 0;
   TrialMask locked = 0;
-  bool saved = false;      // the settings file was written
-  BenchRatings bench;      // the ratings the choice was based on
+  bool saved = false;  // the settings file was written
+  BenchRatings bench;  // the ratings the choice was based on
 };
 
 class JsonSink {

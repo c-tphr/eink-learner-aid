@@ -42,8 +42,8 @@ const WalkStep WALK_STEPS[WALK_STEP_COUNT] = {
      "Playback stops after \"to put out the lamp.\" The checkpoint shows question 1 of 3. Hold Down: Reveal "
      "answer. Press Down, then hold: Correct. Question 2 of 3 shows. Hold Down: Reveal answer. Press Down "
      "twice, then hold: Incorrect. The screen says \"marked Incorrect\". Reread in RSVP is highlighted."},
-    {"reread-rsvp-end", criterionBit(2), "PRD 2: reread in RSVP to the end of the section, back to the question",
-     "C4", "Reread in RSVP to the end",
+    {"reread-rsvp-end", criterionBit(2), "PRD 2: reread in RSVP to the end of the section, back to the question", "C4",
+     "Reread in RSVP to the end",
      "Hold Down: Reread in RSVP. Hold Down: Play. Let it play to the end of the section. You may raise the WPM "
      "first to make it shorter.",
      "The reread starts at \"The Visitor from the Mainland\". The pause screen has a row \"Back to the "
@@ -74,8 +74,8 @@ const WalkStep WALK_STEPS[WALK_STEP_COUNT] = {
      "The book opens at question 1 of 1, with the answer hidden. Tap Skip checkpoint. Page view shows the page "
      "after the break."},
     {"sleep-in-reread", criterionBit(4),
-     "PRD 4: sleep during a reread; waking restores the reread and the way back to the question",
-     "C2, C3, C4, C5", "Sleep during a reread",
+     "PRD 4: sleep during a reread; waking restores the reread and the way back to the question", "C2, C3, C4, C5",
+     "Sleep during a reread",
      "Open Select Chapter and choose The Lamp Room. Turn pages until question 1 of 1 shows. Tap Reveal answer, "
      "then Incorrect, then Reread in page view. Turn one page. Hold the power button until the device sleeps. "
      "Wake it. If the book is not open, open fixture.prepared.epub.",
@@ -89,8 +89,8 @@ const WalkStep WALK_STEPS[WALK_STEP_COUNT] = {
      "Speed read, Play. Choose The Keeper's Log, open Speed read, Play.",
      "RSVP stops before the picture, the table and the code block. Each time a banner says \"... Speed reading "
      "stopped here.\" with Continue speed reading and Stay in page view. No checkpoint appears in this book."},
-    {"pause-screen-600", criterionBit(5), "PRD 5: the real pause screen shows the delivered WPM below a 600 target",
-     "", "The pause screen shows the actual pace",
+    {"pause-screen-600", criterionBit(5), "PRD 5: the real pause screen shows the delivered WPM below a 600 target", "",
+     "The pause screen shows the actual pace",
      "Stay in fixture.epub. Open Speed read. Tap + next to the WPM until it shows 600. Tap Play. After about 20 "
      "seconds, touch the screen to pause.",
      "The top line reads \"Paused · 600 WPM target · N actual\". N is below 600. The words came one at a time, "
@@ -179,9 +179,8 @@ StepResult combine(const StepResult a, const StepResult b) {
 bool runMeasuredOk(const StepSpec& spec, const RunRecord& run) {
   if (run.state != RunState::DONE || !run.hasFigures || !run.figures.hasPlayback) return false;
   const PlaybackFigures& p = run.figures.playback;
-  return p.inOrder && p.wordsDrawn == spec.count && p.wordsShown == spec.count && p.violations == 0 &&
-         p.gaps == 0 && p.repeats == 0 && p.deliveredWpmTenths > 0 &&
-         p.deliveredWpmTenths <= static_cast<uint32_t>(spec.wpm) * 10u;
+  return p.inOrder && p.wordsDrawn == spec.count && p.wordsShown == spec.count && p.violations == 0 && p.gaps == 0 &&
+         p.repeats == 0 && p.deliveredWpmTenths > 0 && p.deliveredWpmTenths <= static_cast<uint32_t>(spec.wpm) * 10u;
 }
 
 // ---------------------------------------------------------------------------------------------------

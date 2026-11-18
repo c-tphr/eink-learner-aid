@@ -84,8 +84,7 @@ TEST(AcceptanceSteps, TheTableCoversCriteriaOneToFiveInOneSitting) {
 TEST(AcceptanceSteps, CriterionOneIsShownInBothModesByTouchAndByKeys) {
   // The single- and the multi-question checkpoint each fire once in RSVP and once in page view, one
   // by touch and one by keys, and one step jumps past them.
-  const char* expected[] = {"c0001-rsvp-touch", "c0001-page-keys", "c0002-rsvp-keys", "later-pass-grades",
-                            "toc-jump"};
+  const char* expected[] = {"c0001-rsvp-touch", "c0001-page-keys", "c0002-rsvp-keys", "later-pass-grades", "toc-jump"};
   for (const char* id : expected) {
     bool found = false;
     for (const WalkStep& s : WALK_STEPS) {
@@ -362,16 +361,29 @@ TEST(Criteria, AnyFailFailsThenNotDoneThenSkipped) {
 
 TEST(AcceptanceJson, ThePartWayFileRecordsTheRunsTheAnswersAndTheVerdicts) {
   const std::string json = devicetest_samples::acceptancePartWayJson();
-  for (const char* expected :
-       {"\"format\":\"rsvp-bench\"", "\"version\":2", "\"kind\":\"acceptance\"", "\"file\":\"0005-acceptance.json\"",
-        "\"status\":\"running\"", "\"profile\":{\"key\":\"trial-b\",\"name\":\"Trial B\"",
-        "\"run\":\"acceptance-240-1\",\"target_wpm\":240", "\"run\":\"acceptance-600-1\",\"target_wpm\":600",
-        "\"attempts\":2", "\"words_drawn\":150", "\"measured_ok\":true", "\"readable\":\"yes\"",
-        "\"slower\":\"yes\"", "\"book\":\"fixture.prepared.epub\"", "\"current\":\"c0002-rsvp-keys\"",
-        "\"away\":true", "\"answered\":3", "\"result\":\"fail\",\"reason\":\"wrong-mode\"",
-        "\"depends_on\":[\"C2\",\"C3\"]", "\"depends_on\":[\"C2\",\"C3\",\"C4\",\"C5\"]", "\"depends_on\":[]",
-        "\"criterion\":5,\"result\":\"not-done\",\"evidence\":[\"part-a\",\"pause-screen-600\"]",
-        "\"measured_pass\":true,\"owner_pass\":true"}) {
+  for (const char* expected : {"\"format\":\"rsvp-bench\"",
+                               "\"version\":2",
+                               "\"kind\":\"acceptance\"",
+                               "\"file\":\"0005-acceptance.json\"",
+                               "\"status\":\"running\"",
+                               "\"profile\":{\"key\":\"trial-b\",\"name\":\"Trial B\"",
+                               "\"run\":\"acceptance-240-1\",\"target_wpm\":240",
+                               "\"run\":\"acceptance-600-1\",\"target_wpm\":600",
+                               "\"attempts\":2",
+                               "\"words_drawn\":150",
+                               "\"measured_ok\":true",
+                               "\"readable\":\"yes\"",
+                               "\"slower\":\"yes\"",
+                               "\"book\":\"fixture.prepared.epub\"",
+                               "\"current\":\"c0002-rsvp-keys\"",
+                               "\"away\":true",
+                               "\"answered\":3",
+                               "\"result\":\"fail\",\"reason\":\"wrong-mode\"",
+                               "\"depends_on\":[\"C2\",\"C3\"]",
+                               "\"depends_on\":[\"C2\",\"C3\",\"C4\",\"C5\"]",
+                               "\"depends_on\":[]",
+                               "\"criterion\":5,\"result\":\"not-done\",\"evidence\":[\"part-a\",\"pause-screen-600\"]",
+                               "\"measured_pass\":true,\"owner_pass\":true"}) {
     EXPECT_NE(json.find(expected), std::string::npos) << expected;
   }
 }

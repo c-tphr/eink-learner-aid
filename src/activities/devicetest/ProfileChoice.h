@@ -46,9 +46,9 @@ ProfileList choiceCandidates(const TrialSetting& setting, PanelId panel, bool in
 TrialMask keepableTrials(const ProfileList& candidates, ProfileId chosen);
 
 struct ChoiceOutcome {
-  uint8_t setting = 0;    // the new rsvpDisplayProfile
-  TrialMask kept = 0;     // the new rsvpProfilesKept
-  TrialMask locked = 0;   // trials unlocked before and locked again now
+  uint8_t setting = 0;   // the new rsvpDisplayProfile
+  TrialMask kept = 0;    // the new rsvpProfilesKept
+  TrialMask locked = 0;  // trials unlocked before and locked again now
 };
 // The stored values after the owner chose `chosen` and kept `keep` (other trials; anything else in
 // it is ignored): only the chosen trial and the kept ones stay unlocked, and they are what ordinary
@@ -78,7 +78,7 @@ uint8_t selectSpeedReadProfile(uint8_t setting, TrialMask kept, PanelId panel, P
 // The rated steps of one profile in the newest benchmark results file (BenchPlan.h, STEPS 3 to 9).
 inline constexpr size_t RATED_STEP_COUNT = 7;
 struct ProfileRatings {
-  bool found = false;  // the file has this profile with at least one rating or a 240 WPM figure
+  bool found = false;                     // the file has this profile with at least one rating or a 240 WPM figure
   Rating ratings[RATED_STEP_COUNT] = {};  // playback-120-1 ... playback-240-3, endurance
   Residue residue = Residue::NONE;
   bool hasDelivered240 = false;

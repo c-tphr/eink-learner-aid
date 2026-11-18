@@ -217,10 +217,10 @@ class DeviceTestActivity final : public Activity, private devicetest::SeriesPain
   // the screen opens (README.md, "Guided acceptance").
   devicetest::Walkthrough walk;
   devicetest::AcceptanceRecord acc;
-  bool accAllocated = false;  // a run number and a file belong to this walk-through
-  bool accSaved = true;       // the last write of the results file succeeded
-  bool progressSaved = true;  // the last write of the progress file succeeded
-  bool leaveRequested = false;  // "Leave to do this step": choose() finishes after the RenderLock
+  bool accAllocated = false;    // a run number and a file belong to this walk-through
+  bool accSaved = true;         // the last write of the results file succeeded
+  bool progressSaved = true;    // the last write of the progress file succeeded
+  bool leaveRequested = false;  // leaving was chosen: loop() finishes once every key is up
 
   // The profile choice.
   devicetest::ChoiceRecord choice;

@@ -1,8 +1,9 @@
 """results: the device test results files (/rsvp-bench/) against the schema and the consistency rules.
 
 The valid files are real firmware output: the simulator scenarios devicetest_sweep,
-devicetest_sweep_keys and devicetest_controls wrote them (docs/evidence/d3a/). Each test below breaks
-one rule and checks the validator says so.
+devicetest_sweep_keys and devicetest_controls wrote them (docs/evidence/d3a/, format version 1), and
+devicetest_acceptance, devicetest_acceptance_keys and devicetest_choose_profile (docs/evidence/d3b/,
+version 2). Each test below breaks one rule and checks the validator says so.
 """
 
 import copy
@@ -92,7 +93,7 @@ def test_unknown_or_missing_members_are_refused():
     assert broken(TOUCH, lambda d: d["profiles"][0]["steps"][0].update(extra=1))
     assert broken(TOUCH, lambda d: d["conditions"].pop("room_temperature_c"))
     assert broken(CONTROLS, lambda d: d["events"][0].pop("held_ms"))
-    assert broken(TOUCH, lambda d: d.update(version=2))
+    assert broken(TOUCH, lambda d: d.update(version=3))
 
 
 def test_a_finished_series_must_hold_the_planned_count():
@@ -145,3 +146,80 @@ def test_controls_events_are_consistent():
 
     assert broken(CONTROLS, renumbered)
     assert broken(CONTROLS, lambda d: d.update(file="0002-controls.json"))
+
+
+# --- Version 2: the guided acceptance and the profile choice (task D3b) -----------------------------
+
+EVIDENCE_D3B = os.path.join(DEVICE, "..", "..", "docs", "evidence", "d3b")
+ACCEPTANCE = os.path.join(EVIDENCE_D3B, "devicetest_acceptance-0001-acceptance.json")
+ACCEPTANCE_KEYS = os.path.join(EVIDENCE_D3B, "devicetest_acceptance_keys-0001-acceptance.json")
+CHOICE_TRIAL = os.path.join(EVIDENCE_D3B, "devicetest_choose_profile-0002-choice.json")
+CHOICE_STOCK = os.path.join(EVIDENCE_D3B, "devicetest_choose_profile-0003-choice.json")
+
+
+@pytest.mark.parametrize("path", [ACCEPTANCE, ACCEPTANCE_KEYS, CHOICE_TRIAL, CHOICE_STOCK])
+def test_d3b_simulator_files_are_valid(path):
+    assert load(path)["version"] == 2
+    assert problems(load(path)) == []
+
+
+def test_version_1_files_still_validate_and_new_kinds_need_version_2():
+    assert load(TOUCH)["version"] == 1
+    assert problems(load(TOUCH)) == []
+    assert broken(ACCEPTANCE, lambda d: d.update(version=1))
+    assert broken(CHOICE_TRIAL, lambda d: d.update(version=1))
+
+
+def test_cli_describes_acceptance_and_choice(capsys):
+    assert results.main(["validate", ACCEPTANCE, CHOICE_TRIAL, CHOICE_STOCK]) == 0
+    out = capsys.readouterr().out
+    assert "guided acceptance run 1, complete, profile stock, part A done, 12 of 12 steps answered" in out
+    assert "criterion 5 measured pass, owner pass" in out
+    assert "profile choice run 2, trial-b chosen, kept trial-b, trial-c, byte 15 -> 38" in out
+    assert "profile choice run 3, stock chosen, kept none, byte 54 -> 0" in out
+
+
+def test_acceptance_records_both_runs_every_word_and_the_answers():
+    doc = load(ACCEPTANCE)
+    for run, target in zip(doc["part_a"]["runs"], (240, 600)):
+        assert run["target_wpm"] == target
+        assert run["playback"]["order"]["words_drawn"] == 150
+        assert run["playback"]["order"]["in_order"] is True
+        assert run["playback"]["delivered_wpm"] <= target
+        assert run["measured_ok"] is True
+        assert run["readable"] == "yes"
+    assert doc["part_a"]["runs"][1]["attempts"] == 2  # stopped once, repeated
+    assert [c["result"] for c in doc["criteria"]] == ["fail", "pass", "pass", "pass", "pass"]
+    assert doc["part_b"]["steps"][1]["reason"] == "wrong-mode"
+
+
+def test_acceptance_verdicts_must_agree_with_the_runs_and_answers():
+    def dropped_word(d):
+        d["part_a"]["runs"][1]["playback"]["order"]["words_drawn"] = 149
+        d["part_a"]["runs"][1]["playback"]["order"]["gaps"] = 1
+
+    out = broken(ACCEPTANCE, dropped_word)
+    assert any("measured_ok" in p for p in out), out
+    assert broken(ACCEPTANCE, lambda d: d["criterion_5"].update(owner_pass=False))
+    assert broken(ACCEPTANCE, lambda d: d["part_a"]["runs"][0].update(readable="no"))
+    assert broken(ACCEPTANCE, lambda d: d["criteria"][0].update(result="pass"))
+
+
+def test_acceptance_steps_are_answered_in_order():
+    assert broken(ACCEPTANCE, lambda d: d["part_b"]["steps"][4].update(result="not-done", answers=0))
+    assert broken(ACCEPTANCE, lambda d: d["part_b"]["steps"][1].update(reason=None))
+    assert broken(ACCEPTANCE, lambda d: d["part_b"]["steps"][0].update(reason="other"))
+    assert broken(ACCEPTANCE, lambda d: d["part_b"].update(current="toc-jump"))
+    assert broken(ACCEPTANCE, lambda d: d.update(status="running"))
+    assert broken(ACCEPTANCE, lambda d: d["part_b"]["steps"][3].update(n=9))
+
+
+def test_choice_byte_agrees_with_what_was_chosen_and_kept():
+    doc = load(CHOICE_TRIAL)
+    assert doc["trial_setting"]["after"] == 0x26
+    assert doc["kept_after"] == ["trial-b", "trial-c"]
+    assert broken(CHOICE_TRIAL, lambda d: d.update(chosen="trial-c"))
+    assert broken(CHOICE_TRIAL, lambda d: d["trial_setting"].update(after=0x36))
+    assert broken(CHOICE_TRIAL, lambda d: d.update(locked=["trial-a"]))
+    assert broken(CHOICE_TRIAL, lambda d: d["candidates"][1].update(kept=True))
+    assert broken(CHOICE_STOCK, lambda d: d["trial_setting"].update(after=6, unlocked_after=["trial-b", "trial-c"]))

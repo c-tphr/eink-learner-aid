@@ -38,7 +38,8 @@ enum class SettingAction {
   ControlsTouch,
   About,
   DeviceTest,  // RSVP builds only (src/activities/devicetest/DeviceTestLaunch.h)
-  SpeedReadDisplay,  // RSVP builds only, once a trial is kept (src/activities/devicetest/SpeedReadSetting.h)
+  // RSVP builds only, once a trial is kept (src/activities/devicetest/SpeedReadSetting.h)
+  SpeedReadDisplay,
 };
 
 struct SettingInfo {

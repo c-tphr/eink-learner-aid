@@ -73,8 +73,8 @@ constexpr int8_t TEMPERATURE_MIN = -10;
 constexpr int8_t TEMPERATURE_MAX = 45;
 constexpr int8_t TEMPERATURE_START = 20;
 
-constexpr const char* MENU_LOG_NAMES[] = {"controls-check",   "benchmark", "guided-acceptance", "choose-profile",
-                                          "clearing-refresh", "leave"};
+constexpr const char* MENU_LOG_NAMES[] = {"controls-check", "benchmark",        "guided-acceptance",
+                                          "choose-profile", "clearing-refresh", "leave"};
 
 bool reached(const uint32_t now, const uint32_t at) { return static_cast<int32_t>(now - at) >= 0; }
 
@@ -881,6 +881,16 @@ bool DeviceTestActivity::fits(void* context, const std::string_view text, const 
 
 void DeviceTestActivity::loop() {
   lastLoopMs.store(static_cast<uint32_t>(millis()));
+  if (leaveRequested) {
+    // Leaving waits for every key to be up: Settings would take a side key still held from the hold
+    // that chose the row as its own hold, and move its highlight.
+    for (const Btn b : {Btn::PageBack, Btn::PageForward, Btn::Up, Btn::Down, Btn::Confirm}) {
+      if (mappedInput.isPressed(b)) return;
+    }
+    leaveRequested = false;
+    finish();
+    return;
+  }
   switch (screen.load()) {
     case Screen::Controls:
       loopControls();
@@ -958,8 +968,7 @@ void DeviceTestActivity::choose(const uint8_t row) {
           requestUpdate();
           return;
         case MenuRow::Leave:
-          lock.unlock();
-          finish();
+          leaveRequested = true;  // loop() finishes once the hold that chose the row is released
           return;
       }
       return;
@@ -1034,13 +1043,7 @@ void DeviceTestActivity::choose(const uint8_t row) {
     case Screen::AccResult:
     case Screen::AccReason:
     case Screen::AccSummary:
-      chooseAcceptance(screen.load(), row);
-      if (leaveRequested) {
-        // "Leave to do this step": the progress is saved; the owner goes to the reader.
-        leaveRequested = false;
-        lock.unlock();
-        finish();
-      }
+      chooseAcceptance(screen.load(), row);  // "Leave to do this step" sets leaveRequested
       return;
     case Screen::ChooseProfile:
     case Screen::KeepTrials:
@@ -1368,14 +1371,13 @@ void DeviceTestActivity::logResult(const StepFigures& f, const bool stopped) {
   LOG_INF("DTS",
           "result profile=%s step=%s outcome=%s attempt=%u updates=%lu median=%lu p95=%lu max=%lu min=%lu mean=%lu "
           "timeouts=%lu clears=%lu clear_median=%lu clear_max=%lu clear_timeouts=%lu promotions=%lu duration_ms=%lu",
-          key, spec.key, stopped ? "stopped" : "complete", seriesAttempt(),
-          static_cast<unsigned long>(f.updates.count), static_cast<unsigned long>(f.updates.medianMs),
-          static_cast<unsigned long>(f.updates.p95Ms), static_cast<unsigned long>(f.updates.maxMs),
-          static_cast<unsigned long>(f.updates.minMs), static_cast<unsigned long>(f.updates.meanMs),
-          static_cast<unsigned long>(f.updates.timeouts), static_cast<unsigned long>(f.clears.count),
-          static_cast<unsigned long>(f.clears.medianMs), static_cast<unsigned long>(f.clears.maxMs),
-          static_cast<unsigned long>(f.clears.timeouts), static_cast<unsigned long>(f.promotions),
-          static_cast<unsigned long>(f.durationMs));
+          key, spec.key, stopped ? "stopped" : "complete", seriesAttempt(), static_cast<unsigned long>(f.updates.count),
+          static_cast<unsigned long>(f.updates.medianMs), static_cast<unsigned long>(f.updates.p95Ms),
+          static_cast<unsigned long>(f.updates.maxMs), static_cast<unsigned long>(f.updates.minMs),
+          static_cast<unsigned long>(f.updates.meanMs), static_cast<unsigned long>(f.updates.timeouts),
+          static_cast<unsigned long>(f.clears.count), static_cast<unsigned long>(f.clears.medianMs),
+          static_cast<unsigned long>(f.clears.maxMs), static_cast<unsigned long>(f.clears.timeouts),
+          static_cast<unsigned long>(f.promotions), static_cast<unsigned long>(f.durationMs));
   if (f.hasPlayback) {
     const PlaybackFigures& p = f.playback;
     LOG_INF("DTS",

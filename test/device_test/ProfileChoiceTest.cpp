@@ -23,7 +23,8 @@ constexpr TrialMask D = trialBit(ProfileId::TRIAL_D);
 
 std::string keys(const ProfileList& list) {
   std::string out;
-  for (uint8_t i = 0; i < list.count; ++i) out += std::string(i ? "," : "") + displayprofile::profileInfo(list.ids[i]).key;
+  for (uint8_t i = 0; i < list.count; ++i)
+    out += std::string(i ? "," : "") + displayprofile::profileInfo(list.ids[i]).key;
   return out;
 }
 
@@ -101,7 +102,7 @@ TEST(ProfileChoice, TheExampleChoiceOnDepg0397) {
 TEST(SpeedReadRow, HiddenByDefaultAndAfterABenchmarkAloneShownAfterAChoice) {
   EXPECT_FALSE(speedReadRowVisible(0, 0));
   EXPECT_FALSE(speedReadRowVisible(afterBenchmark(PanelId::DEPG0397), 0));
-  EXPECT_FALSE(speedReadRowVisible(0, ALL_TRIALS));  // nothing unlocked: the byte wins
+  EXPECT_FALSE(speedReadRowVisible(0, ALL_TRIALS));     // nothing unlocked: the byte wins
   EXPECT_FALSE(speedReadRowVisible(0xFF, ALL_TRIALS));  // a byte this firmware never writes decodes to 0
   const ChoiceOutcome out = applyChoice(0x0F, ProfileId::TRIAL_B, 0);
   EXPECT_TRUE(speedReadRowVisible(out.setting, out.kept));
@@ -168,8 +169,9 @@ TEST(ChoiceJson, TheChoiceFileRecordsTheBytesAndTheRatingsItWasBasedOn) {
         "\"chosen\":\"trial-c\"", "\"saved\":true", "\"before\":15,\"after\":53",
         "\"unlocked_after\":[\"trial-a\",\"trial-c\"]", "\"kept_before\":[]",
         "\"kept_after\":[\"trial-a\",\"trial-c\"]", "\"locked\":[\"trial-b\",\"trial-d\"]",
-        "\"benchmark_file\":\"0012-bench.json\"", "\"key\":\"trial-b\",\"name\":\"Trial B\",\"chosen\":false,\"kept\":false",
-        "\"playback-300-1\":\"tolerable\"", "\"delivered_wpm_240\":175.0",
+        "\"benchmark_file\":\"0012-bench.json\"",
+        "\"key\":\"trial-b\",\"name\":\"Trial B\",\"chosen\":false,\"kept\":false", "\"playback-300-1\":\"tolerable\"",
+        "\"delivered_wpm_240\":175.0",
         "\"key\":\"trial-d\",\"name\":\"Trial D\",\"chosen\":false,\"kept\":false,\"ratings\":null,\"residue\":null,"
         "\"delivered_wpm_240\":null"}) {
     EXPECT_NE(json.find(expected), std::string::npos) << expected;

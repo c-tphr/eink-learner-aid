@@ -148,8 +148,7 @@ void DeviceTestActivity::loadAcceptance() {
   acc = AcceptanceRecord{};
   accAllocated = false;
   HalFile file;
-  if (!Storage.exists(ACCEPTANCE_PROGRESS_PATH) ||
-      !Storage.openFileForRead("DTS", ACCEPTANCE_PROGRESS_PATH, file)) {
+  if (!Storage.exists(ACCEPTANCE_PROGRESS_PATH) || !Storage.openFileForRead("DTS", ACCEPTANCE_PROGRESS_PATH, file)) {
     LOG_DBG("DTS", "acceptance progress none");
     return;
   }
@@ -230,8 +229,8 @@ bool DeviceTestActivity::saveAcceptance() {
   // The caller holds the RenderLock. The progress first: it is what a restart reads.
   if (!accAllocated) return false;
   size_t bytes = 0;
-  progressSaved = writeAtomically(
-      ACCEPTANCE_PROGRESS_PATH, [this](JsonSink& sink) { encodeProgress(acc, walk, sink); }, bytes);
+  progressSaved =
+      writeAtomically(ACCEPTANCE_PROGRESS_PATH, [this](JsonSink& sink) { encodeProgress(acc, walk, sink); }, bytes);
   Storage.mkdir(RESULTS_DIR);
   char path[64];
   snprintf(path, sizeof(path), "%s/%s", RESULTS_DIR, acc.header.file);
@@ -594,9 +593,9 @@ void DeviceTestActivity::describeAcceptanceScreen(const Screen s, const char*& t
       }
       // Criterion 5 with its three parts: the automatic verdict apart from the owner's answers.
       const Criterion5 c = walk.criterion5();
-      line("%s 5: %s. %s %s, %s %s, %s %s.", tr(STR_DT_CRITERION), resultText(walk.criterion(5)),
-           tr(STR_DT_AUTO_CHECK), resultText(c.measured), tr(STR_DT_YOUR_ANSWERS), resultText(c.owner),
-           tr(STR_DT_PAUSE_SCREEN), resultText(c.pauseScreen));
+      line("%s 5: %s. %s %s, %s %s, %s %s.", tr(STR_DT_CRITERION), resultText(walk.criterion(5)), tr(STR_DT_AUTO_CHECK),
+           resultText(c.measured), tr(STR_DT_YOUR_ANSWERS), resultText(c.owner), tr(STR_DT_PAUSE_SCREEN),
+           resultText(c.pauseScreen));
       for (size_t i = 0; i < WALK_STEP_COUNT; ++i) {
         const StepAnswer& a = walk.partB.steps[i];
         if (a.result == StepResult::FAIL) {
@@ -627,8 +626,8 @@ void DeviceTestActivity::openChoice() {
   char keys[64] = {};
   size_t used = 0;
   for (uint8_t i = 0; i < choice.candidates.count; ++i) {
-    const int w = snprintf(keys + used, sizeof(keys) - used, "%s%s", used ? "," : "",
-                           profileInfo(choice.candidates.ids[i]).key);
+    const int w =
+        snprintf(keys + used, sizeof(keys) - used, "%s%s", used ? "," : "", profileInfo(choice.candidates.ids[i]).key);
     if (w > 0 && static_cast<size_t>(w) < sizeof(keys) - used) used += static_cast<size_t>(w);
   }
   LOG_INF("DTS", "choose open candidates=%s current=%s setting=%u kept=%u bench=%s", keys, profileInfo(current).key,
@@ -700,7 +699,9 @@ void DeviceTestActivity::readBenchRatings() {
       }
       if (strcmp(key, "endurance") == 0) {
         const char* residue = st["residue"] | "";
-        r.residue = strcmp(residue, "yes") == 0 ? Residue::YES : strcmp(residue, "no") == 0 ? Residue::NO : Residue::NONE;
+        r.residue = strcmp(residue, "yes") == 0  ? Residue::YES
+                    : strcmp(residue, "no") == 0 ? Residue::NO
+                                                 : Residue::NONE;
       }
       if (strcmp(key, "playback-240-1") == 0 && !st["playback"]["delivered_wpm"].isNull()) {
         const float wpm = st["playback"]["delivered_wpm"].as<float>();
@@ -790,8 +791,8 @@ void DeviceTestActivity::saveChoice() {
           choiceFileSaved ? 1 : 0);
 }
 
-void DeviceTestActivity::describeChoiceScreen(const Screen s, const char*& title, char* subtitle,
-                                              const char** labels, uint8_t& lines) {
+void DeviceTestActivity::describeChoiceScreen(const Screen s, const char*& title, char* subtitle, const char** labels,
+                                              uint8_t& lines) {
   const auto line = [&](const char* fmt, auto... args) {
     if (lines < INFO_LINES) snprintf(info[lines++], LINE_BYTES, fmt, args...);
   };

@@ -94,7 +94,7 @@ const char* stepResultName(StepResult result);  // "not-done", "pass", "fail", "
 
 enum class FailReason : uint8_t { NONE, DID_NOT_APPEAR, WRONG_PLACE, WRONG_MODE, GRADE_WRONG, OTHER };
 inline constexpr uint8_t FAIL_REASON_COUNT = 5;  // the reasons offered (NONE is not one)
-const char* failReasonName(FailReason reason);    // "none", "did-not-appear", "wrong-place", ...
+const char* failReasonName(FailReason reason);   // "none", "did-not-appear", "wrong-place", ...
 
 struct StepAnswer {
   StepResult result = StepResult::NOT_DONE;
@@ -142,18 +142,18 @@ bool runMeasuredOk(const StepSpec& spec, const RunRecord& run);
 
 // What the activity shows next.
 enum class Walk : uint8_t {
-  START,        // Part A's start screen: the chosen profile, Start / Skip part A / Back
-  RUN,          // play run runIndex()
-  ASK_READABLE, // after a run (and after the owner has looked)
-  ASK_SLOWER,   // after the 600 WPM run's readability answer
-  RUN_STOPPED,  // the owner stopped a run
-  PART_A_DONE,  // Part A's result
-  STEP,         // Part B step stepIndex(): its instructions
-  ASK_RESULT,   // "How did it go?" for the step
-  ASK_REASON,   // the fail reasons
-  LEAVE,        // the owner leaves the device test to do the step (the progress says so)
-  SUMMARY,      // every criterion's result
-  MENU,         // back to the device test menu
+  START,         // Part A's start screen: the chosen profile, Start / Skip part A / Back
+  RUN,           // play run runIndex()
+  ASK_READABLE,  // after a run (and after the owner has looked)
+  ASK_SLOWER,    // after the 600 WPM run's readability answer
+  RUN_STOPPED,   // the owner stopped a run
+  PART_A_DONE,   // Part A's result
+  STEP,          // Part B step stepIndex(): its instructions
+  ASK_RESULT,    // "How did it go?" for the step
+  ASK_REASON,    // the fail reasons
+  LEAVE,         // the owner leaves the device test to do the step (the progress says so)
+  SUMMARY,       // every criterion's result
+  MENU,          // back to the device test menu
 };
 
 class Walkthrough {

@@ -2,13 +2,13 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
-#include "AcceptanceProgress.h"
-
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+
+#include "AcceptanceProgress.h"
 
 namespace devicetest {
 
@@ -138,7 +138,7 @@ void encodeProgress(const AcceptanceRecord& record, const Walkthrough& walk, Jso
   out.put("profile %u %u\n", static_cast<unsigned>(record.profile), static_cast<unsigned>(record.trialSetting));
   const ConditionsRecord& c = record.header.conditions;
   out.put("conditions %u %u %lu %s\n", static_cast<unsigned>(c.batteryPercent), c.usbConnected ? 1u : 0u,
-             static_cast<unsigned long>(c.uptimeMs), c.clock[0] != '\0' ? c.clock : "-");
+          static_cast<unsigned long>(c.uptimeMs), c.clock[0] != '\0' ? c.clock : "-");
   out.put("part_a %u %u\n", static_cast<unsigned>(walk.partA.status), static_cast<unsigned>(walk.partA.slower));
   for (size_t i = 0; i < ACCEPTANCE_RUN_COUNT; ++i) {
     const RunRecord& r = walk.partA.runs[i];
@@ -151,12 +151,12 @@ void encodeProgress(const AcceptanceRecord& record, const Walkthrough& walk, Jso
       if (w > 0 && static_cast<size_t>(w) < sizeof(numbers) - used) used += static_cast<size_t>(w);
     }
     out.put("run_a %u %u %u %u %u%s\n", static_cast<unsigned>(i), static_cast<unsigned>(r.state),
-               static_cast<unsigned>(r.attempts), r.hasFigures ? 1u : 0u, static_cast<unsigned>(r.readable), numbers);
+            static_cast<unsigned>(r.attempts), r.hasFigures ? 1u : 0u, static_cast<unsigned>(r.readable), numbers);
   }
   for (size_t i = 0; i < WALK_STEP_COUNT; ++i) {
     const StepAnswer& a = walk.partB.steps[i];
     out.put("step %u %u %u %u\n", static_cast<unsigned>(i), static_cast<unsigned>(a.result),
-               static_cast<unsigned>(a.reason), static_cast<unsigned>(a.answers));
+            static_cast<unsigned>(a.reason), static_cast<unsigned>(a.answers));
   }
   out.put("part_b %u %u\n", static_cast<unsigned>(walk.partB.current), walk.partB.away ? 1u : 0u);
   out.put("end\n");
