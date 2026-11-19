@@ -370,5 +370,3 @@ TEST(FixtureBook, ChaptersGroupWithoutCrossingBoundaries) {
     EXPECT_EQ(nonProseWords.size(), href == "text/title.xhtml" ? 0u : 1u) << href;
   }
 }
-
-TEST(CiDeliberateFailure,FailsOnPurpose){EXPECT_EQ(1,2)<<"deliberate failure: CI must turn red";}
