@@ -232,6 +232,7 @@ PURPOSE = {
     "api.registry.platformio.org": "PlatformIO registry API: native platform, registry libraries, tool-scons",
     "registry.platformio.org": "PlatformIO registry",
     "dl.registry.platformio.org": "PlatformIO registry package downloads",
+    "usc1.contabostorage.com": "PlatformIO registry download mirror (dl.registry.platformio.org redirects here or to github.com)",
     "dl.platformio.org": "PlatformIO downloads",
     "collector.platformio.org": "PlatformIO usage telemetry (not needed to build)",
     "pypi.org": "Python package index: pioarduino's private virtualenv (uv), PlatformIO itself",
@@ -479,6 +480,14 @@ def build_report(work, out):
             "any download or build; `scripts/cloud-setup.sh` turns telemetry off for its own `pio` calls. "
             "It need not be allowlisted."
         )
+        if any(host == "usc1.contabostorage.com" for host, _where, _err in refused):
+            w("")
+            w(
+                "`usc1.contabostorage.com` is a download mirror of the PlatformIO registry: "
+                "`dl.registry.platformio.org` answers PlatformIO with a redirect either to it or to "
+                "`github.com`. When it is refused, PlatformIO retries and usually lands on the other "
+                "mirror, so setup can still succeed, but not reliably. It should be allowlisted."
+            )
     else:
         w("None.")
     w("")
