@@ -1,6 +1,6 @@
 # tools/prep
 
-Book preparation tools (docs/PLAN.md section 8). This package holds the `extract` and `build` commands, the EPUB reading library they share, the checkpoint file schema and its validator, the draft file schema, the synthetic fixture book generator (`fixture/`) and an EPUBCheck runner (`epubcheck.py`). The `validate` and `report` commands come in a later task.
+Book preparation tools (docs/PLAN.md section 8). This package holds the `extract`, `build`, `validate`, `verify-check` and `report` commands, the EPUB reading library they share, the checkpoint file schema and its validator, the draft, check, validation-result and report schemas, the synthetic fixture book generator and the prepared and negative fixture generator (`fixture/`) and an EPUBCheck runner (`epubcheck.py`).
 
 ```sh
 pip install -r tools/prep/requirements.txt
@@ -8,9 +8,12 @@ python3 -m pytest tools/prep -q
 
 python3 -m tools.prep extract BOOK.epub WORKDIR                        # step 1: work folder for the drafter
 python3 -m tools.prep build BOOK.epub DRAFT.json -o BOOK.prepared.epub  # step 3: prepared EPUB
+python3 -m tools.prep validate BOOK.epub BOOK.prepared.epub --work-dir WORKDIR --json validation.json  # step 4
+python3 -m tools.prep verify-check BOOK.epub BOOK.prepared.epub check.json  # script side of step 5
+python3 -m tools.prep report --original BOOK.epub --prepared BOOK.prepared.epub --history WORKDIR -o OUTDIR  # step 7
 ```
 
-Exit status of every command: 0 success, 1 a problem with the input (every problem is listed on stderr), 2 a usage error.
+Exit status of every command: 0 success, 1 a problem with the input (every problem is listed on stderr), 2 a usage error. For `validate` and `verify-check`, 0 means everything passed and 1 that something failed; for `report`, 0 means READY and 1 NOT READY.
 
 | Module | Contents |
 | --- | --- |
@@ -25,6 +28,11 @@ Exit status of every command: 0 success, 1 a problem with the input (every probl
 | `draft.py` | `check_draft(raw, book)`: draft parse, schema and cross-reference checks |
 | `build.py` | `build_file(epub, draft, out)`, anchor insertion, the manifest line, `checkpoints.json` |
 | `checkpoints.py` | Validator for `checkpoints.json` |
+| `limits.py` | The firmware's limits on `checkpoints.json` (`lib/CheckpointCore/CheckpointLimits.h`), mirrored and checked |
+| `validate.py` | `prep validate`: every script-verifiable check of a prepared EPUB against its original |
+| `verify_check.py` | `prep verify-check`: what a script can confirm about the checker's `check.json` |
+| `report.py` | `prep report`: the readiness rule, the round history and the validation report |
+| `version.py` | Tool and word-rules versions recorded in results |
 
 ```python
 from tools.prep.checkpoints import check_file, load_checkpoints, validate_checkpoints, verdict
@@ -305,6 +313,174 @@ The start anchor precedes the section's first word and the end anchor follows it
 - The span is written with the namespace prefix of its parent element, so a book that writes XHTML with a prefix still gets XHTML spans.
 - Anchors are placed at element boundaries of blocks, and blocks are elements at which the firmware's word pass splits words, so they sit between words (`docs/spikes/S1-word-stream.md` section 5). The build checks this with the word pass itself (above).
 
+## `prep validate`: the prepared EPUB against its original
+
+```sh
+python3 -m tools.prep validate ORIGINAL.epub PREPARED.epub [--draft DRAFT.json | --work-dir WORKDIR] [--json OUT] [--timestamp ISO]
+```
+
+Everything a script can verify about a prepared book is verified here (plan section 8, "What the validator script checks"); the AI checker is left only what needs reading comprehension. The command prints a table of the checks to stdout and every failure to stderr as `<check>: <code> at <location>: <message>`, and exits 0 only when **every** check has status `pass`. A check has one of four statuses:
+
+| Status | Meaning |
+| --- | --- |
+| `pass` | The check ran on the whole book and found nothing |
+| `fail` | Failures are listed |
+| `incomplete` | No failure found, but part of the book could not be judged because an earlier check failed there (a section whose anchors did not resolve is not counted, covered or boundary-checked). Not a pass |
+| `not-run` | The check could not run (the file does not open; EPUBCheck cannot be obtained). Not a pass: an unchecked book is never a passed one |
+
+`--json OUT` writes the result (`schema/validation.schema.json`): `format` `rsvp-validation`, `version` 1, `tool` (`name`, `version` from `version.py`, `word_rules_version`, `epubcheck_version` or null), `created`, `original` and `prepared` (file name and SHA-256), `draft` (the draft used for exclusions, or null), `coverage_mode` (`draft` or `implicit`), `passed`, and `checks`: each with `name`, `title`, `status`, `failures` (`code`, `location`, `message`) and `details` (what was looked at). File names are recorded without their directory and the time is `--timestamp`, else `$SOURCE_DATE_EPOCH`, else the clock, so the same inputs and time give the same bytes. The original is only ever read, and is hashed again at the end to prove it did not change.
+
+Locations are a zip path, with `#<JSON pointer>` into the checkpoint file, `#<id>` for an anchor, or ` words A-B` / ` word N` (0-based indexes into the document's word stream). Codes are stable; messages are not.
+
+| Check | Code | Meaning |
+| --- | --- | --- |
+| `open` | `unreadable-original`, `unreadable-prepared` | The file is not a readable EPUB (zip, container, package document, every XHTML spine document parses). Every later check that needs it is `not-run` |
+| `source-hash` | `source-mismatch` | `book.source_sha256` is not the SHA-256 of the original given |
+| | `original-changed` | The original's bytes differ after validation from before |
+| `checkpoint-item` | `checkpoint-item-missing`, `checkpoint-item-repeated` | Not exactly one manifest item with id `rsvp-checkpoints` (a second item declaring the file also counts as repeated) |
+| | `checkpoint-item-media-type`, `checkpoint-item-href` | The item is not `application/json`, or does not resolve to `rsvp/checkpoints.json` beside the package document |
+| | `checkpoint-file-missing` | The archive has no such member |
+| `checkpoint-file` | `parse`, `duplicate-key`, `unsupported-version`, `schema`, `duplicate-id`, `anchor-name`, `unknown-section`, `multiple-checkpoints-for-section`, `not-plain-text`, `blank-text` | `checkpoints.py`'s four layers, codes as in "The checkpoint file, version 1" above. After a parse, version or schema failure the structure checks below are `not-run` |
+| `firmware-limits` | `limit` | A limit of `lib/CheckpointCore/CheckpointLimits.h` is exceeded; the message starts with the constant's name (`MAX_LABEL_CHARS: ...`). See "Firmware limits" below |
+| `anchors` | `unknown-document` | A section's `chapter_href` is not an XHTML spine document |
+| | `anchor-missing` | `rsvp-<id>-start` or `-end` is in no document (for an end anchor the message names the checkpoint that could never fire) |
+| | `anchor-repeated` | The anchor id occurs more than once |
+| | `anchor-wrong-document` | The anchor is in another document than the section's `chapter_href` |
+| | `section-spans-documents` | The two anchors are in different documents (plan rule 1) |
+| | `anchor-element` | The anchor is not an empty XHTML `<span>` whose only attribute is `id` |
+| | `anchor-not-in-body` | The anchor is outside the visible body, where the firmware does not look |
+| | `anchor-order` | The start anchor is not before the end anchor |
+| | `section-overlap`, `section-order` | Two sections of one document overlap; sections are not listed in reading order (document order inside a document, spine order across documents) |
+| | `unaccounted-anchor` | An element of an XHTML document in the manifest has an id starting `rsvp-` that is no section's anchor (the firmware treats every such id as an anchor) |
+| `word-boundaries` | `anchor-inside-word` | The shared word pass puts the anchor strictly inside a word |
+| | `anchor-in-table`, `anchor-in-code` | The anchor has a `table` or `pre` ancestor |
+| `coverage` | `uncovered-words` | A run of words of a spine document is in no section, in no footnote or endnote body (NOTE region) and not excluded |
+| | `excluded-in-section` | Words both excluded by the draft and inside a section |
+| | `draft-unreadable`, `draft-mismatch`, `draft-exclusion` | The draft given fails to parse or its schema; it was made from another original or has other sections (ids, chapters, labels) than the checkpoint file; an excluded range does not resolve |
+| `word-counts` | `word-count` | A section's `word_count` is not the number of words in `[start, end)` of its anchors' word indexes |
+| `text-unchanged` | `spine-changed` | The spine differs from the original's |
+| | `words-changed`, `flags-changed`, `markers-changed`, `noterefs-changed` | The word pass (`words.py`) on a spine document gives other words (the first difference is shown), other flags, IMAGE/TABLE/CODE/NOTE markers or footnote marks than on the original |
+| `archive-unchanged` | `member-added`, `member-removed` | The members are not exactly the original's plus the checkpoint file |
+| | `opf-changed` | Removing the one `rsvp-checkpoints` item (as an element, or as its own line) does not give the original package document |
+| | `document-changed` | Removing every empty element with an `rsvp-` id from a changed XHTML spine document does not give the original bytes |
+| | `member-changed`, `member-unreadable` | Any other member is not byte-identical (compared uncompressed) or cannot be read |
+| `epubcheck` | `epubcheck-error` | EPUBCheck 5.3.0 reports an error or fatal error (warnings go to `details`) |
+| | `epubcheck-unavailable` | EPUBCheck cannot be obtained or produced no report; status `not-run` |
+
+A broken file usually fails one check: a missing end anchor fails `anchors` and leaves `word-boundaries`, `coverage` and `word-counts` `incomplete` for that chapter. A changed word fails both `text-unchanged` and `archive-unchanged`, by design: one compares words, the other bytes.
+
+### Exclusions: how `validate` knows them
+
+The checkpoint file does not list excluded front and back matter, and its format does not change for that. The exclusions live in the draft the book was built from (`excluded`, with a reason each), which is the drafter's explicit record and which `/prep-book` keeps in the work folder and in each round's folder. So the draft is an optional third input:
+
+- `--draft DRAFT.json`, or `--work-dir WORKDIR` (its `draft.json`): coverage mode `draft`. Each excluded paragraph range is resolved against the **original** (the word streams are proved identical by `text-unchanged`), and every word of every XHTML spine document must be in exactly one place: a section, an excluded range or a NOTE region. The draft must be made from this original and have the checkpoint file's sections, or coverage fails with `draft-mismatch`. `prep report` passes the latest round's draft.
+- No draft: coverage mode `implicit`. A spine document with no section at all counts as excluded as a whole and is listed in `details` (`text/title.xhtml: no section; treated as excluded matter (20 words ...)`); a document with any section must be covered completely apart from NOTE regions. This can wrongly fail a book that excludes part of a chapter (pass the draft), and cannot notice a whole chapter left out on purpose: that judgement is the checker's, who reads the draft's reasons.
+
+### Firmware limits
+
+`limits.py` mirrors every limit of `lib/CheckpointCore/CheckpointLimits.h` by its C++ name, and `tests/test_limits.py` parses the header and fails if a number differs or a new limit is not mirrored. The limits a schema can express are also in `schema/checkpoints.schema.json`: `maxItems` 512 on `sections` and `checkpoints`, 32 on a checkpoint's `prompts`; `maxLength` 300 on `book.title`, 35 on `book.language`, 32 on `book.instructions_version`, 255 on `chapter_href`, 200 on `label` (ids, prompts and answers were already limited). Adding them changed no verdict of the shared samples in `fixtures/checkpoints/`. Only `limits.py` checks the rest: file size (1,048,576 bytes), prompts in the file (1,024), distinct `chapter_href` values (256), the string pool (16,384 bytes: section ids, checkpoint ids, checkpoint `section` values and distinct chapter hrefs, each as UTF-8 plus one byte), nesting depth (32), members of open objects (128) and number length (64 characters).
+
+## `check.json`: the checker's result
+
+The checker session (plan section 8, step 5; a separate task writes its instructions) reads the work folder and the prepared book's checkpoint file, and writes `check.json` (`schema/check.schema.json`, closed, `x_` members allowed). Example: `fixtures/books/fixture.check.json`.
+
+```json
+{
+  "format": "rsvp-check",
+  "version": 1,
+  "prepared_sha256": "<SHA-256 of the prepared EPUB judged>",
+  "original_sha256": "<SHA-256 of the original, as in source.json>",
+  "instructions_version": "1.0",
+  "checker": { "model": "<model id>", "date": "2026-11-18" },
+  "round": 1,
+  "prompts": [
+    {
+      "id": "c0001-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d02-p006"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "d02-p006 says each light had its own pattern of flashes ..."
+    }
+  ],
+  "sections": [{ "id": "s0001", "natural_boundary": true, "evidence": "Ends after ..." }],
+  "issues": [
+    { "id": "I1", "severity": "blocking", "target": "c0002-p2", "description": "...", "suggested_fix": "...", "status": "open" }
+  ],
+  "verdict": "fail"
+}
+```
+
+- One entry per prompt and per section of the checkpoint file. A prompt's four booleans are the plan's criteria: the answer is supported by the prompt's own section; it states the essential ideas clearly enough that a correct paraphrase can be accepted; the prompt can be answered from its section alone; it does not give its answer away. `evidence` is free text.
+- **What the checker must cite:** `citations` are the paragraph references `prep extract` wrote (`d02-p006`, as in `text/*.txt`), of reading-stream paragraphs inside the prompt's own section. Never XHTML ids, never footnote bodies (`dNN-nNNN`). A `pass` needs at least one.
+- `issues`: `severity` `blocking` (the book cannot be delivered) or `minor`; `target` a prompt, checkpoint or section id, or `book`; `status` `open` or `resolved` (with an optional `resolution`). An issue keeps its `id` across rounds, so a later round can mark it `resolved`.
+- `verdict` is `pass` only if every prompt and section passes and no blocking issue is open.
+
+`python3 -m tools.prep verify-check ORIGINAL.epub PREPARED.epub check.json [--json OUT]` enforces what a script can, exit 0 only when nothing fails **and** the checker's verdict is pass:
+
+| Code | Meaning |
+| --- | --- |
+| `check-unreadable`, `check-schema` | Not one JSON object without duplicate names; fails the schema |
+| `stale-check` | `prepared_sha256` is not the prepared file given: the check is no evidence for it |
+| `original-mismatch` | `original_sha256` is not the original given |
+| `instructions-version-mismatch` | Not the checkpoint file's `book.instructions_version` |
+| `prepared-unreadable` | The prepared file or its checkpoint file cannot be read |
+| `missing-prompt`, `unknown-prompt`, `duplicate-prompt` | Every prompt of the book needs exactly one entry, and no other prompt may appear |
+| `missing-section`, `unknown-section`, `duplicate-section` | The same for sections |
+| `unknown-paragraph` | A citation names no paragraph of the book |
+| `citation-outside-section` | A cited paragraph's words are not inside the prompt's section, as the prepared file's anchors place it |
+| `section-unresolved` | The prompt's section has no valid anchors, so its citations cannot be confirmed |
+| `pass-without-citation`, `pass-with-failed-criterion` | A `pass` prompt with no citation, or with a criterion false |
+| `verdict-unjustified` | Overall `pass` although a prompt or section fails or a blocking issue is open |
+| `unknown-issue-target`, `duplicate-issue` | An issue targets nothing in the book; two issues share an id |
+| `checker-verdict-fail` | Everything is consistent, but the checker failed the draft |
+
+## `prep report`: ready or not, and the validation report
+
+```sh
+python3 -m tools.prep report --original BOOK.epub --prepared BOOK.prepared.epub \
+    [--validation validation.json] [--check check.json] [--history WORKDIR] [--draft draft.json] -o OUTDIR [--timestamp ISO]
+```
+
+The book is **READY** only when all of these hold (plan "Controls": no pass, no delivery):
+
+1. `validate`, **run again here** on the files given (with the latest draft's exclusions), passes every check, EPUBCheck included;
+2. the latest stored validator result passed, and was made against the SHA-256 of exactly this prepared file and this original;
+3. `verify-check`, **run again here** on the latest checker result, passes: same prepared file and original, complete, consistent, citations inside their sections, verdict pass.
+
+Stored results are evidence of history, not authority: editing `validation.json` or `check.json` cannot make a book ready, because the validator and the script-side checks run again on the bytes being delivered. What a script cannot re-run (whether an answer is supported) rests on the checker's verdict for exactly this file.
+
+| Validator (re-run) | Checker | Results made against this file | EPUBCheck | Report |
+| --- | --- | --- | --- | --- |
+| pass | pass | yes | available | READY, exit 0 |
+| any other combination | | | | NOT READY, exit 1 |
+
+Outputs in `OUTDIR`, where `<name>` is the prepared file's name without `.prepared.epub`:
+
+- `<name>.validation-report.md`: for a non-developer. The first line is `READY: ...` or `NOT READY: ...`; then plain sentences (why it is not ready), the book's facts (both SHA-256s, instructions version, number of rounds, drafter and checker models, tool versions, time), **one table of checks** (the twelve validator checks, the stored validator record and three checker rows, each Passed, Failed, Incomplete or Not run) and **one table of issues** (round, raised by, issue, where, description, how it was resolved, or Open).
+- `<name>.validation-report.json` (`schema/report.schema.json`): the same facts, `ready`, `reasons`, `checks`, `issues`, the full re-run validation result and the verify-check result.
+- `<name>.prepared.epub`, only when READY, written from the very bytes that were checked (skipped when it is the prepared file itself).
+
+A NOT READY report is still written, after the third failed round too, listing the open issues. Models come from `check.json` (`checker`) and from the draft's optional `x_drafter` member (`{"model": "...", "date": "YYYY-MM-DD"}`; the draft schema allows `x_` members).
+
+### Round history
+
+`/prep-book` (a later task) keeps one folder per round in the work folder; `report --history WORKDIR` reads it:
+
+```
+WORKDIR/
+  source.json, structure.json, text/      prep extract
+  draft.json                              the current draft
+  rounds/01/draft.json                    the draft built in round 1
+  rounds/01/validation.json               prep validate --json for that round's prepared file
+  rounds/01/check.json                    the checker's result for it (absent if the checker did not run)
+  rounds/02/...
+```
+
+Round folders are numbered (`01`, `02`, `03`) and read in numeric order. Without `--validation`, `--check` or `--draft`, the latest round that has the file supplies it. Each issue of each round is listed once, with its resolution: a validator failure (check, code, location) is "Fixed in round N" when round N's validation no longer reports it; a checker issue is "Resolved in round N" when round N's `check.json` marks it resolved (with its `resolution`), or "Not raised again ... in round N" when it is gone; an issue the final results still show is "Open". Without a history the files given count as one round.
+
 ## Synthetic fixture book
 
 `fixture/generate.py` writes `fixtures/books/fixture.epub`, `fixture.draft.json`, `fixture.expected.json` and `README.md` from the data in `fixture/content.py`, byte for byte reproducibly and with the standard library only. `fixtures/books/README.md` has the content inventory and word counts.
@@ -313,6 +489,8 @@ The start anchor precedes the section's first word and the end anchor follows it
 python3 tools/prep/fixture/generate.py           # regenerate after editing fixture/content.py
 python3 tools/prep/fixture/generate.py --check   # exit 1 and name each stale file
 ```
+
+`fixture/prepared.py` then writes, from the committed `fixture.epub` and `fixture.draft.json`, the prepared fixture `fixture.prepared.epub` (`prep build` output), a passing sample checker result `fixture.check.json`, and `negative/`: prepared copies broken in one way each (`broken-link.prepared.epub`: checkpoint c0002's section s0004 has no end anchor; also a checkpoint naming a missing section, a misspelt end anchor, anchors in the wrong document, a section spanning two documents, start after end, a changed word, an extra member, a wrong `source_sha256`, a `word_count` off by one) and checker results `verify-check` must reject (a citation outside the section, a missing prompt, a stale hash, a pass without citation, an unjustified overall verdict, a failed check). `negative/manifest.json` names, for each file, the exact checks and codes it must fail; `tests/test_validate.py` and `tests/test_verify_check.py` iterate it. `python3 tools/prep/fixture/prepared.py --check` exits 1 if a file is stale.
 
 `fixture.expected.json` is the ground truth other layers compare against, including the firmware's WordIndex tests (task R3). It is computed from the content model in `content.py`, not by parsing the EPUB, with the generator's own small text splitter. Before writing anything, the generator runs the word pass (`words.py`) on every XHTML document it produced and refuses if the two routes disagree; `tests/test_fixture.py` compares the committed file with the word pass, `prep extract`'s blocks and `prep build`'s anchors on `fixture.epub` again. An error in either route therefore shows up as a difference.
 

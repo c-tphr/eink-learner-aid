@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/c-tphr/eink-learner-aid/tools/prep/schema/report.schema.json",
+  "title": "Validation report, version 1",
+  "description": "<name>.validation-report.json, written by 'python3 -m tools.prep report' beside <name>.validation-report.md (tools/prep/README.md, 'prep report'). 'ready' is true only when the validator (re-run), the stored validator result and the checker result (re-verified) all passed for exactly the prepared file named here.",
+  "$comment": "Patterns end in $(?!\\n) for the reason given in checkpoints.schema.json. 'validation' follows validation.schema.json.",
+  "type": "object",
+  "required": ["format", "version", "status", "ready", "created", "book", "original", "prepared", "delivered", "rounds", "history", "models", "tools", "reasons", "checks", "issues", "validation", "check_verification"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "rsvp-validation-report" },
+    "version": { "type": "integer", "const": 1 },
+    "status": { "enum": ["READY", "NOT READY"] },
+    "ready": { "type": "boolean" },
+    "created": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$(?!\\n)" },
+    "book": {
+      "type": "object",
+      "required": ["title", "language", "instructions_version"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": ["string", "null"] },
+        "language": { "type": ["string", "null"] },
+        "instructions_version": { "type": ["string", "null"] }
+      }
+    },
+    "original": { "$ref": "#/$defs/file" },
+    "prepared": { "$ref": "#/$defs/file" },
+    "delivered": { "description": "File name of the prepared EPUB beside the report; null when not ready.", "type": ["string", "null"] },
+    "rounds": { "type": "integer", "minimum": 1 },
+    "history": { "description": "Whether a round history was read.", "type": "boolean" },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "model", "date", "round"],
+        "additionalProperties": false,
+        "properties": {
+          "role": { "enum": ["drafter", "checker"] },
+          "model": { "type": "string", "minLength": 1 },
+          "date": { "type": ["string", "null"] },
+          "round": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "required": ["name", "version", "word_rules_version", "epubcheck_version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "word_rules_version": { "type": "integer" },
+        "epubcheck_version": { "type": ["string", "null"] }
+      }
+    },
+    "reasons": { "description": "Why the book is not ready, in plain sentences; empty when ready.", "type": "array", "items": { "type": "string" } },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "title", "status", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "enum": ["pass", "fail", "incomplete", "not-run"] },
+          "source": { "enum": ["validator", "checker", "report"] }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["round", "raised_by", "code", "where", "description", "severity", "resolution", "open"],
+        "additionalProperties": false,
+        "properties": {
+          "round": { "type": "string" },
+          "raised_by": { "enum": ["validator", "checker", "report"] },
+          "code": { "type": "string" },
+          "where": { "type": "string" },
+          "description": { "type": "string" },
+          "severity": { "type": "string" },
+          "resolution": { "type": "string" },
+          "open": { "type": "boolean" }
+        }
+      }
+    },
+    "validation": { "description": "The validator's result for this report's own run (validation.schema.json).", "type": "object" },
+    "check_verification": { "description": "verify-check's result for the checker result used, or null when none was given.", "type": ["object", "null"] }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "required": ["file", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "type": "string" },
+        "sha256": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[0-9a-f]{64}$(?!\\n)" }] }
+      }
+    }
+  }
+}

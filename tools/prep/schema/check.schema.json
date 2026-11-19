@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/c-tphr/eink-learner-aid/tools/prep/schema/check.schema.json",
+  "title": "Checker result, version 1",
+  "description": "check.json, written by the checker session (docs/PLAN.md section 8, step 5) after reading the work folder and the prepared book's checkpoint file, and read by 'prep verify-check' and 'prep report'. One verdict per prompt and per section, the evidence for each, and an issue list for the drafter. tools/prep/README.md ('check.json') explains every member and what the script verifies.",
+  "$comment": "Closed schema (additionalProperties: false) so a misspelt member is caught; members starting with 'x_' are allowed and ignored. Patterns end in $(?!\\n) for the reason given in checkpoints.schema.json.",
+  "type": "object",
+  "required": ["format", "version", "prepared_sha256", "original_sha256", "instructions_version", "checker", "prompts", "sections", "issues", "verdict"],
+  "patternProperties": { "^x_": true },
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "rsvp-check" },
+    "version": { "type": "integer", "const": 1 },
+    "prepared_sha256": {
+      "description": "SHA-256 of the prepared EPUB the checker judged. A check is evidence only for exactly that file.",
+      "$ref": "#/$defs/sha256"
+    },
+    "original_sha256": {
+      "description": "SHA-256 of the original EPUB (the work folder's source.json source_sha256).",
+      "$ref": "#/$defs/sha256"
+    },
+    "instructions_version": {
+      "description": "The preparation instructions the checker applied; must equal book.instructions_version of the checkpoint file.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "round": { "description": "Optional: the round of the preparation loop (1 to 3).", "type": "integer", "minimum": 1 },
+    "checker": {
+      "type": "object",
+      "required": ["model", "date"],
+      "additionalProperties": false,
+      "properties": {
+        "model": { "description": "The checker session's model identifier.", "type": "string", "minLength": 1 },
+        "date": { "description": "The day of the check, YYYY-MM-DD.", "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$(?!\\n)" }
+      }
+    },
+    "prompts": {
+      "description": "Exactly one entry per prompt of the checkpoint file.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/prompt" }
+    },
+    "sections": {
+      "description": "Exactly one entry per section of the checkpoint file.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "issues": {
+      "description": "Everything the drafter must fix (status open) or that a previous round raised and is now fixed (status resolved). May be empty.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/issue" }
+    },
+    "verdict": {
+      "description": "pass only when every prompt and every section passes and no open blocking issue remains.",
+      "enum": ["pass", "fail"]
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$(?!\\n)" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$(?!\\n)" },
+    "paragraphRef": {
+      "description": "A reading-stream paragraph as numbered by 'prep extract' (d02-p006). Footnote bodies (dNN-nNNN) and source XHTML ids are not citable.",
+      "type": "string",
+      "pattern": "^d[0-9]{2,}-p[0-9]{3,}$(?!\\n)"
+    },
+    "evidence": { "description": "Free text: why, with short quotations from the cited paragraphs.", "type": "string", "minLength": 1 },
+    "prompt": {
+      "type": "object",
+      "required": ["id", "verdict", "supported_by_section", "citations", "accepts_paraphrase", "answerable_from_section", "does_not_give_away_answer", "evidence"],
+      "patternProperties": { "^x_": true },
+      "additionalProperties": false,
+      "properties": {
+        "id": { "description": "A prompt id of the checkpoint file.", "$ref": "#/$defs/id" },
+        "verdict": { "description": "pass requires every criterion true and at least one citation.", "enum": ["pass", "fail"] },
+        "supported_by_section": { "description": "The reference answer is supported by the prompt's own section.", "type": "boolean" },
+        "citations": {
+          "description": "The paragraphs of the prompt's own section that support the answer. The script confirms each lies inside that section.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/paragraphRef" }
+        },
+        "accepts_paraphrase": { "description": "The answer states the essential ideas clearly enough that a reader could accept a correct paraphrase as Correct.", "type": "boolean" },
+        "answerable_from_section": { "description": "The prompt can be answered from its section alone.", "type": "boolean" },
+        "does_not_give_away_answer": { "description": "The prompt does not give its answer away.", "type": "boolean" },
+        "evidence": { "$ref": "#/$defs/evidence" }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["id", "natural_boundary", "evidence"],
+      "patternProperties": { "^x_": true },
+      "additionalProperties": false,
+      "properties": {
+        "id": { "description": "A section id of the checkpoint file.", "$ref": "#/$defs/id" },
+        "natural_boundary": { "description": "The section's break falls at a natural boundary under the instructions.", "type": "boolean" },
+        "evidence": { "$ref": "#/$defs/evidence" }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "required": ["id", "severity", "target", "description", "suggested_fix", "status"],
+      "patternProperties": { "^x_": true },
+      "additionalProperties": false,
+      "properties": {
+        "id": { "description": "Stable across rounds: a later round reuses the id when it reports on the same issue.", "$ref": "#/$defs/id" },
+        "severity": { "description": "blocking: the book cannot be delivered until fixed. minor: worth fixing, does not block.", "enum": ["blocking", "minor"] },
+        "target": { "description": "A prompt, checkpoint or section id of the checkpoint file, or 'book'.", "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "suggested_fix": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["open", "resolved"] },
+        "resolution": { "description": "Optional: how a resolved issue was fixed.", "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

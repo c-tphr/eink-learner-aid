@@ -1,0 +1,92 @@
+{
+  "format": "rsvp-check",
+  "version": 1,
+  "prepared_sha256": "4de72b86060994ebbed4fca739df8670230b393b44c8650d8810a7a464de1414",
+  "original_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "instructions_version": "fixture",
+  "checker": {
+    "model": "fixture-sample",
+    "date": "2026-01-01"
+  },
+  "round": 1,
+  "prompts": [
+    {
+      "id": "c0001-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": [
+        "d02-p006"
+      ],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "d02-p006 says each light had its own pattern of flashes that sailors counted, and that Gannet Rock gave one white flash every ten seconds, which no other light on the coast did."
+    },
+    {
+      "id": "c0002-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": [
+        "d03-p009"
+      ],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "d03-p009 says the fisherman steered by the sound of the horn alone, two blasts and silence, until the boat grounded on the shingle below the tower."
+    },
+    {
+      "id": "c0002-p2",
+      "verdict": "fail",
+      "supported_by_section": true,
+      "citations": [
+        "d03-p010",
+        "d03-p011"
+      ],
+      "accepts_paraphrase": false,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "The answer runs two ideas together; a reader could not tell which part is essential."
+    },
+    {
+      "id": "c0002-p3",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": [
+        "d03-p013"
+      ],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "d03-p013 gives Ione's advice: never put to sea in November without oars, however good the engine."
+    }
+  ],
+  "sections": [
+    {
+      "id": "s0001",
+      "natural_boundary": true,
+      "evidence": "Ends after the paragraph on the light's flash pattern, before the clockwork scene begins."
+    },
+    {
+      "id": "s0002",
+      "natural_boundary": true,
+      "evidence": "The clockwork scene runs to the end of chapter 1."
+    },
+    {
+      "id": "s0003",
+      "natural_boundary": true,
+      "evidence": "Ends after the fog-signal paragraphs, where the visitor's arrival starts a new scene under its own heading."
+    },
+    {
+      "id": "s0004",
+      "natural_boundary": true,
+      "evidence": "Runs from the visitor's heading to the end of chapter 2."
+    },
+    {
+      "id": "s0005",
+      "natural_boundary": true,
+      "evidence": "The whole of chapter 3, one short chapter."
+    }
+  ],
+  "issues": [],
+  "verdict": "pass"
+}
