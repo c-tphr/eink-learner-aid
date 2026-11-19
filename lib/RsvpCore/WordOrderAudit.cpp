@@ -15,10 +15,14 @@ void WordOrderAudit::record(const uint32_t wordIndex) {
   if (!segmentOpen) {
     segmentOpen = true;
     forwardSkip = false;
+    pendingDeclared = 0;
     ++segmentCount;
     expected = wordIndex + 1;
     return;
   }
+  declared += pendingDeclared;
+  expected += pendingDeclared;
+  pendingDeclared = 0;
   if (wordIndex != expected) {
     if (wordIndex > expected && forwardSkip) {
       skipped += wordIndex - expected;

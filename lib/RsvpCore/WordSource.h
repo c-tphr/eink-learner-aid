@@ -29,6 +29,9 @@ struct Token {
   // Index of the word within its chapter (0-based), as used by the position model.
   uint32_t wordIndex = 0;
   uint8_t flags = 0;  // TokenFlag bits
+  // Word indexes right before this one that the source passed over on purpose without a stop
+  // (a footnote body): wordIndex - skippedBefore follows the previous token. 0 for most sources.
+  uint32_t skippedBefore = 0;
 };
 
 // Pull-style word supply for one chapter. RsvpCore needs one token of lookahead: it peeks the

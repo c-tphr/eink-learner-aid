@@ -18,6 +18,8 @@ bool FrameBuilder::next(Frame& out) {
 
   while (true) {
     const uint8_t slot = out.wordCount;
+    // Words passed over on purpose are not adjacent text: the group ends before them.
+    if (slot > 0 && token.skippedBefore != 0) break;
     const size_t keep = text::truncateToCodePoint(token.text, MAX_WORD_BYTES);
     const std::string_view word = token.text.substr(0, keep);
     const size_t offset = slot == 0 ? 0 : out.textLength + 1;
@@ -47,6 +49,7 @@ bool FrameBuilder::next(Frame& out) {
     out.focusByteLength = focus.byteLength;
     if (slot == 0) {
       out.firstWordIndex = token.wordIndex;
+      out.skippedBefore = token.skippedBefore;
       out.overWide = !fit;
     }
     out.lastWordIndex = token.wordIndex;

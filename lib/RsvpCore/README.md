@@ -63,6 +63,10 @@ What the source must do:
 - Words inside a table or code block are not prose: the source flags the last prose word before
   them with `TOKEN_NON_PROSE_FOLLOWS` and does not hand them out as RSVP words. A non-prose block
   before the chapter's first word cannot be flagged; the activity handles that case.
+- Words it passes over on purpose without a stop (a footnote or endnote body in mid-chapter) are
+  declared on the next token: `Token::skippedBefore` is the number of word indexes skipped right
+  before it (0 otherwise). A frame never joins words across such a skip: the group ends before the
+  token, and the frame records the count in `Frame::skippedBefore`.
 - After a jump, reposition itself; the owner then calls `Scheduler::reposition()` (or
   `FrameBuilder::reset()` when using a builder alone). The builder keeps no word state between
   frames, so the next `next()` starts from wherever the source now is.
@@ -183,6 +187,7 @@ A `Frame` carries:
 | `text`, `textLength`, `view()` | NUL-terminated joined UTF-8 text |
 | `wordCount`, `wordOffset[]`, `wordLength[]`, `word(i)` | The member words within `text` |
 | `firstWordIndex`, `lastWordIndex` | Chapter word indexes of the first and last word |
+| `skippedBefore` | The first word's `Token::skippedBefore` (indexes passed over on purpose right before it) |
 | `focusWord`, `focusByteOffset`, `focusByteLength` | The group's focus letter within `text` |
 | `holdMs` | Ideal hold: exactly the sum of the member words' paced intervals |
 | `lastWord` | `WordClass` of the last word (sentence, paragraph and section ends, for clearing refreshes) |
@@ -366,6 +371,10 @@ a violation.
   (`allowForwardSkip()`), because a source may keep word indexes for a table's or code block's
   words without handing them out (S1, section 5). The jump is counted in `skippedWords()`. A
   repeat is never allowed.
+- **Declared skips:** when a frame's first word has `skippedBefore` > 0, the scheduler calls
+  `declareSkip(count)` before recording the frame, and the audit expects the next index exactly that
+  much further on. The count goes to `declaredSkips()`, apart from `skippedWords()`. A wrong count
+  is still a gap or a repeat; at the start of a segment the declaration is ignored.
 - `resetSession()` resets it together with the meter.
 
 ## Constraints

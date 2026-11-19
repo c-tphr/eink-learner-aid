@@ -8,8 +8,10 @@
 // The first index after beginSegment() is accepted whatever it is; within a segment each index
 // must be the previous one plus 1. allowForwardSkip() accepts one forward jump at the next index,
 // for word indexes the source does not hand out as RSVP words (the inside of a table or code
-// block after a non-prose stop); the skipped count is recorded. Any other difference is a
-// violation: a gap (index too high) or a repeat (index at or below one already drawn).
+// block after a non-prose stop); the skipped count is recorded. declareSkip() moves the expected
+// index on by the count a source declares it passed over on purpose (Token::skippedBefore, a
+// footnote body), counted apart. Any other difference is a violation: a gap (index too high) or a
+// repeat (index at or below one already drawn).
 
 #include <cstdint>
 
@@ -21,10 +23,18 @@ class WordOrderAudit {
   void reset() { *this = WordOrderAudit{}; }
 
   // The next index opens a new segment.
-  void beginSegment() { segmentOpen = false; }
+  void beginSegment() {
+    segmentOpen = false;
+    pendingDeclared = 0;
+  }
 
   // The next index may be any index after the last one drawn.
   void allowForwardSkip() { forwardSkip = true; }
+
+  // The source passed over `count` indexes on purpose right before the next one (a footnote
+  // body, Token::skippedBefore): the next index is expected that much further on. Counted in
+  // declaredSkips(), not skippedWords(). Ignored when the next index opens a segment.
+  void declareSkip(uint32_t count) { pendingDeclared += count; }
 
   // Records one drawn word.
   void record(uint32_t wordIndex);
@@ -39,7 +49,8 @@ class WordOrderAudit {
   uint32_t violations() const { return violationCount; }
   uint32_t gaps() const { return gapCount; }
   uint32_t repeats() const { return repeatCount; }
-  uint32_t skippedWords() const { return skipped; }  // indexes passed over by allowed forward skips
+  uint32_t skippedWords() const { return skipped; }    // indexes passed over by allowed forward skips
+  uint32_t declaredSkips() const { return declared; }  // indexes passed over by declareSkip()
 
   // The first violation: the index that was expected and the one that was drawn.
   bool hasViolation() const { return violationCount != 0; }
@@ -58,6 +69,8 @@ class WordOrderAudit {
   uint32_t gapCount = 0;
   uint32_t repeatCount = 0;
   uint32_t skipped = 0;
+  uint32_t declared = 0;
+  uint32_t pendingDeclared = 0;
   uint32_t violationExpected = 0;
   uint32_t violationDrawn = 0;
   uint32_t expected = 0;
