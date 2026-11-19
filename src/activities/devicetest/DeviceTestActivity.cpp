@@ -28,6 +28,7 @@
 #include "CrossPointSettings.h"
 #include "DeviceTestLaunch.h"
 #include "MappedInputManager.h"
+#include "ResultsFile.h"
 #include "fontIds.h"
 
 using namespace devicetest;
@@ -72,8 +73,8 @@ constexpr int8_t TEMPERATURE_MIN = -10;
 constexpr int8_t TEMPERATURE_MAX = 45;
 constexpr int8_t TEMPERATURE_START = 20;
 
-constexpr const char* MENU_LOG_NAMES[] = {"controls-check", "benchmark", "clearing-refresh", "leave"};
-constexpr uint8_t MENU_ROWS = 4;
+constexpr const char* MENU_LOG_NAMES[] = {"controls-check", "benchmark",        "guided-acceptance",
+                                          "choose-profile", "clearing-refresh", "leave"};
 
 bool reached(const uint32_t now, const uint32_t at) { return static_cast<int32_t>(now - at) >= 0; }
 
@@ -188,72 +189,6 @@ void estimateTimes(const displayprofile::PanelId panel, uint32_t& updateMs, uint
   clearMs = r.predictedClearMs > 0 ? r.predictedClearMs + displayprofile::FRAME_TRANSFER_MS : x4.clearMs;
 }
 
-// A JsonSink over an open file, through a small buffer.
-class FileSink final : public JsonSink {
- public:
-  explicit FileSink(HalFile& target) : file(target) {}
-  void write(const char* data, size_t length) override {
-    while (length > 0) {
-      const size_t n = length < sizeof(buffer) - used ? length : sizeof(buffer) - used;
-      memcpy(buffer + used, data, n);
-      used += n;
-      data += n;
-      length -= n;
-      if (used == sizeof(buffer)) flush();
-    }
-  }
-  bool finish() {
-    flush();
-    return ok;
-  }
-  size_t bytes() const { return total; }
-
- private:
-  void flush() {
-    if (used == 0) return;
-    if (file.write(buffer, used) != used) ok = false;
-    total += used;
-    used = 0;
-  }
-  HalFile& file;
-  char buffer[256] = {};
-  size_t used = 0;
-  size_t total = 0;
-  bool ok = true;
-};
-
-// Writes `path` through a temporary file and a rename, as src/reading/BookStateFile.cpp does, so a
-// cut-off write never replaces the last good file.
-template <typename Encode>
-bool writeAtomically(const char* path, Encode encode, size_t& bytes) {
-  char tmp[64];
-  snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-  {
-    HalFile file;
-    if (!Storage.openFileForWrite("DTS", tmp, file)) {
-      LOG_ERR("DTS", "results %s: cannot open for write", tmp);
-      return false;
-    }
-    FileSink sink(file);
-    encode(sink);
-    const bool ok = sink.finish();
-    bytes = sink.bytes();
-    file.close();  // SdFat does not rename a file that is still open
-    if (!ok) {
-      LOG_ERR("DTS", "results %s: short write", tmp);
-      Storage.remove(tmp);
-      return false;
-    }
-  }
-  // SdFat's rename does not replace, so the old file goes first.
-  Storage.remove(path);
-  if (!Storage.rename(tmp, path)) {
-    LOG_ERR("DTS", "results %s: rename failed", path);
-    return false;
-  }
-  return true;
-}
-
 }  // namespace
 
 namespace devicetest {
@@ -322,11 +257,13 @@ void DeviceTestActivity::onEnter() {
   LOG_DBG("DTS", "open panel=%s setting=%u activity_bytes=%u", displayprofile::panelName(backend.panel()),
           static_cast<unsigned>(SETTINGS.rsvpDisplayProfile), static_cast<unsigned>(sizeof(DeviceTestActivity)));
   RenderLock lock;
-  show(Screen::Menu, MENU_ROWS, 0, true);
+  loadAcceptance();
+  show(Screen::Menu, MENU_ROW_COUNT, 0, true);
 }
 
 void DeviceTestActivity::onExit() {
   // The caller holds the RenderLock.
+  if (seriesActive.load() && seriesOwner == SeriesOwner::Acceptance) abandonAcceptanceRun();
   if (sweep.active()) {
     if (seriesActive.load()) sweep.seriesStopped(runner.figures());
     sweep.abandon(RunStatus::INTERRUPTED);
@@ -347,6 +284,7 @@ void DeviceTestActivity::onExit() {
 void DeviceTestActivity::prepareForSleep() {
   // Under the RenderLock, no series step is running. Deep sleep restarts the device on wake, so the
   // files are written now with what was measured.
+  if (seriesActive.load() && seriesOwner == SeriesOwner::Acceptance) abandonAcceptanceRun();
   if (sweep.active()) {
     if (seriesActive.load()) {
       sweep.seriesStopped(runner.figures());
@@ -431,9 +369,9 @@ void DeviceTestActivity::stepSeries() {
     stepPending = false;
     seriesDone.store(false);
     seriesActive.store(true);
-    LOG_DBG("DTS", "step start profile=%s step=%s attempt=%u", profileInfo(sweep.profile().id).key,
-            sweep.stepSpec().key, static_cast<unsigned>(sweep.stepRecord().attempts + 1));
-    runner.begin(sweep.stepSpec());
+    LOG_DBG("DTS", "step start profile=%s step=%s attempt=%u", profileInfo(seriesProfile()).key, seriesSpec().key,
+            seriesAttempt());
+    runner.begin(seriesSpec());
     wakeAtMs.store(clock.nowMs());
     wakeValid.store(true);
     return;
@@ -460,6 +398,19 @@ void DeviceTestActivity::runClearingRefresh() {
   drawScreen(false);
 }
 
+const StepSpec& DeviceTestActivity::seriesSpec() const {
+  return seriesOwner == SeriesOwner::Acceptance ? walk.runSpec() : sweep.stepSpec();
+}
+
+ProfileId DeviceTestActivity::seriesProfile() const {
+  return seriesOwner == SeriesOwner::Acceptance ? acc.profile : sweep.profile().id;
+}
+
+unsigned DeviceTestActivity::seriesAttempt() const {
+  return 1u + (seriesOwner == SeriesOwner::Acceptance ? walk.partA.runs[walk.runIndex()].attempts
+                                                      : sweep.stepRecord().attempts);
+}
+
 void DeviceTestActivity::paintList(const char* title, const char* subtitle, const char* const* labels,
                                    const uint8_t lineCount) {
   renderer.clearScreen();
@@ -484,14 +435,21 @@ void DeviceTestActivity::paintList(const char* title, const char* subtitle, cons
   for (uint8_t i = 0; i < lineCount && y + small <= HINT_Y; ++i) {
     y = drawWrapped(info[i], y, HINT_Y) + LINE_GAP;
   }
+  for (const LongText& t : longText) {
+    if (t.text == nullptr) continue;
+    if (t.label != nullptr && y + small <= HINT_Y) {
+      renderer.drawText(UI_10_FONT_ID, MARGIN, y, t.label, true, EpdFontFamily::BOLD);
+      y += small;
+    }
+    y = drawWrapped(t.text, y, HINT_Y, 0) + LINE_GAP;
+  }
   renderer.drawCenteredText(UI_10_FONT_ID, HINT_Y + (HINT_H - small) / 2, tr(STR_RSVP_KEY_HINT));
 }
 
-int DeviceTestActivity::drawWrapped(const char* text, int y, const int bottom) {
+int DeviceTestActivity::drawWrapped(const char* text, int y, const int bottom, const int indent) {
   // Breaks at spaces to the screen width; continuation lines are indented. No allocation.
   const int small = renderer.getLineHeight(UI_10_FONT_ID);
   const int maxWidth = renderer.getScreenWidth() - 2 * MARGIN;
-  constexpr int INDENT = 24;
   char line[LINE_BYTES];
   const char* p = text;
   bool first = true;
@@ -505,7 +463,7 @@ int DeviceTestActivity::drawWrapped(const char* text, int y, const int bottom) {
       if (length >= sizeof(line)) break;
       memcpy(line, p, length);
       line[length] = '\0';
-      if (used > 0 && renderer.getTextWidth(UI_10_FONT_ID, line) > maxWidth - (first ? 0 : INDENT)) break;
+      if (used > 0 && renderer.getTextWidth(UI_10_FONT_ID, line) > maxWidth - (first ? 0 : indent)) break;
       used = length;
       lineEnd = wordEnd;
       q = *wordEnd == ' ' ? wordEnd + 1 : wordEnd;
@@ -516,7 +474,7 @@ int DeviceTestActivity::drawWrapped(const char* text, int y, const int bottom) {
     }
     memcpy(line, p, used);
     line[used] = '\0';
-    renderer.drawText(UI_10_FONT_ID, MARGIN + (first ? 0 : INDENT), y, line);
+    renderer.drawText(UI_10_FONT_ID, MARGIN + (first ? 0 : indent), y, line);
     y += small;
     first = false;
     p = lineEnd;
@@ -534,14 +492,17 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
   const auto line = [&](const char* fmt, auto... args) {
     if (lines < INFO_LINES) snprintf(info[lines++], LINE_BYTES, fmt, args...);
   };
+  for (LongText& t : longText) t = LongText{};
 
   switch (s) {
     case Screen::Menu: {
       title = tr(STR_DT_DEVICE_TEST);
       labels[0] = tr(STR_DT_CONTROLS_CHECK);
       labels[1] = tr(STR_DT_BENCHMARK);
-      labels[2] = tr(STR_DT_CLEARING_REFRESH);
-      labels[3] = tr(STR_DT_LEAVE);
+      labels[2] = menuAcceptanceLabel(labelText[2], LINE_BYTES);
+      labels[3] = tr(STR_DT_CHOOSE_PROFILE);
+      labels[4] = tr(STR_DT_CLEARING_REFRESH);
+      labels[5] = tr(STR_DT_LEAVE);
       const displayprofile::PanelRecord& r = displayprofile::panelRecord(backend.panel());
       snprintf(subtitle, sizeof(subtitle), "%s: %s (%s)", tr(STR_DT_PANEL), displayprofile::panelName(backend.panel()),
                displayprofile::controllerName(r.controller));
@@ -725,6 +686,22 @@ void DeviceTestActivity::drawScreen(const bool clearing) {
       }
       break;
     }
+    case Screen::AccStart:
+    case Screen::AccRunStopped:
+    case Screen::AccReadable:
+    case Screen::AccSlower:
+    case Screen::AccPartADone:
+    case Screen::AccStep:
+    case Screen::AccResult:
+    case Screen::AccReason:
+    case Screen::AccSummary:
+      describeAcceptanceScreen(s, title, subtitle, labels, lines);
+      break;
+    case Screen::ChooseProfile:
+    case Screen::KeepTrials:
+    case Screen::ChoiceDone:
+      describeChoiceScreen(s, title, subtitle, labels, lines);
+      break;
     case Screen::Step:
     case Screen::Look:
       return;
@@ -795,8 +772,15 @@ void DeviceTestActivity::paintControls() {
 void DeviceTestActivity::paintStepScreen(const StepSpec& step) {
   renderer.clearScreen();
   char text[LINE_BYTES];
-  snprintf(text, sizeof(text), "%s · %s %u / %u", profileInfo(sweep.profile().id).name, tr(STR_DT_STEP),
-           static_cast<unsigned>(sweep.stepIndex() + 1), static_cast<unsigned>(STEP_COUNT));
+  if (seriesOwner == SeriesOwner::Acceptance) {
+    // "Part A · run 2 of 2 · Trial B"
+    snprintf(text, sizeof(text), "%s · %s %u / %u · %s", tr(STR_DT_PART_A), tr(STR_DT_RUN),
+             static_cast<unsigned>(walk.runIndex() + 1), static_cast<unsigned>(ACCEPTANCE_RUN_COUNT),
+             profileInfo(acc.profile).name);
+  } else {
+    snprintf(text, sizeof(text), "%s · %s %u / %u", profileInfo(sweep.profile().id).name, tr(STR_DT_STEP),
+             static_cast<unsigned>(sweep.stepIndex() + 1), static_cast<unsigned>(STEP_COUNT));
+  }
   renderer.drawText(UI_12_FONT_ID, MARGIN, TITLE_Y, text, true, EpdFontFamily::BOLD);
   const int small = renderer.getLineHeight(UI_10_FONT_ID);
   int y = SUBTITLE_Y;
@@ -897,6 +881,16 @@ bool DeviceTestActivity::fits(void* context, const std::string_view text, const 
 
 void DeviceTestActivity::loop() {
   lastLoopMs.store(static_cast<uint32_t>(millis()));
+  if (leaveRequested) {
+    // Leaving waits for every key to be up: Settings would take a side key still held from the hold
+    // that chose the row as its own hold, and move its highlight.
+    for (const Btn b : {Btn::PageBack, Btn::PageForward, Btn::Up, Btn::Down, Btn::Confirm}) {
+      if (mappedInput.isPressed(b)) return;
+    }
+    leaveRequested = false;
+    finish();
+    return;
+  }
   switch (screen.load()) {
     case Screen::Controls:
       loopControls();
@@ -913,10 +907,11 @@ void DeviceTestActivity::loop() {
   }
 }
 
-void DeviceTestActivity::show(const Screen next, const uint8_t rows, const uint8_t repeatMask, const bool clearing) {
+void DeviceTestActivity::show(const Screen next, const uint8_t rows, const uint8_t repeatMask, const bool clearing,
+                              const uint8_t defaultRow) {
   // The caller holds the RenderLock.
   screen.store(next);
-  list.reset(rows, 0, repeatMask);
+  list.reset(rows, defaultRow, repeatMask);
   needClear = clearing;
   guardRestartPending.store(true);
   requestUpdate();
@@ -954,7 +949,7 @@ void DeviceTestActivity::choose(const uint8_t row) {
   RenderLock lock;
   switch (screen.load()) {
     case Screen::Menu:
-      LOG_DBG("DTS", "menu %s", row < MENU_ROWS ? MENU_LOG_NAMES[row] : "?");
+      LOG_DBG("DTS", "menu %s", row < MENU_ROW_COUNT ? MENU_LOG_NAMES[row] : "?");
       switch (static_cast<MenuRow>(row)) {
         case MenuRow::ControlsCheck:
           startControls();
@@ -962,13 +957,18 @@ void DeviceTestActivity::choose(const uint8_t row) {
         case MenuRow::Benchmark:
           show(Screen::Temperature, 5, 0b0110, false);
           return;
+        case MenuRow::Acceptance:
+          openAcceptance();
+          return;
+        case MenuRow::ChooseProfile:
+          openChoice();
+          return;
         case MenuRow::ClearingRefresh:
           pendingClearing = true;
           requestUpdate();
           return;
         case MenuRow::Leave:
-          lock.unlock();
-          finish();
+          leaveRequested = true;  // loop() finishes once the hold that chose the row is released
           return;
       }
       return;
@@ -992,14 +992,14 @@ void DeviceTestActivity::choose(const uint8_t row) {
         LOG_DBG("DTS", "temperature unknown");
         requestUpdate();
       } else {
-        show(Screen::Menu, MENU_ROWS, 0, false);
+        show(Screen::Menu, MENU_ROW_COUNT, 0, false);
       }
       return;
     case Screen::Overview:
       if (row == 0) {
         startBenchmark();
       } else {
-        show(Screen::Menu, MENU_ROWS, 0, false);
+        show(Screen::Menu, MENU_ROW_COUNT, 0, false);
       }
       return;
     case Screen::Rating: {
@@ -1032,7 +1032,23 @@ void DeviceTestActivity::choose(const uint8_t row) {
       go(sweep.summary(row == 0 ? SummaryChoice::NEXT : SummaryChoice::END_RUN));
       return;
     case Screen::RunSummary:
-      show(Screen::Menu, MENU_ROWS, 0, false);
+      show(Screen::Menu, MENU_ROW_COUNT, 0, false);
+      return;
+    case Screen::AccStart:
+    case Screen::AccRunStopped:
+    case Screen::AccReadable:
+    case Screen::AccSlower:
+    case Screen::AccPartADone:
+    case Screen::AccStep:
+    case Screen::AccResult:
+    case Screen::AccReason:
+    case Screen::AccSummary:
+      chooseAcceptance(screen.load(), row);  // "Leave to do this step" sets leaveRequested
+      return;
+    case Screen::ChooseProfile:
+    case Screen::KeepTrials:
+    case Screen::ChoiceDone:
+      chooseProfile(screen.load(), row);
       return;
     case Screen::Controls:
     case Screen::Step:
@@ -1049,9 +1065,40 @@ void DeviceTestActivity::back() {
   }
   if (s == Screen::Temperature || s == Screen::Overview || s == Screen::RunSummary) {
     RenderLock lock;
-    show(Screen::Menu, MENU_ROWS, 0, false);
+    show(Screen::Menu, MENU_ROW_COUNT, 0, false);
+    return;
   }
-  // Prompts during a benchmark need an answer: the Back gesture does nothing there.
+  // The new screens: Back is the row that commits nothing. Prompts that need an answer (during a
+  // benchmark or Part A) ignore it.
+  int row = -1;
+  switch (s) {
+    case Screen::AccStart:
+      row = static_cast<int>(StartChoice::BACK);
+      break;
+    case Screen::AccPartADone:
+      row = 1;  // Device test menu (row 0 goes on to Part B)
+      break;
+    case Screen::AccSummary:
+      row = static_cast<int>(SummaryRow::MENU);
+      break;
+    case Screen::AccResult:
+      row = static_cast<int>(ResultChoice::NOT_DONE);
+      break;
+    case Screen::AccReason:
+    case Screen::ChoiceDone:
+      row = 0;  // Back; Back to the device test menu
+      break;
+    case Screen::AccStep:
+      row = static_cast<int>(StepChoice::MENU);
+      break;
+    case Screen::ChooseProfile:
+    case Screen::KeepTrials:
+      row = list.count() - 1;  // Back is the last row
+      break;
+    default:
+      break;
+  }
+  if (row >= 0) choose(static_cast<uint8_t>(row));
 }
 
 // --- Controls check ---------------------------------------------------------------------------
@@ -1172,7 +1219,7 @@ void DeviceTestActivity::finishControls(const RunStatus status) {
   controlsActive = false;
   LOG_INF("DTS", "controls end run=%u events=%lu status=%s", controlsRecord.header.run,
           static_cast<unsigned long>(controlsRecord.count), runStatusName(status));
-  show(Screen::Menu, MENU_ROWS, 0, true);
+  show(Screen::Menu, MENU_ROW_COUNT, 0, true);
 }
 
 // --- Benchmark --------------------------------------------------------------------------------
@@ -1238,6 +1285,7 @@ void DeviceTestActivity::go(Next next) {
   benchSaved = saveBenchmark() && benchSaved;
   switch (next) {
     case Next::RUN_STEP:
+      seriesOwner = SeriesOwner::Benchmark;
       screen.store(Screen::Step);
       stepPending = true;
       seriesDone.store(false);
@@ -1290,6 +1338,10 @@ void DeviceTestActivity::seriesEnded() {
   const StepFigures f = runner.figures();
   const bool stopped = runner.stopped();
   logResult(f, stopped);
+  if (seriesOwner == SeriesOwner::Acceptance) {
+    acceptanceSeriesEnded(f, stopped);
+    return;
+  }
   if (stopped) {
     sweep.seriesStopped(f);
     // Drawn with a clearing refresh, which also ends a trial's run.
@@ -1305,24 +1357,27 @@ void DeviceTestActivity::loopLook() {
   LOG_DBG("DTS", "look done by=%s", e.ev == controls::Ev::TouchDown ? "touch" : "key");
   RenderLock lock;
   // The clearing refresh that draws the prompt also ends a trial's run.
-  show(Screen::Rating, RATING_CHOICES, 0, true);
+  if (seriesOwner == SeriesOwner::Acceptance) {
+    goWalk(Walk::ASK_READABLE);
+  } else {
+    show(Screen::Rating, RATING_CHOICES, 0, true);
+  }
 }
 
 void DeviceTestActivity::logResult(const StepFigures& f, const bool stopped) {
   // The same figures as the results file, at once: a failed SD write does not lose them (plan 10).
-  const StepSpec& spec = sweep.stepSpec();
-  const char* key = profileInfo(sweep.profile().id).key;
+  const StepSpec& spec = seriesSpec();
+  const char* key = profileInfo(seriesProfile()).key;
   LOG_INF("DTS",
           "result profile=%s step=%s outcome=%s attempt=%u updates=%lu median=%lu p95=%lu max=%lu min=%lu mean=%lu "
           "timeouts=%lu clears=%lu clear_median=%lu clear_max=%lu clear_timeouts=%lu promotions=%lu duration_ms=%lu",
-          key, spec.key, stopped ? "stopped" : "complete", static_cast<unsigned>(sweep.stepRecord().attempts + 1),
-          static_cast<unsigned long>(f.updates.count), static_cast<unsigned long>(f.updates.medianMs),
-          static_cast<unsigned long>(f.updates.p95Ms), static_cast<unsigned long>(f.updates.maxMs),
-          static_cast<unsigned long>(f.updates.minMs), static_cast<unsigned long>(f.updates.meanMs),
-          static_cast<unsigned long>(f.updates.timeouts), static_cast<unsigned long>(f.clears.count),
-          static_cast<unsigned long>(f.clears.medianMs), static_cast<unsigned long>(f.clears.maxMs),
-          static_cast<unsigned long>(f.clears.timeouts), static_cast<unsigned long>(f.promotions),
-          static_cast<unsigned long>(f.durationMs));
+          key, spec.key, stopped ? "stopped" : "complete", seriesAttempt(), static_cast<unsigned long>(f.updates.count),
+          static_cast<unsigned long>(f.updates.medianMs), static_cast<unsigned long>(f.updates.p95Ms),
+          static_cast<unsigned long>(f.updates.maxMs), static_cast<unsigned long>(f.updates.minMs),
+          static_cast<unsigned long>(f.updates.meanMs), static_cast<unsigned long>(f.updates.timeouts),
+          static_cast<unsigned long>(f.clears.count), static_cast<unsigned long>(f.clears.medianMs),
+          static_cast<unsigned long>(f.clears.maxMs), static_cast<unsigned long>(f.clears.timeouts),
+          static_cast<unsigned long>(f.promotions), static_cast<unsigned long>(f.durationMs));
   if (f.hasPlayback) {
     const PlaybackFigures& p = f.playback;
     LOG_INF("DTS",
@@ -1453,6 +1508,30 @@ const char* DeviceTestActivity::screenName() const {
       return "profile-summary";
     case Screen::RunSummary:
       return "run-summary";
+    case Screen::AccStart:
+      return "acceptance-start";
+    case Screen::AccRunStopped:
+      return "acceptance-stopped";
+    case Screen::AccReadable:
+      return "acceptance-readable";
+    case Screen::AccSlower:
+      return "acceptance-slower";
+    case Screen::AccPartADone:
+      return "acceptance-part-a";
+    case Screen::AccStep:
+      return "acceptance-step";
+    case Screen::AccResult:
+      return "acceptance-result";
+    case Screen::AccReason:
+      return "acceptance-reason";
+    case Screen::AccSummary:
+      return "acceptance-summary";
+    case Screen::ChooseProfile:
+      return "choose-profile";
+    case Screen::KeepTrials:
+      return "keep-trials";
+    case Screen::ChoiceDone:
+      return "choice-done";
   }
   return "?";
 }

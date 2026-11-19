@@ -34,6 +34,7 @@
 #include "StatusBarSettingsActivity.h"
 #include "TextSettingsActivity.h"
 #include "activities/devicetest/DeviceTestLaunch.h"
+#include "activities/devicetest/SpeedReadSetting.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
 #include "components/UITheme.h"
@@ -141,6 +142,8 @@ void SettingsActivity::rebuildSettings() {
   addAction(SettingsSection::General, StrId::STR_KEYBOARD_LAYOUTS, SettingAction::KeyboardLayouts);
   addAction(SettingsSection::Reader, StrId::STR_TEXT_SETTINGS, SettingAction::TextSettings);
   if (devicetest::AVAILABLE) addAction(SettingsSection::Display, StrId::STR_DT_DEVICE_TEST, SettingAction::DeviceTest);
+  if (speedreadsetting::visible())
+    addAction(SettingsSection::Display, StrId::STR_SPEED_READ_DISPLAY, SettingAction::SpeedReadDisplay);
   addAction(SettingsSection::Reader, StrId::STR_MANAGE_FONTS, SettingAction::DownloadFonts);
   if (section == SettingsSection::Controls) {
     if (controlsGroup == ControlsGroup::Root) {
@@ -529,9 +532,20 @@ void SettingsActivity::toggleSelectedSetting() {
         }
         break;
       case SettingAction::DeviceTest:
+        // The profile choice can add or remove the "Speed read display" row.
         if (auto activity = devicetest::create(renderer, mappedInput))
-          startActivityForResult(std::move(activity), nullptr);
+          startActivityForResult(std::move(activity), [this](const ActivityResult&) { rebuildSettings(); });
         break;
+      case SettingAction::SpeedReadDisplay: {
+        const speedreadsetting::Options options = speedreadsetting::options();
+        optionPopup.show(tr(STR_SPEED_READ_DISPLAY), options.names, options.count, options.current,
+                         [this, options](const int idx) {
+                           speedreadsetting::select(options, idx);
+                           rebuildSettings();
+                         });
+        requestUpdate();
+        return;
+      }
       case SettingAction::None:
         // Do nothing
         break;
@@ -590,6 +604,7 @@ void SettingsActivity::openSleepTimeoutPicker() {
 
 std::string SettingsActivity::settingValueText(const SettingInfo& setting) {
   if (setting.action == SettingAction::Plugins) return SETTINGS.pluginsEnabled ? tr(STR_ENABLED) : tr(STR_DISABLED);
+  if (setting.action == SettingAction::SpeedReadDisplay) return speedreadsetting::currentName();
   if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
     // Guard like the valueGetter branch below: a corrupt/migrated settings
     // byte must not index past the enum table.

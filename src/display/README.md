@@ -191,17 +191,29 @@ Times are waveform only (S2 section 4); the frame transfer (at least 38.4 ms) an
 | D on YRD0426 / OPM040B3 | The time (80 ms only if FR code 1 is 40 ms per frame); a 2-frame waveform is expected to ghost the most |
 | D on SE0400NQW47 | Which table ran (mode 3 or the reading table; the first FAST after a clear always runs the reading table because of the driver's `_afterReader` rule, `Ssd2677Driver.cpp:196-197`, and a large word may exceed 1/8 of the frame bytes); every SE0400 duration |
 
-## Who selects a profile (task D3a)
+## Who selects a profile (tasks D3a and D3b)
 
 The stored byte `rsvpDisplayProfile` (CrossPoint's settings file; `TrialUnlock.h` encoding) says which
 trials are unlocked and which profile is chosen. `RsvpActivity::onEnter()` applies it before playback:
 `setUnlockedTrials(unlocked)`, `select(chosen)`, then the scheduler takes `info().clearing`. With
 nothing stored that is Stock, as before. The device test's benchmark (`src/activities/devicetest/`)
 unlocks the trials it runs, selects each profile in turn, and on leaving re-selects the chosen one; it
-never changes `chosen` (task D3b's "Choose a profile" does). It uses the backend as RSVP does:
-`update(UpdateKind::WORD)` for word frames and its full-screen series, `update()` for prompts,
-`clear()` for clearing refreshes, `resetStats()` before each series and `exposure().promotions()` to
-count promotions. No accessor was added.
+never changes `chosen`. It uses the backend as RSVP does: `update(UpdateKind::WORD)` for word frames
+and its full-screen series, `update()` for prompts, `clear()` for clearing refreshes, `resetStats()`
+before each series and `exposure().promotions()` to count promotions. No accessor was added.
+
+Task D3b adds who changes `chosen` and keeps a trial for reading (`src/activities/devicetest/README.md`,
+"Choose a profile" and "Settings: Speed read display"; the rules in `ProfileChoice.h`):
+
+| Who | What it writes |
+| --- | --- |
+| The benchmark (D3a) | Unlocks the trials it runs; `chosen` unchanged |
+| The device test's "Choose a profile" | `chosen`; clears every unlock bit but the chosen trial's and the kept ones'; `rsvpProfilesKept` (a second persisted-only byte: the trials kept selectable for reading). Stock with nothing kept writes 0 and 0, the factory state |
+| Settings > Display > "Speed read display" | `chosen` only, among Stock and the kept trials that are unlocked and made for this panel; never the unlock bits. The row exists only while a kept trial is unlocked (never with the factory byte, nor after a benchmark alone) |
+| The guided acceptance's Part A | Nothing: it plays on the chosen profile as RSVP resolves it (`resolveProfile()`), and the menus stay on Stock |
+
+The allow rule still decides at every word update: a chosen trial the panel does not allow, or any trial
+while the screen is inverted, plays as Stock, and the Settings row shows Stock for it.
 
 ## Environment variables (simulator only)
 

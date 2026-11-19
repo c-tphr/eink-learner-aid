@@ -15,7 +15,7 @@ The project's firmware code sits beside upstream CrossPoint, not inside it (`doc
 | `src/controls/` | ControlMap | The single binding table (key roles, timings, event-to-action bindings, touch zones) and the input adapter (`docs/spikes/S4-control-map.md`, section 7) | R4a (#21), C3a (#93, checkpoint screens), C4, D3a |
 | `src/activities/checkpoint/` | CheckpointActivity | Prompt, reveal, grade, reread choice, skip; opened by ReadingSession when a checkpoint fires | C3a (done), C3 (#27), C4 |
 | `src/display/` | DisplayProfile | Millisecond clock, simulator backend (modelled timing), device backend (the stock and trial profiles' refreshes, timed), a temporary simulator self-test | E3 (done), D1 (done), D2 (done) |
-| `src/activities/devicetest/` | DeviceTestActivity | Device test menu, Controls check, display benchmark sweep and ratings, results files under `/rsvp-bench/` (since D3a; portable parts host-tested in `test/device_test`); guided acceptance and profile choice | D3a (done), D3b |
+| `src/activities/devicetest/` | DeviceTestActivity | Device test menu, Controls check, display benchmark sweep and ratings, results files under `/rsvp-bench/` (since D3a; portable parts host-tested in `test/device_test`); the guided acceptance walk-through with its progress file, "Choose a profile" and the Settings row "Speed read display" (since D3b) | D3a (done), D3b |
 | `lib/UpdatePolicy/` | (two-slot build) | Self-update slot policy and the Wi-Fi updater's release source, asset name and version rule. Portable, host-tested (`test/update_policy`) | D4 (done) |
 | `src/update/` | (two-slot build) | Reads the running partition table through ESP-IDF and gates the update menus, the boot recovery picker and every update write; points the Wi-Fi updater at this repository | D4 (done) |
 | `src/RsvpFeature.h` | (all) | The feature flag test, below | F4 |
@@ -74,6 +74,9 @@ Registration points so far:
 | `src/activities/settings/SettingsActivity.h/.cpp` | `SettingAction::DeviceTest`; `#include "activities/devicetest/DeviceTestLaunch.h"`; the row "Device test" first in Settings > Display when `devicetest::AVAILABLE`; its case opens `devicetest::create()` | D3a |
 | `src/CrossPointSettings.h`, `src/SettingsList.cpp` | `rsvpDisplayProfile` (the trial display profiles' byte, `TrialUnlock.h`), persisted only, inside the existing `#if CROSSPOINT_RSVP_ENABLED` blocks | D3a |
 | `lib/I18n/translations/english.yaml` | The device test screens' `STR_DT_*` strings | D3a |
+| `src/activities/settings/SettingsActivity.h/.cpp` | `SettingAction::SpeedReadDisplay`; `#include "activities/devicetest/SpeedReadSetting.h"`; the row "Speed read display" second in Settings > Display when `speedreadsetting::visible()`; its case opens a list through the screen's option popup; its value text; the Device test row's result handler rebuilds the rows | D3b |
+| `src/CrossPointSettings.h`, `src/SettingsList.cpp` | `rsvpProfilesKept` (the trials kept selectable for reading), persisted only, inside the existing `#if CROSSPOINT_RSVP_ENABLED` blocks | D3b |
+| `lib/I18n/translations/english.yaml` | The guided acceptance's and the profile choice's `STR_DT_*` strings and `STR_SPEED_READ_DISPLAY` | D3b |
 
 ## Simulator
 

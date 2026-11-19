@@ -1,0 +1,7 @@
+OK ../../docs/evidence/d3b/devicetest_acceptance-0001-acceptance.json: guided acceptance run 1, complete, profile stock, part A done, 12 of 12 steps answered; criteria: 1 fail, 2 pass, 3 pass, 4 pass, 5 pass; criterion 5 measured pass, owner pass
+OK ../../docs/evidence/d3b/devicetest_acceptance_keys-0001-acceptance.json: guided acceptance run 1, complete, profile stock, part A done, 12 of 12 steps answered; criteria: 1 fail, 2 pass, 3 pass, 4 pass, 5 fail; criterion 5 measured pass, owner pass
+OK ../../docs/evidence/d3b/devicetest_choose_profile-0002-choice.json: profile choice run 2, trial-b chosen, kept trial-b, trial-c, byte 15 -> 38
+OK ../../docs/evidence/d3b/devicetest_choose_profile-0003-choice.json: profile choice run 3, stock chosen, kept none, byte 54 -> 0
+OK ../../docs/evidence/d3a/devicetest_sweep-0001-bench.json: benchmark run 1, ended-by-owner, panel simulator, 21 C, profiles: stock done; trial-a skipped-part-way from word-band; trial-b done; trial-c not-run (ended-by-owner); trial-d not-run (ended-by-owner)
+OK ../../docs/evidence/d3a/devicetest_sweep_keys-0001-bench.json: benchmark run 1, ended-by-owner, panel simulator, 21 C, profiles: stock done; trial-a skipped-part-way from playback-240-1; trial-b done; trial-c not-run (ended-by-owner); trial-d not-run (ended-by-owner)
+OK ../../docs/evidence/d3a/devicetest_controls-0001-controls.json: controls check run 1, complete, 8 events (up_pressed, up_held, down_pressed, down_held, confirm_pressed, power_clicked, touched)

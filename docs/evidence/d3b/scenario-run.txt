@@ -1,0 +1,6 @@
+simtest: 3 run(s), binary .pio/build/simulator_picco/program, report build/simtest-report
+PASS devicetest_acceptance (26.7 s)
+PASS devicetest_acceptance_keys (58.0 s)
+PASS devicetest_choose_profile (11.1 s)
+
+simtest: 3 passed, 0 failed (95.8 s); report: build/simtest-report/index.html

@@ -47,7 +47,7 @@ size_t count(const std::string& s, const std::string& what) {
 TEST(BenchJson, ASkippedRunRecordsEveryProfileAndEveryStep) {
   const std::string json = skippedRunJson();
   ASSERT_TRUE(wellFormed(json)) << json;
-  EXPECT_EQ(json.rfind("{\"format\":\"rsvp-bench\",\"version\":1,\"kind\":\"benchmark\",\"run\":1,", 0), 0u);
+  EXPECT_EQ(json.rfind("{\"format\":\"rsvp-bench\",\"version\":2,\"kind\":\"benchmark\",\"run\":1,", 0), 0u);
   EXPECT_NE(json.find("\"file\":\"0001-bench.json\""), std::string::npos);
   EXPECT_NE(json.find("\"status\":\"ended-by-owner\""), std::string::npos);
   EXPECT_NE(json.find("\"room_temperature_c\":21"), std::string::npos);
@@ -93,7 +93,7 @@ TEST(BenchJson, ACompleteSe0400RunSaysWhyTrialsAToCDidNotRun) {
 TEST(BenchJson, ControlsCheckFile) {
   const std::string json = controlsJson();
   ASSERT_TRUE(wellFormed(json)) << json;
-  EXPECT_EQ(json.rfind("{\"format\":\"rsvp-bench\",\"version\":1,\"kind\":\"controls\",\"run\":2,", 0), 0u);
+  EXPECT_EQ(json.rfind("{\"format\":\"rsvp-bench\",\"version\":2,\"kind\":\"controls\",\"run\":2,", 0), 0u);
   EXPECT_NE(json.find("\"settings\":{\"side_button_layout\":\"prev-next\",\"side_button_layout_value\":0,"
                       "\"short_power_button\":\"ignore\",\"short_power_button_value\":0,\"prev_key\":\"PageBack\","
                       "\"next_key\":\"PageForward\",\"confirm_selects\":true,\"hold_ms\":700,\"exit_hold_ms\":3000}"),

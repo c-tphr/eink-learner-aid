@@ -434,7 +434,21 @@ uint16_t runNumberOf(const std::string_view name) {
 }
 
 void resultFileName(const uint16_t run, const ResultKind kind, char* out, const size_t size) {
-  snprintf(out, size, "%04u-%s.json", static_cast<unsigned>(run), kind == ResultKind::BENCHMARK ? "bench" : "controls");
+  const char* name = "bench";
+  switch (kind) {
+    case ResultKind::BENCHMARK:
+      break;
+    case ResultKind::CONTROLS:
+      name = "controls";
+      break;
+    case ResultKind::ACCEPTANCE:
+      name = "acceptance";
+      break;
+    case ResultKind::CHOICE:
+      name = "choice";
+      break;
+  }
+  snprintf(out, size, "%04u-%s.json", static_cast<unsigned>(run), name);
 }
 
 }  // namespace devicetest

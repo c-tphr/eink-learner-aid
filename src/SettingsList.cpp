@@ -200,6 +200,10 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
   emit(SettingInfo::Value(StrId::STR_DT_DISPLAY_PROFILE, &CrossPointSettings::rsvpDisplayProfile, {0, 255, 1},
                           "rsvpDisplayProfile")
            .withWebHidden());
+  // The trials kept selectable for reading, persisted only; set by "Choose a profile" (task D3b).
+  emit(SettingInfo::Value(StrId::STR_DT_PROFILES_KEPT, &CrossPointSettings::rsvpProfilesKept, {0, 15, 1},
+                          "rsvpProfilesKept")
+           .withWebHidden());
 #endif
   emit(buildLongPressMenuSetting());
   // Double-click power frontlight shortcut only exists on the X4 Pro.

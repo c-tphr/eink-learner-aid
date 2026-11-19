@@ -359,6 +359,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t rsvpWordsPerUpdate = 1;
   // Trial display profiles unlocked and chosen (lib/DisplayProfileCore/TrialUnlock.h); set by the device test.
   uint8_t rsvpDisplayProfile = 0;
+  // Trials the owner kept selectable for reading (a TrialMask); set by the device test's profile choice.
+  uint8_t rsvpProfilesKept = 0;
 #endif
   // Long-press Confirm function in EPUB reader (cycles through LONG_PRESS_MENU_FUNCTION values).
   // Defaults to Disabled so shortcut-based bookmark toggling remains opt-in.

@@ -10,6 +10,7 @@
 #include <cstring>
 #include <string>
 
+#include "activities/devicetest/AcceptanceProgress.h"
 #include "activities/devicetest/BenchJson.h"
 #include "activities/devicetest/SeriesRunner.h"
 
@@ -196,6 +197,122 @@ inline std::string controlsJson() {
   record.events[record.count++] = e;
   StringSink sink;
   writeControls(record, sink);
+  return sink.text;
+}
+
+// Plays Part A run `walk.runIndex()` through a runner, as the activity does.
+inline Walk playRun(Walkthrough& walk, SeriesRunner& runner, displayprofile::FakeClock& clock,
+                    const int stopAfter = -1) {
+  runner.begin(walk.runSpec());
+  while (!runner.done()) {
+    if (stopAfter >= 0 && runner.progress() >= static_cast<uint32_t>(stopAfter)) runner.requestStop();
+    const SeriesRunner::Tick t = runner.tick();
+    if (t.wake) clock.advanceTo(t.wakeAtMs);
+  }
+  if (runner.stopped()) {
+    walk.runStopped(runner.figures());
+    return Walk::RUN_STOPPED;
+  }
+  return walk.runDone(runner.figures());
+}
+
+// Part A on the fake backend with its selected profile: the 240 run stopped once and repeated, both
+// runs readable, the slowdown confirmed.
+inline void partA(Walkthrough& walk, displayprofile::FakeDisplayBackend& backend, displayprofile::FakeClock& clock) {
+  NullPainter painter;
+  SeriesRunner runner(backend, clock, painter);
+  Walk next = walk.start(StartChoice::START);
+  bool stoppedOnce = false;
+  while (next == Walk::RUN) {
+    next = playRun(walk, runner, clock, stoppedOnce ? -1 : 40);
+    if (next == Walk::RUN_STOPPED) {
+      stoppedOnce = true;
+      next = walk.stopped(RunStopChoice::REPEAT);
+      continue;
+    }
+    if (next == Walk::ASK_READABLE) next = walk.readable(ReadableChoice::YES);
+    if (next == Walk::ASK_SLOWER) next = walk.slower(SlowerChoice::YES);
+  }
+}
+
+// A guided acceptance part-way, on the simulator's panel with Trial B chosen: Part A done, steps 1 to
+// 3 answered (Pass, Fail with a reason, Skip), the owner away doing step 4. `progress` receives the
+// progress file of the same state.
+inline std::string acceptancePartWayJson(std::string* progress = nullptr) {
+  displayprofile::FakeClock clock(1000);
+  displayprofile::FakeDisplayBackend backend(clock);
+  backend.setUnlockedTrials(displayprofile::ALL_TRIALS);
+  backend.select(ProfileId::TRIAL_B);
+  AcceptanceRecord record;
+  fillHeader(record.header, 5, ResultKind::ACCEPTANCE, PanelId::SIMULATED);
+  record.header.simulatorTimeScale = 50;
+  record.profile = ProfileId::TRIAL_B;
+  record.trialSetting =
+      displayprofile::encodeTrialSetting({displayprofile::trialBit(ProfileId::TRIAL_B), ProfileId::TRIAL_B});
+  Walkthrough walk;
+  walk.reset();
+  partA(walk, backend, clock);
+  walk.partADone();
+  walk.step(StepChoice::DONE);
+  walk.result(ResultChoice::PASS);
+  walk.step(StepChoice::LEAVE);
+  walk.result(ResultChoice::FAIL);
+  walk.reason(static_cast<uint8_t>(FailReason::WRONG_MODE));
+  walk.result(ResultChoice::SKIP);
+  walk.step(StepChoice::LEAVE);
+  StringSink sink;
+  writeAcceptance(record, walk, sink);
+  if (progress != nullptr) {
+    StringSink p;
+    encodeProgress(record, walk, p);
+    *progress = p.text;
+  }
+  return sink.text;
+}
+
+// A complete guided acceptance on SE0400NQW47 with Stock: every step passed except one skipped.
+inline std::string acceptanceCompleteJson() {
+  displayprofile::FakeClock clock(1000);
+  displayprofile::FakeDisplayBackend backend(clock, displayprofile::TimingModel(), PanelId::SE0400NQW47);
+  AcceptanceRecord record;
+  fillHeader(record.header, 14, ResultKind::ACCEPTANCE, PanelId::SE0400NQW47);
+  snprintf(record.header.conditions.clock, sizeof(record.header.conditions.clock), "%s", "2026-12-01T15:10:00");
+  Walkthrough walk;
+  walk.reset();
+  partA(walk, backend, clock);
+  for (size_t i = 0; i < WALK_STEP_COUNT; ++i) walk.result(i == 10 ? ResultChoice::SKIP : ResultChoice::PASS);
+  StringSink sink;
+  writeAcceptance(record, walk, sink);
+  return sink.text;
+}
+
+// A profile choice on DEPG0397 after a benchmark: Trial C chosen, Trial A kept, Trials B and D locked.
+inline std::string choiceJson() {
+  ChoiceRecord record;
+  fillHeader(record.header, 15, ResultKind::CHOICE, PanelId::DEPG0397);
+  record.settingBefore = displayprofile::encodeTrialSetting({displayprofile::ALL_TRIALS, ProfileId::STOCK});
+  record.keptBefore = 0;
+  record.candidates =
+      choiceCandidates(displayprofile::decodeTrialSetting(record.settingBefore), PanelId::DEPG0397, false);
+  record.chosen = ProfileId::TRIAL_C;
+  const ChoiceOutcome out =
+      applyChoice(record.settingBefore, ProfileId::TRIAL_C, displayprofile::trialBit(ProfileId::TRIAL_A));
+  record.settingAfter = out.setting;
+  record.keptAfter = out.kept;
+  record.locked = out.locked;
+  record.saved = true;
+  snprintf(record.bench.file, sizeof(record.bench.file), "%s", "0012-bench.json");
+  for (size_t p = 0; p < displayprofile::PROFILE_COUNT; ++p) {
+    ProfileRatings& r = record.bench.profiles[p];
+    r.found = p != static_cast<size_t>(ProfileId::TRIAL_D);  // Trial D was not in that run
+    if (!r.found) continue;
+    for (size_t i = 0; i < RATED_STEP_COUNT; ++i) r.ratings[i] = i == 3 && p == 2 ? Rating::TOLERABLE : Rating::CLEAN;
+    r.residue = Residue::NO;
+    r.hasDelivered240 = true;
+    r.delivered240Tenths = 1250 + static_cast<uint32_t>(p) * 250;
+  }
+  StringSink sink;
+  writeChoice(record, sink);
   return sink.text;
 }
 
