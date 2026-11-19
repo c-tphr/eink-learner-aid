@@ -15,21 +15,42 @@
   nothing needs admin rights, no system setting or PATH is changed.
   Delete the .\runtime folder to remove it all.
 
-  How to run it (no policy change needed; the bypass applies to this one run):
+  How to run it, from the folder that holds this script (no policy change
+  needed; the bypass applies to this one run; with PowerShell 7, pwsh works
+  in place of powershell):
       powershell -ExecutionPolicy Bypass -File .\session.ps1 identify
-  or, with PowerShell 7:
-      pwsh -ExecutionPolicy Bypass -File .\session.ps1 identify
 
 .EXAMPLE
-  .\session.ps1 setup                 # prepare the private Python only (can be done days before)
-  .\session.ps1 identify              # read-only checks
-  .\session.ps1 backup                # read-only: two full reads, keep if identical
-  .\session.ps1 flash -DryRun         # show exactly what would be written; writes nothing
-  .\session.ps1 flash                 # the one destructive step (asks for a typed phrase)
-  .\session.ps1 monitor               # record serial output until Ctrl+C
-  .\session.ps1 restore "work\picco-backup-....bin"
-  .\session.ps1 identify -Port COM5   # name the port if more than one device is connected
-  .\session.ps1 summary              # one text file, safe to post, from the work folder
+  powershell -ExecutionPolicy Bypass -File .\session.ps1 setup
+  Prepare the private Python only (can be done days before).
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\session.ps1 identify
+  Read-only checks. Add -Port COM5 to name the port if more than one device is connected.
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\session.ps1 backup
+  Read-only: two full reads, kept only if identical.
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\session.ps1 flash -DryRun
+  Show exactly what would be written; writes nothing.
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\session.ps1 flash
+  The one destructive step (asks for a typed phrase).
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\session.ps1 monitor -Reset
+  Record serial output until Ctrl+C (-Reset restarts the Picco once at the start).
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\session.ps1 restore "work\picco-backup-<...>.bin"
+  Write the backup back: the Picco returns to Onyx's firmware.
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\session.ps1 summary
+  One text file, safe to post, from the work folder.
 
 .NOTES
   Exit codes are piccoflash's: 0 OK, 1 STOP (nothing written), 3 already
@@ -72,6 +93,10 @@ $PinnedPythonVersion = '3.13.17'
 $PythonPackageUrl    = 'https://api.nuget.org/v3-flatcontainer/python/3.13.17/python.3.13.17.nupkg'
 $PythonPackageSha256 = 'dce409744b088f94c6e37ba41f8100c384c27e029e843237364c602d30d475e5'
 $PinnedEsptool       = '5.6.0'
+
+# How the owner runs this script; every command printed for them uses it.
+# piccoflash/common.py holds the same text (SESSION_LAUNCHER); a test checks.
+$Launcher = 'powershell -ExecutionPolicy Bypass -File .\session.ps1'
 
 $Here    = $PSScriptRoot                                   # works from a path with spaces
 $Runtime = Join-Path $Here 'runtime'
@@ -196,7 +221,8 @@ function Invoke-Session {
         exit 2
     }
     if ($Command -eq 'restore' -and -not $BackupFile) {
-        Write-Host 'restore needs the backup file, e.g.  .\session.ps1 restore "work\picco-backup-....bin"'
+        Write-Host 'restore needs the backup file. Type the command with its path, for example:'
+        Write-Host "    $Launcher restore `"work\picco-backup-<...>.bin`""
         exit 2
     }
     if ($Command -eq 'restore' -and -not (Test-Path -LiteralPath $BackupFile -PathType Leaf)) {
@@ -217,7 +243,7 @@ function Invoke-Session {
     $Plan = $Plan.TrimEnd('\', '/')
     $WorkDir = $WorkDir.TrimEnd('\', '/')
 
-    $argv = @('-E', '-s', '-m', 'piccoflash', $Command, '--work-dir', $WorkDir, '--launcher', '.\session.ps1')
+    $argv = @('-E', '-s', '-m', 'piccoflash', $Command, '--work-dir', $WorkDir)
     if ($Command -eq 'plan' -or $Command -eq 'flash') { $argv += @('--plan', $Plan) }
     if ($Port)   { $argv += @('--port', $Port) }
     if ($DryRun) { $argv += '--dry-run' }

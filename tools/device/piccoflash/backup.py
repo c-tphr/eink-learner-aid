@@ -29,7 +29,8 @@ def run(ctx: Context) -> int:
     work = workdir.ensure(ctx.work)
     if not any(_verdict(p) == identify.PASS for p in workdir.identify_records(work)):
         ui.say("REFUSED: there is no passing 'identify' in the work folder %s." % work)
-        ui.say("Run '%s' first." % ctx.command_hint("identify"))
+        ui.say("Run identify first:")
+        ui.say("    %s" % ctx.command_hint("identify"))
         return STOP
 
     if ctx.dry_run:
@@ -56,7 +57,8 @@ def run(ctx: Context) -> int:
         ui.say("")
         ui.say("The connection to the chip failed during the backup: %s" % exc)
         ui.say("Nothing was written to the Picco. No backup was marked as verified.")
-        ui.say("Check the cable and run '%s' again." % ctx.command_hint("backup"))
+        ui.say("Check the cable and run the backup again:")
+        ui.say("    %s" % ctx.command_hint("backup"))
         return NOT_REACHED
     finally:
         dev.close()
@@ -69,7 +71,8 @@ def _backup(ctx: Context, dev, work: str) -> int:
     found = workdir.latest_identify(work, mac)
     if found is None or found[1].get("verdict") != identify.PASS:
         ui.say("REFUSED: the connected Picco (MAC %s) has no passing 'identify' in %s." % (mac, work))
-        ui.say("Run '%s' with this device connected first." % ctx.command_hint("identify"))
+        ui.say("Run identify first, with this Picco connected:")
+        ui.say("    %s" % ctx.command_hint("identify"))
         _reset(dev, ui)
         return STOP
     if res.verdict != identify.PASS:
@@ -123,7 +126,8 @@ def _backup(ctx: Context, dev, work: str) -> int:
         if not consistent:
             ui.say("The full read also differs from the bootloader/table read moments earlier by identify.")
         ui.say("Both reads were kept for diagnosis: %s and %s" % (p1, p2))
-        ui.say("Try again with another USB cable or another USB port on the PC: '%s'" % ctx.command_hint("backup"))
+        ui.say("Try again with another USB cable or another USB port on the PC:")
+        ui.say("    %s" % ctx.command_hint("backup"))
         return STOP
 
     final = base + ".bin"
@@ -131,7 +135,8 @@ def _backup(ctx: Context, dev, work: str) -> int:
     os.remove(p2)
     size, final_digest = workdir.file_sha256(final)
     if size != FULL or final_digest != h1:
-        ui.say("REFUSED: the kept backup file no longer hashes correctly. Run backup again.")
+        ui.say("REFUSED: the kept backup file no longer hashes correctly. Run the backup again:")
+        ui.say("    %s" % ctx.command_hint("backup"))
         return STOP
     sidecar = base + ".json"
     rec = {

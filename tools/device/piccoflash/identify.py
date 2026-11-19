@@ -22,6 +22,7 @@ from dataclasses import asdict, dataclass, field
 from typing import List, Optional
 
 from . import PINNED_ESPTOOL_VERSION, __version__, espimage, esptool_calls, layout, workdir
+from .common import session_command
 from .device import ChipInfo, Device, SecurityInfo
 from .ui import UI
 
@@ -227,14 +228,18 @@ def print_summary(res: IdentifyResult, ui: UI) -> None:
     ui.say("")
     if res.verdict == PASS:
         ui.say("RESULT: PASS. This is a stock Picco that matches what the tools expect.")
-        ui.say("Nothing on the device was changed. Next step: backup.")
+        ui.say("Nothing on the device was changed. Next step: the backup. Type:")
+        ui.say("    %s" % session_command("backup"))
     elif res.verdict == ALREADY_CONVERTED:
         ui.say("RESULT: ALREADY CONVERTED. This Picco already has the two-slot layout.")
-        ui.say("Nothing was changed. 'flash' will refuse this device: install updates from the SD card")
-        ui.say("(Settings > SD Card Firmware Update). 'restore <backup>' still works.")
+        ui.say("Nothing was changed. 'flash' refuses this device. Install updates from the SD card instead:")
+        ui.say("on the Picco, Settings > System > SD Card Firmware Update.")
+        ui.say("To go back to Onyx, run the restore with your backup file:")
+        ui.say("    %s" % session_command("restore", "<backup file>"))
     else:
         ui.say("RESULT: STOP. Do not continue with backup or flash.")
         for chk in res.evaluation.stops:
             ui.say("  - %s: %s" % (chk.name, chk.detail))
-        ui.say("Nothing on the device was changed. Run the 'summary' command and attach the summary file it")
-        ui.say("writes to the issue. Never attach the .bin files from the work folder.")
+        ui.say("Nothing on the device was changed. Make the summary and attach the file it writes to the")
+        ui.say("issue. Never attach the .bin files from the work folder. Type:")
+        ui.say("    %s" % session_command("summary"))

@@ -95,7 +95,7 @@ def test_already_converted_is_a_distinct_result(tmp_path):
     c.flash[0x8000:0x8C00] = layout.encode_table(layout.TWO_SLOT_TABLE)
     code, out, _ = identify(c, tmp_path)
     assert code == common.ALREADY_CONVERTED
-    assert "ALREADY CONVERTED" in out and "'flash' will refuse" in out
+    assert "ALREADY CONVERTED" in out and "'flash' refuses this device" in out
 
 
 def test_signed_bootloader_stops(tmp_path):

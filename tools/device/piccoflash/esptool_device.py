@@ -20,6 +20,7 @@ import os
 from typing import Any, Optional
 
 from . import PINNED_ESPTOOL_VERSION, esptool_calls, guard
+from .common import session_command
 from .device import ChipInfo, Device, DeviceError, DeviceNotReached, ProgressFn, SecurityInfo
 from .ui import UI
 
@@ -44,8 +45,8 @@ def load_esptool(ui: UI):
 
     if esptool.__version__ != PINNED_ESPTOOL_VERSION:
         raise DeviceError("esptool %s is installed, but this tool was checked against esptool %s only. "
-                          "Run session.ps1, which installs the pinned version." % (esptool.__version__,
-                                                                                   PINNED_ESPTOOL_VERSION))
+                          "Delete the 'runtime' folder in the kit folder, then run:  %s" % (
+                              esptool.__version__, PINNED_ESPTOOL_VERSION, session_command("setup")))
     _parser, cfg_path = esptool.config.load_config_file()
     if cfg_path:
         raise DeviceError("an esptool configuration file is active (%s). It can change reset and timing "
@@ -112,7 +113,8 @@ class EsptoolDevice(Device):
         try:
             esptool = load_esptool(self.ui)
         except ImportError as exc:
-            raise DeviceNotReached("esptool is not installed in this Python (%s); run session.ps1" % exc)
+            raise DeviceNotReached("esptool is not installed in this Python (%s). Run:  %s" % (
+                exc, session_command("setup")))
         except DeviceError as exc:
             raise DeviceNotReached(str(exc))
         self._cmds = esptool.cmds

@@ -170,7 +170,7 @@ def _failed(ctx: Context, backup_file: str, why: str) -> int:
     ui.say("RESTORE DID NOT COMPLETE: %s" % why)
     ui.say("Your backup file is unchanged. Do not unplug the Picco.")
     ui.say("Run the restore again; if it fails again, try another USB cable or port:")
-    ui.say("    %s \"%s\"" % (ctx.command_hint("restore"), os.path.abspath(backup_file)))
+    ui.say("    %s" % ctx.command_hint("restore", os.path.abspath(backup_file)))
     return RESTORE_FAILED
 
 
