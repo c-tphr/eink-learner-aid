@@ -50,7 +50,10 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `scripts/net-smoke.sh`, `scripts/net_smoke.py` | Added | Network smoke test (task F2) |
 | `scripts/patch_simulator.py`, `scripts/simulator_patches/` | Added | Patches applied to the fetched simulator library (see "Simulator" below) (task F2) |
 | `docs/net-smoke-report.md`, `docs/evidence/f2/` | Added | Smoke test report and evidence (task F2) |
-| `test/CMakeLists.txt` | **Modified, two lines added**: `add_subdirectory(rsvp_core)` (task R1) and `add_subdirectory(checkpoint_core)` (task C1a), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
+| `test/CMakeLists.txt` | **Modified, three lines added**: `add_subdirectory(rsvp_core)` (task R1), `add_subdirectory(checkpoint_core)` (task C1a) and `add_subdirectory(word_index)` (task R3), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
+| `platformio.ini` | **Modified, three lines added**: `-DCROSSPOINT_RSVP=1` at the end of `build_flags` in `[env:picco]`, `[env:picco-gh_release]` and `[env:picco-gh_release_rc]` | The RSVP feature flag, on for the Picco targets only (task F4). `simulator_picco` sets it in `platformio.project.ini`. See `docs/ARCHITECTURE-RSVP.md` |
+| `src/main.cpp` | **Modified, two lines added**: `#include "reading/RsvpLinkCheck.h"` and `runRsvpLinkCheck();` in `setup()`, after the "Starting CrossPoint version" log line | Temporary start-up check that links RsvpCore and CheckpointCore; an empty inline function without the flag (task F4). Task C2 replaces it with ReadingSession |
+| `src/RsvpFeature.h`, `src/reading/`, `src/activities/rsvp/`, `src/activities/checkpoint/`, `src/display/`, `src/activities/devicetest/`, `docs/ARCHITECTURE-RSVP.md` | Added | Feature flag header and the module skeletons, compiled only with the flag (task F4) |
 | `.gitignore` | Two negation lines after `.claude/*` so `.claude/commands/` and `.claude/agents/` are tracked | The `/prep-book` command and the checker subagent live there (P4) |
 | `.github/workflows/project-ci.yml`, `.github/scripts/check-format.sh`, `sim-smoke.sh`, `firmware-size.sh`, `no_skips.py`, `device_session_fixture.py`, `docs/CI.md` | Added | This project's CI (task F3); `docs/CI.md` describes it |
 | `.github/workflows/ci.yml` ("CI (build)") | **Modified**: every job (`clang-format`, `cppcheck`, `build`, `unit-tests`, `test-status`) gets `if: github.repository == 'crosspoint-reader/crosspoint-reader'` (`test-status`: `always() &&` that) and a one-line comment | On every pull request it built eight devices, including the `custom_sdkconfig` ones, ran clang-format over every upstream file and duplicated the host tests; `project-ci.yml` covers this project's checks, with one other device (`x4pro`) as the compile guard (task F3) |
@@ -119,9 +122,9 @@ git merge-base --is-ancestor 490813ff4541e74e654f54f66ece9efc908361a0 HEAD && ec
 # 2. The SDK submodule is at the SHA recorded above
 git submodule status
 
-# 3. Outside docs/ and README.md, the only upstream files modified are platformio.ini (one line),
-#    test/CMakeLists.txt (two lines), .gitignore (two lines) and five .github/workflows files (job conditions),
-#    all in the table above;
+# 3. Outside docs/ and README.md, the only upstream files modified are platformio.ini (four lines),
+#    test/CMakeLists.txt (three lines), src/main.cpp (two lines), .gitignore (two lines) and five
+#    .github/workflows files (job conditions), all in the table above;
 #    everything else listed is an added file from the table above
 git diff --stat --diff-filter=MD 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
 git diff --stat 490813ff4541e74e654f54f66ece9efc908361a0 HEAD -- . ':!docs' ':!README.md'
