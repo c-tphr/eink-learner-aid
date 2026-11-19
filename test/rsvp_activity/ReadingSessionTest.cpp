@@ -543,3 +543,218 @@ TEST(ReadingSessionReread, TheFlowFollowsThePagesOfAPageViewReread) {
   EXPECT_EQ(t.resume, resume);
   EXPECT_EQ(state->grades.find("c0001-p1"), checkpoint::Grade::Incorrect);
 }
+
+// --- Opening a book with a checkpoint in progress (task C5): the plan, over every chapter's index ---
+
+namespace {
+
+// The word index of every reader chapter of the prepared fixture, opened as BookIndexLayout asks.
+struct BookIndexes {
+  BookIndexes() {
+    const char* const files[CHAPTERS] = {"OEBPS/text/title.xhtml", CH1, CH2, "OEBPS/text/chapter-3.xhtml",
+                                         "OEBPS/text/endnotes.xhtml"};
+    for (uint16_t c = 0; c < CHAPTERS; ++c) {
+      built[c] = wixtest::buildIndex(preparedFile(files[c]));
+      EXPECT_EQ(built[c].status, wordindex::BuildStatus::Ok);
+      EXPECT_EQ(readers[c].open(built[c].file), wordindex::ReadStatus::Ok);
+    }
+  }
+  static wordindex::WordIndexReader* open(void* context, uint16_t chapter) {
+    auto* self = static_cast<BookIndexes*>(context);
+    return chapter < CHAPTERS ? &self->readers[chapter] : nullptr;
+  }
+  // "text/chapter-<n>.xhtml" is spine n in the fixture.
+  static int spineOf(void* context, uint16_t section) {
+    const auto* self = static_cast<BookIndexes*>(context);
+    const std::string href = self->index->sectionChapterHref(section);
+    if (href.rfind("text/chapter-", 0) != 0) return -1;
+    return href[13] - '0';
+  }
+  wixtest::Built built[CHAPTERS];
+  wordindex::WordIndexReader readers[CHAPTERS];
+  const checkpoint::CheckpointIndex* index = nullptr;
+};
+
+// A state file of the open fixture with `active` as its active_checkpoint member (empty: none).
+std::string stateWith(const Checkpoints& cp, const std::string& active) {
+  std::string s = std::string("{\"version\": 1, \"book_sha256\": \"") + cp.index.sourceSha256() +
+                  "\", \"overrides\": {}, \"position\": {\"chapter\": 2, \"word\": 490, \"mode\": \"page\"}, "
+                  "\"grades\": {\"c0002-p1\": {\"first\": \"correct\"}}";
+  if (!active.empty()) s += ", \"active_checkpoint\": " + active;
+  return s + "}";
+}
+
+struct Restored {
+  checkpoint::RestorePlan plan;
+  reading::OpenAction action;
+};
+
+Restored restoreFrom(const Checkpoints& cp, const std::string& file, checkpoint::BookState& state) {
+  const reading::StateLoad load = reading::decodeForUse(reinterpret_cast<const uint8_t*>(file.data()), file.size(),
+                                                        cp.index.sourceSha256(), &cp.index, state);
+  EXPECT_EQ(load.source, reading::StateSource::Read);
+  BookIndexes books;
+  books.index = &cp.index;
+  reading::BookIndexLayout layout(cp.index, CHAPTERS, &BookIndexes::open, &BookIndexes::spineOf, &books);
+  Restored r;
+  r.plan = checkpoint::planRestore(state, &cp.index, layout);
+  r.action = reading::openActionFor(r.plan);
+  return r;
+}
+
+const char* const C0002_PROMPT_2 = R"({"id": "c0002", "prompt_index": 1,
+  "resume": {"chapter": 3, "word": 0, "mode": "page"}})";
+
+}  // namespace
+
+TEST(ReadingSessionRestore, TheLayoutKnowsEveryChapterAndSection) {
+  Checkpoints cp;
+  BookIndexes books;
+  books.index = &cp.index;
+  reading::BookIndexLayout layout(cp.index, CHAPTERS, &BookIndexes::open, &BookIndexes::spineOf, &books);
+  uint32_t words = 0;
+  ASSERT_TRUE(layout.chapterWordCount(CHAPTER_2, words));
+  EXPECT_EQ(words, books.readers[CHAPTER_2].wordCount());
+  ASSERT_TRUE(layout.chapterWordCount(3, words));
+  EXPECT_EQ(words, books.readers[3].wordCount());
+  EXPECT_FALSE(layout.chapterWordCount(CHAPTERS, words));
+  for (const char* id : {"s0001", "s0002", "s0003", "s0004"}) {
+    checkpoint::SectionRange range;
+    ASSERT_TRUE(layout.sectionRange(sectionNumber(cp, id), range)) << id;
+    EXPECT_EQ(range.start, static_cast<uint32_t>(expectedNumber(id, "start"))) << id;
+    EXPECT_EQ(range.end, static_cast<uint32_t>(expectedNumber(id, "end"))) << id;
+  }
+  checkpoint::SectionRange range;
+  ASSERT_TRUE(layout.sectionRange(sectionNumber(cp, "s0004"), range));
+  EXPECT_EQ(range.chapter, CHAPTER_2);
+  EXPECT_EQ(range.section, sectionNumber(cp, "s0004"));
+}
+
+TEST(ReadingSessionRestore, APromptInProgressOpensAtThatPromptWithItsAnswerHidden) {
+  Checkpoints cp;
+  auto state = std::make_unique<checkpoint::BookState>();
+  const Restored r = restoreFrom(cp, stateWith(cp, C0002_PROMPT_2), *state);
+  EXPECT_EQ(r.plan.view, checkpoint::OpenView::Prompt);
+  EXPECT_EQ(r.plan.notes, 0u);
+  EXPECT_EQ(r.plan.checkpoint, static_cast<uint16_t>(cp.index.findCheckpoint("c0002")));
+  EXPECT_EQ(r.plan.section.start, static_cast<uint32_t>(expectedNumber("s0004", "start")));
+  EXPECT_EQ(r.plan.section.end, static_cast<uint32_t>(expectedNumber("s0004", "end")));
+  EXPECT_EQ(r.action.show, reading::OpenAction::Show::Prompt);
+  EXPECT_FALSE(r.action.jump) << "no page is drawn before the prompt";
+  EXPECT_FALSE(r.action.speedRead);
+  checkpoint::CheckpointFlow flow(*state, cp.index);
+  ASSERT_TRUE(flow.restore(r.plan).accepted);
+  EXPECT_EQ(flow.state(), checkpoint::FlowState::PromptHidden);
+  EXPECT_EQ(flow.promptIndex(), 1u) << "question 2 of 3, as saved";
+  EXPECT_EQ(state->grades.find("c0002-p1"), checkpoint::Grade::Correct);
+  // Skip checkpoint resumes at the saved resume place, in the mode it fired in.
+  const checkpoint::Transition t = flow.handle(checkpoint::FlowEvent::SkipCheckpoint);
+  EXPECT_TRUE(t.finished);
+  EXPECT_EQ(t.resume.position, (Position{3, 0}));
+  EXPECT_EQ(t.resume.mode, checkpoint::ReadingMode::Page);
+}
+
+TEST(ReadingSessionRestore, AnActiveRereadWinsAndOpensInItsOwnMode) {
+  Checkpoints cp;
+  for (const std::string mode : {"page", "rsvp"}) {
+    auto state = std::make_unique<checkpoint::BookState>();
+    const std::string active = R"({"id": "c0002", "prompt_index": 1,
+      "resume": {"chapter": 3, "word": 0, "mode": "rsvp"}, "reread": {"mode": ")" +
+                               mode + R"(", "chapter": 2, "word": 381}})";
+    const Restored r = restoreFrom(cp, stateWith(cp, active), *state);
+    EXPECT_EQ(r.plan.view, checkpoint::OpenView::Reread) << mode;
+    EXPECT_EQ(r.plan.place.position, (Position{CHAPTER_2, 381})) << mode;
+    EXPECT_EQ(r.action.show, reading::OpenAction::Show::Reread) << mode;
+    EXPECT_TRUE(r.action.jump) << "the page under it holds the reread word: " << mode;
+    EXPECT_EQ(r.action.speedRead, mode == "rsvp") << "the reread's mode, not the mode the checkpoint fired in";
+    checkpoint::CheckpointFlow flow(*state, cp.index);
+    ASSERT_TRUE(flow.restore(r.plan).accepted);
+    EXPECT_EQ(flow.state(), checkpoint::FlowState::Rereading);
+    EXPECT_EQ(flow.rereadSection(), sectionNumber(cp, "s0004"));
+    // Back at the prompt, the resume place is still the one saved when it fired.
+    ASSERT_TRUE(flow.handle(checkpoint::FlowEvent::ReturnEarly).accepted);
+    EXPECT_EQ(flow.promptIndex(), 1u);
+    EXPECT_EQ(state->active.resume.mode, checkpoint::ReadingMode::Rsvp);
+  }
+}
+
+TEST(ReadingSessionRestore, ARereadOutsideItsSectionShowsThePromptInstead) {
+  Checkpoints cp;
+  auto state = std::make_unique<checkpoint::BookState>();
+  const Restored r = restoreFrom(cp,
+                                 stateWith(cp, R"({"id": "c0002", "prompt_index": 1,
+    "resume": {"chapter": 3, "word": 0, "mode": "page"}, "reread": {"mode": "page", "chapter": 2, "word": 100}})"),
+                                 *state);
+  EXPECT_EQ(r.plan.view, checkpoint::OpenView::Prompt);
+  EXPECT_EQ(r.plan.notes, checkpoint::NOTE_REREAD_OUTSIDE_SECTION);
+  EXPECT_FALSE(state->active.rereading) << "removed from the state, so the next save drops it";
+  EXPECT_EQ(r.action.show, reading::OpenAction::Show::Prompt);
+  char names[80];
+  reading::restoreNoteNames(r.plan.notes, names, sizeof(names));
+  EXPECT_STREQ(names, "reread-outside-section");
+}
+
+TEST(ReadingSessionRestore, WhatCannotBeRestoredOpensAtTheBestRemainingView) {
+  Checkpoints cp;
+  struct Case {
+    const char* name;
+    const char* active;
+    uint16_t note;
+    Position at;
+  };
+  const Case cases[] = {
+      {"unknown checkpoint", R"({"id": "c0099", "prompt_index": 0, "resume": {"chapter": 3, "word": 0, "mode": "page"}})",
+       checkpoint::NOTE_UNKNOWN_CHECKPOINT, Position{3, 0}},
+      {"prompt out of range",
+       R"({"id": "c0002", "prompt_index": 5, "resume": {"chapter": 3, "word": 0, "mode": "page"}})",
+       checkpoint::NOTE_PROMPT_OUT_OF_RANGE, Position{3, 0}},
+      {"resume outside the book",
+       R"({"id": "c0002", "prompt_index": 0, "resume": {"chapter": 9, "word": 0, "mode": "page"}})",
+       checkpoint::NOTE_RESUME_OUTSIDE_BOOK, Position{CHAPTER_2, 490}},
+  };
+  for (const Case& c : cases) {
+    auto state = std::make_unique<checkpoint::BookState>();
+    const Restored r = restoreFrom(cp, stateWith(cp, c.active), *state);
+    EXPECT_EQ(r.plan.view, checkpoint::OpenView::Position) << c.name;
+    EXPECT_EQ(r.plan.notes, c.note) << c.name;
+    EXPECT_FALSE(state->hasActive) << c.name;
+    EXPECT_EQ(state->position.position, c.at) << c.name;
+    EXPECT_EQ(state->grades.find("c0002-p1"), checkpoint::Grade::Correct) << "no grade is lost: " << c.name;
+    EXPECT_EQ(r.action.show, reading::OpenAction::Show::Reading) << c.name;
+    EXPECT_TRUE(r.action.jump) << "page view goes to the place, not to its own progress: " << c.name;
+    EXPECT_EQ(r.action.at.position, c.at) << c.name;
+  }
+  // In RSVP the place opens RSVP (by its saved word).
+  auto state = std::make_unique<checkpoint::BookState>();
+  const Restored r = restoreFrom(
+      cp, stateWith(cp, R"({"id": "c0099", "prompt_index": 0, "resume": {"chapter": 3, "word": 0, "mode": "rsvp"}})"),
+      *state);
+  EXPECT_TRUE(r.action.speedRead);
+  EXPECT_FALSE(r.action.jump);
+}
+
+TEST(ReadingSessionRestore, AnotherEditionsCheckpointIsNeverRestored) {
+  Checkpoints cp;
+  std::string file = stateWith(cp, C0002_PROMPT_2);
+  file.replace(file.find(cp.index.sourceSha256()), 64, std::string(64, 'b'));
+  auto state = std::make_unique<checkpoint::BookState>();
+  const reading::StateLoad load = reading::decodeForUse(reinterpret_cast<const uint8_t*>(file.data()), file.size(),
+                                                        cp.index.sourceSha256(), &cp.index, *state);
+  EXPECT_TRUE(load.shaMismatch);
+  EXPECT_FALSE(state->hasActive) << "dropped as the file is read: the book opens at the reader's own page";
+  EXPECT_FALSE(state->hasPosition);
+  EXPECT_EQ(state->grades.find("c0002-p1"), checkpoint::Grade::Correct);
+}
+
+TEST(ReadingSessionRestore, NoteNames) {
+  char names[160];
+  reading::restoreNoteNames(0, names, sizeof(names));
+  EXPECT_STREQ(names, "none");
+  reading::restoreNoteNames(checkpoint::NOTE_UNKNOWN_CHECKPOINT | checkpoint::NOTE_RESUME_OUTSIDE_BOOK, names,
+                            sizeof(names));
+  EXPECT_STREQ(names, "unknown-checkpoint+resume-outside-book");
+  char tiny[8];
+  reading::restoreNoteNames(checkpoint::NOTE_UNKNOWN_CHECKPOINT, tiny, sizeof(tiny));
+  EXPECT_LT(std::string(tiny).size(), sizeof(tiny));
+  EXPECT_STREQ(reading::openViewName(checkpoint::OpenView::Reread), "reread");
+}

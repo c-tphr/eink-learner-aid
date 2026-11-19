@@ -328,7 +328,20 @@ bool EpubReaderActivity::loadBook() {
     LOG_ERR("CLIP", "Failed to load clippings for %s", epub->getPath().c_str());
   }
   readingSession = readingsession::open(epub);
-  resumeSpeedRead = rsvpentry::openedInRsvp(*epub, readingSession.get());
+  // RSVP builds: the saved mode, and a reread or prompt in progress (task C5; src/reading/README.md).
+  const readingsession::OpenRestore restore = readingsession::restoreOnOpen(renderer, *epub, readingSession.get());
+  resumeSpeedRead = restore.speedRead;
+  if (restore.jump) {
+    currentSpineIndex = restore.spine;
+    nextPageNumber = 0;
+    pendingOffsetJump = restore.offset;
+  }
+  // A restored prompt shows before any page, so no text after its break is drawn first; a sleep while
+  // it shows reopens the book, as after a page.
+  if (openRereadPrompt()) {
+    APP_STATE.openEpubPath = bookPath;
+    APP_STATE.saveToFile();
+  }
   return true;
 }
 
@@ -1580,7 +1593,7 @@ bool EpubReaderActivity::openRereadChoices() {
   return true;
 }
 
-void EpubReaderActivity::notePageShown(const int textBottom) {
+void EpubReaderActivity::notePageShown(const int textBottom, const bool drawn) {
   if (!RSVP_FEATURE_ENABLED || !readingSession || !section) return;
   readingsession::PageSpan page;
   page.spine = currentSpineIndex;
@@ -1591,6 +1604,10 @@ void EpubReaderActivity::notePageShown(const int textBottom) {
   }
   page.textBottom = static_cast<int16_t>(textBottom);
   page.lineHeight = static_cast<int16_t>(renderer.getLineHeight(SETTINGS.getReaderFontId()));
+  if (!drawn) {
+    readingsession::pageShowing(*readingSession, page);
+    return;
+  }
   readingsession::pageShown(renderer, *readingSession, page);
 }
 
@@ -1601,10 +1618,12 @@ void EpubReaderActivity::resumeAfterCheckpoint(const readingsession::CheckpointR
     next = readingsession::afterPageCheckpoint(*readingSession, run);
   }
   using Go = readingsession::PageResume::Go;
-  if (next.go == Go::SpeedRead) {
+  if (next.go == Go::SpeedRead && section) {
     openSpeedRead();  // a reread in RSVP, or after the break of a checkpoint that fired in RSVP
     return;
   }
+  // A prompt restored on opening showed before any page: RSVP opens once the page under it is drawn.
+  if (next.go == Go::SpeedRead) resumeSpeedRead = true;
   if (next.go == Go::ThisPage) {
     // Trigger rule 7: another section end on this page fires before reading continues.
     if (!openPageCheckpoint()) requestUpdate();
@@ -2261,11 +2280,13 @@ void EpubReaderActivity::renderBook() {
     // needs that slot, then snapshot the newly rendered page below.
     discardOverlayPage();
 
+    // RSVP builds: a page-view reread saves this page as its place before it shows (task C5).
+    notePageShown(renderer.getScreenHeight() - orientedMarginBottom, false);
     const auto start = millis();
     renderContents(std::move(p), orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
     LOG_DBG("ERS", "Rendered page in %dms", millis() - start);
     // RSVP builds: during a page-view reread, its bar over the status-bar row, below the text area.
-    notePageShown(renderer.getScreenHeight() - orientedMarginBottom);
+    notePageShown(renderer.getScreenHeight() - orientedMarginBottom, true);
     lastRenderCompleteMs = millis();
     markPageRendered();
   }

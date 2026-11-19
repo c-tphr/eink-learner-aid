@@ -141,7 +141,7 @@ std::unique_ptr<Activity> create(GfxRenderer& renderer, MappedInputManager& inpu
 
 bool openedInRsvp(const Epub& epub, const reading::ReadingSession* session) {
   // Most books have no state file: answer without the allocation below.
-  if (!Storage.exists(reading::bookStatePath(epub.getPath()).c_str())) return false;
+  if (!reading::bookStateExists(epub.getPath())) return false;
   // 78 KB while the file is read (BookStateFile.h), freed on return.
   auto state = makeUniqueNoThrow<checkpoint::BookState>();
   if (!state) return false;
@@ -485,8 +485,9 @@ void RsvpActivity::enterPause(const Note pauseNote, const char* reason) {
   note = pauseNote;
   focus = pauseLayout().defaultIndex;
   logPause(reason);
-  drawPauseScreen(true);  // the clearing refresh that ends playback carries the pause screen
+  // Saved before the pause screen shows (task C5): during a reread this is its place.
   savePosition(checkpoint::ReadingMode::Rsvp, reason);
+  drawPauseScreen(true);  // the clearing refresh that ends playback carries the pause screen
   if (entry.session && entry.session->promptDue()) {
     // The pause left the section being reread (task C4): its prompt again.
     checkpointBefore = source.position();

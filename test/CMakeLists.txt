@@ -102,6 +102,7 @@ add_subdirectory(word_index)
 add_subdirectory(display_profile)
 add_subdirectory(rsvp_activity)
 add_subdirectory(checkpoint_activity)
+add_subdirectory(book_state_file)
 add_subdirectory(update_policy)
 add_subdirectory(device_test)
 

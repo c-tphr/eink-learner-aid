@@ -38,8 +38,20 @@ struct BookIdentity {
 // `<bookPath>.rsvp-state.json`.
 std::string bookStatePath(const std::string& bookPath);
 
+// The book has a state file: the file, or a complete `<file>.tmp` that a power cut left before its
+// rename (below). No allocation: a book without one opens without reading anything.
+bool bookStateExists(const std::string& bookPath);
+
 // Reads the book's state into `out` (a fresh state unless the result is Read). Never changes the file.
+// When the file is missing but `<file>.tmp` is there and reads as a valid state, that is read instead:
+// a write is cut between removing the old file and renaming the new one only after the new one was
+// written and closed in full (logged as recovered; the next write renames it into place).
 StateLoad loadBookState(const std::string& bookPath, const BookIdentity& book, checkpoint::BookState& out);
+
+// Writes `state` as the whole file, through `<file>.tmp` and a rename (as editBookState() does). For a
+// caller that holds the complete state already, read from the file (task C5: the restore at open,
+// which keeps its state in the session's checkpoint block): no second state is allocated.
+bool writeBookState(const std::string& bookPath, const checkpoint::BookState& state);
 
 // Changes the state passed to it; `context` is the caller's.
 using StateEdit = void (*)(checkpoint::BookState& state, const void* context);
