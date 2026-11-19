@@ -1,0 +1,351 @@
+{
+  "format": "rsvp-validation-report",
+  "version": 1,
+  "status": "READY",
+  "ready": true,
+  "created": "2026-11-19T11:51:35Z",
+  "book": {
+    "title": "The Lighthouse Keeper's Almanac",
+    "language": "en",
+    "instructions_version": "1.0"
+  },
+  "original": {
+    "file": "fixture.epub",
+    "sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c"
+  },
+  "prepared": {
+    "file": "fixture.prepared.epub",
+    "sha256": "b38765ad3bbf62a4f154204acf8e3d132caca47b5bb3a429247f965df214f810"
+  },
+  "delivered": "fixture.prepared.epub",
+  "rounds": 2,
+  "history": true,
+  "models": [
+    {
+      "role": "checker",
+      "model": "claude-fable-5-2",
+      "date": "2026-11-19",
+      "round": 1
+    },
+    {
+      "role": "drafter",
+      "model": "claude-opus-5-5",
+      "date": "2026-11-19",
+      "round": 2
+    }
+  ],
+  "tools": {
+    "name": "tools.prep",
+    "version": "1.0.0",
+    "word_rules_version": 1,
+    "epubcheck_version": "5.3.0"
+  },
+  "reasons": [],
+  "checks": [
+    {
+      "name": "open",
+      "title": "Both files open as EPUBs and every spine document parses",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "source-hash",
+      "title": "The checkpoint file names the original's SHA-256, and the original was not changed",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "checkpoint-item",
+      "title": "The package declares rsvp/checkpoints.json exactly once, as application/json",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "checkpoint-file",
+      "title": "The checkpoint file passes its schema and cross-reference rules (unique ids, plain text)",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "firmware-limits",
+      "title": "The checkpoint file is within the firmware's limits",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "anchors",
+      "title": "Every section's two anchors exist once, in its chapter, as empty spans, in order, without overlap",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "word-boundaries",
+      "title": "Every anchor sits between two words, outside tables and code blocks",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "coverage",
+      "title": "Sections cover the body text; everything else is footnotes or listed excluded matter",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "word-counts",
+      "title": "Every section's word_count equals the words between its anchors",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "text-unchanged",
+      "title": "Every spine document has the original's words, flags, markers and footnote marks",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "archive-unchanged",
+      "title": "Only the anchors, one manifest line and the checkpoint file differ from the original",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "epubcheck",
+      "title": "EPUBCheck reports no errors",
+      "status": "pass",
+      "source": "validator"
+    },
+    {
+      "name": "validator-record",
+      "title": "The latest stored validator result passed, for exactly this prepared file and original",
+      "status": "pass",
+      "source": "report"
+    },
+    {
+      "name": "checker-files",
+      "title": "The checker's result is for exactly this prepared file, this original and these instructions",
+      "status": "pass",
+      "source": "checker"
+    },
+    {
+      "name": "checker-complete",
+      "title": "The checker gave one verdict per prompt and section, and every cited paragraph lies inside the prompt's own section",
+      "status": "pass",
+      "source": "checker"
+    },
+    {
+      "name": "checker-verdict",
+      "title": "The checker passed every prompt and every section, with no open blocking issue",
+      "status": "pass",
+      "source": "checker"
+    }
+  ],
+  "issues": [
+    {
+      "round": "1",
+      "raised_by": "checker",
+      "code": "R1-I1",
+      "where": "c0001-p1",
+      "description": "The reference answer contains a claim that section s0001 does not state: 'made by a lens with four bright panels that turned once every forty seconds'. In s0001 the lens is described only in d02-p005 (rings of cut glass bending a single oil flame into one narrow beam); the flash pattern is in d02-p006. The four panels and the forty-second rotation appear only in d02-p008, which belongs to section s0002. Suggested fix: Remove the clause 'made by a lens with four bright panels that turned once every forty seconds' from the answer, leaving: 'Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash every ten seconds; no other light on the coast did the same.' Keep the citation to d02-p006.",
+      "severity": "blocking",
+      "resolution": "Not raised again by the checker in round 2",
+      "open": false
+    },
+    {
+      "round": "1",
+      "raised_by": "checker",
+      "code": "R1-I2",
+      "where": "s0002",
+      "description": "Section s0002 (d02-p007 to d02-p010, 194 words) has no checkpoint. It is not a mere bridge: d02-p008 and d02-p009 explain how the clockwork weight turns the lens, why a stopped light is dangerous, and that the weight must be rewound every four hours. The instructions give every body section a checkpoint unless it only bridges two others, is mostly non-prose, or has nothing worth recalling. Suggested fix: Add a checkpoint with one prompt on s0002, for example on what turns the lens and why it has to be rewound through the night, supported by d02-p008 and d02-p009.",
+      "severity": "minor",
+      "resolution": "Not raised again by the checker in round 2",
+      "open": false
+    },
+    {
+      "round": "1",
+      "raised_by": "checker",
+      "code": "R1-I3",
+      "where": "s0003",
+      "description": "Section s0003 (d03-p001 to d03-p007, 311 words) has no checkpoint although it carries several ideas worth recalling in prose: why fog makes the light almost useless (d03-p002, d03-p003), how the fog signal works and when it is started (d03-p004), and why the horn is not sounded all the time (d03-p007). The table d03-p005 is only one block, so the section is not mostly non-prose. Suggested fix: Add a checkpoint with one or two prompts on s0003, for example on why keepers relied on sound in fog and why the horn could not be sounded continuously, supported by d03-p002 to d03-p004 and d03-p007.",
+      "severity": "minor",
+      "resolution": "Not raised again by the checker in round 2",
+      "open": false
+    },
+    {
+      "round": "1",
+      "raised_by": "checker",
+      "code": "R1-I4",
+      "where": "s0005",
+      "description": "Section s0005 (d04-p001 to d04-p008, 321 words) is a whole chapter with no checkpoint. Its prose states recallable ideas: what the count of fog hours showed and why it had gone unnoticed (d04-p005), what Ione did when the clockwork stopped (d04-p006), and what the lighthouse board agreed to (d04-p007). The code block d04-p004 is a single block whose result is restated in prose. Suggested fix: Add a checkpoint with one or two prompts on s0005, for example on what the log count revealed about the fog signal and what came of it, supported by d04-p005 and d04-p007.",
+      "severity": "minor",
+      "resolution": "Not raised again by the checker in round 2",
+      "open": false
+    }
+  ],
+  "validation": {
+    "format": "rsvp-validation",
+    "version": 1,
+    "tool": {
+      "name": "tools.prep",
+      "version": "1.0.0",
+      "word_rules_version": 1,
+      "epubcheck_version": "5.3.0"
+    },
+    "created": "2026-11-19T11:51:35Z",
+    "original": {
+      "file": "fixture.epub",
+      "sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c"
+    },
+    "prepared": {
+      "file": "fixture.prepared.epub",
+      "sha256": "b38765ad3bbf62a4f154204acf8e3d132caca47b5bb3a429247f965df214f810"
+    },
+    "draft": {
+      "file": "draft.json",
+      "sha256": "8373c0430fb6cfa76a19f4b657a7a3c9c7c51cbfa082233ebdb649057022ec48"
+    },
+    "coverage_mode": "draft",
+    "passed": true,
+    "checks": [
+      {
+        "name": "open",
+        "title": "Both files open as EPUBs and every spine document parses",
+        "status": "pass",
+        "failures": [],
+        "details": []
+      },
+      {
+        "name": "source-hash",
+        "title": "The checkpoint file names the original's SHA-256, and the original was not changed",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "source_sha256 matches the original (9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c)",
+          "the original is byte-identical before and after validation"
+        ]
+      },
+      {
+        "name": "checkpoint-item",
+        "title": "The package declares rsvp/checkpoints.json exactly once, as application/json",
+        "status": "pass",
+        "failures": [],
+        "details": []
+      },
+      {
+        "name": "checkpoint-file",
+        "title": "The checkpoint file passes its schema and cross-reference rules (unique ids, plain text)",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "5 sections, 5 checkpoints, 9 prompts"
+        ]
+      },
+      {
+        "name": "firmware-limits",
+        "title": "The checkpoint file is within the firmware's limits",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "4917 bytes"
+        ]
+      },
+      {
+        "name": "anchors",
+        "title": "Every section's two anchors exist once, in its chapter, as empty spans, in order, without overlap",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "5 of 5 sections resolved to two anchors in their chapter"
+        ]
+      },
+      {
+        "name": "word-boundaries",
+        "title": "Every anchor sits between two words, outside tables and code blocks",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "10 anchors checked"
+        ]
+      },
+      {
+        "name": "coverage",
+        "title": "Sections cover the body text; everything else is footnotes or listed excluded matter",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "exclusions from the draft",
+          "text/title.xhtml: words 0-19 excluded by the draft: Front matter: title page.",
+          "text/title.xhtml: 0 of 20 words in sections, 0 in footnotes",
+          "text/chapter-1.xhtml: 427 of 451 words in sections, 24 in footnotes",
+          "text/chapter-2.xhtml: 608 of 608 words in sections, 0 in footnotes",
+          "text/chapter-3.xhtml: 321 of 321 words in sections, 0 in footnotes",
+          "text/endnotes.xhtml: 0 of 34 words in sections, 34 in footnotes"
+        ]
+      },
+      {
+        "name": "word-counts",
+        "title": "Every section's word_count equals the words between its anchors",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "5 sections counted"
+        ]
+      },
+      {
+        "name": "text-unchanged",
+        "title": "Every spine document has the original's words, flags, markers and footnote marks",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "5 spine documents compared word for word"
+        ]
+      },
+      {
+        "name": "archive-unchanged",
+        "title": "Only the anchors, one manifest line and the checkpoint file differ from the original",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "12 original members; changed: OEBPS/content.opf, OEBPS/text/chapter-1.xhtml, OEBPS/text/chapter-2.xhtml, OEBPS/text/chapter-3.xhtml"
+        ]
+      },
+      {
+        "name": "epubcheck",
+        "title": "EPUBCheck reports no errors",
+        "status": "pass",
+        "failures": [],
+        "details": [
+          "EPUBCheck 5.3.0: 0 errors, 0 warnings"
+        ]
+      }
+    ]
+  },
+  "check_verification": {
+    "format": "rsvp-check-verification",
+    "version": 1,
+    "tool": {
+      "name": "tools.prep",
+      "version": "1.0.0"
+    },
+    "created": "2026-11-19T11:51:35Z",
+    "original": {
+      "file": "fixture.epub",
+      "sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c"
+    },
+    "prepared": {
+      "file": "fixture.prepared.epub",
+      "sha256": "b38765ad3bbf62a4f154204acf8e3d132caca47b5bb3a429247f965df214f810"
+    },
+    "check": {
+      "file": "check.json",
+      "sha256": "f02eeb33b4758191a9fd75299a47708ac7f56b07f2bbfb2d2840cb8163435070"
+    },
+    "checker": {
+      "model": "claude-fable-5-2",
+      "date": "2026-11-19"
+    },
+    "checker_verdict": "pass",
+    "consistent": true,
+    "passed": true,
+    "failures": []
+  }
+}

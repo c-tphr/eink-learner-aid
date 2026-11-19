@@ -7,6 +7,13 @@
     python3 -m tools.prep report --original BOOK.epub --prepared OUT.prepared.epub [--validation V.json]
                                  [--check CHECK.json] [--history WORKDIR] [--draft DRAFT.json] -o OUTDIR
 
+Steps of the /prep-book loop (tools/prep/loop.py):
+
+    python3 -m tools.prep start-round WORKDIR ORIGINAL.epub OUT.prepared.epub
+    python3 -m tools.prep checker-input WORKDIR OUT.prepared.epub [--date YYYY-MM-DD]
+    python3 -m tools.prep save-check WORKDIR
+    python3 -m tools.prep issues WORKDIR
+
 Exit status: 0 success (for validate and verify-check: everything passed;
 for report: the book is READY), 1 a problem with the input or a failed
 check (each problem is printed on stderr), 2 a usage error.
@@ -137,6 +144,63 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return EXIT_OK if ev.ready else EXIT_INPUT
 
 
+def _loop_errors(name: str, exc: Exception) -> int:
+    problems = getattr(exc, "problems", [str(exc)])
+    print(f"prep {name}: refused ({len(problems)} problem{'s' if len(problems) != 1 else ''}):", file=sys.stderr)
+    for problem in problems:
+        print(f"  {problem}", file=sys.stderr)
+    return EXIT_INPUT
+
+
+def _cmd_start_round(args: argparse.Namespace) -> int:
+    from .loop import LoopError, start_round
+    try:
+        r = start_round(args.workdir, args.original, args.prepared)
+    except LoopError as exc:
+        return _loop_errors("start-round", exc)
+    for note in r.notes:
+        print(f"  {note}")
+    print(f"round {r.number}{' (restarted: it never reached the validator)' if r.restarted else ''}: "
+          f"archived the draft as {r.folder / 'draft.json'}")
+    return EXIT_OK
+
+
+def _cmd_checker_input(args: argparse.Namespace) -> int:
+    from .loop import CHECKER_DIR, LoopError, checker_input
+    try:
+        book = checker_input(args.workdir, args.prepared, args.date)
+    except LoopError as exc:
+        return _loop_errors("checker-input", exc)
+    print(f"wrote {args.workdir / CHECKER_DIR} for round {book['round']}: {len(book['sections'])} sections, "
+          f"{len(book['prompt_ids'])} prompts (prepared SHA-256 {book['prepared_sha256']})")
+    return EXIT_OK
+
+
+def _cmd_save_check(args: argparse.Namespace) -> int:
+    from .loop import LoopError, save_check
+    try:
+        path, extracted = save_check(args.workdir)
+    except LoopError as exc:
+        return _loop_errors("save-check", exc)
+    if extracted:
+        print(f"wrote {path} from the checker's reply")
+        return EXIT_OK
+    print(f"wrote {path}: the checker's reply holds no JSON object, so it was saved as it is; verify-check will "
+          "reject it and the round fails", file=sys.stderr)
+    return EXIT_INPUT
+
+
+def _cmd_issues(args: argparse.Namespace) -> int:
+    from .loop import LoopError, write_issues
+    try:
+        path, text, _ = write_issues(args.workdir)
+    except LoopError as exc:
+        return _loop_errors("issues", exc)
+    print(text)
+    print(f"wrote {path}")
+    return EXIT_OK
+
+
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python3 -m tools.prep", description="Book preparation tools.")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
@@ -180,6 +244,26 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("-o", "--output", type=Path, required=True, help="folder for the report (and the EPUB if ready)")
     p.add_argument("--timestamp", help="time to record (ISO 8601, UTC); default $SOURCE_DATE_EPOCH or now")
     p.set_defaults(func=_cmd_report)
+
+    p = sub.add_parser("start-round", help="/prep-book: open the next round and archive the draft")
+    p.add_argument("workdir", type=Path, help="the work folder")
+    p.add_argument("original", type=Path, help="the original EPUB")
+    p.add_argument("prepared", type=Path, help="the prepared EPUB just built from WORKDIR/draft.json")
+    p.set_defaults(func=_cmd_start_round)
+
+    p = sub.add_parser("checker-input", help="/prep-book: write WORKDIR/checker/, the checker's only input")
+    p.add_argument("workdir", type=Path, help="the work folder")
+    p.add_argument("prepared", type=Path, help="the prepared EPUB the round's validator passed")
+    p.add_argument("--date", help="the date to give the checker (YYYY-MM-DD); default today (UTC)")
+    p.set_defaults(func=_cmd_checker_input)
+
+    p = sub.add_parser("save-check", help="/prep-book: rounds/NN/checker-reply.txt -> rounds/NN/check.json")
+    p.add_argument("workdir", type=Path, help="the work folder")
+    p.set_defaults(func=_cmd_save_check)
+
+    p = sub.add_parser("issues", help="/prep-book: write rounds/NN/issues.md, the drafter's issue list")
+    p.add_argument("workdir", type=Path, help="the work folder")
+    p.set_defaults(func=_cmd_issues)
     return parser
 
 

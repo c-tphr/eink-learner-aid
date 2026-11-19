@@ -1,6 +1,6 @@
 # tools/prep
 
-Book preparation tools (docs/PLAN.md section 8). This package holds the `extract`, `build`, `validate`, `verify-check` and `report` commands, the EPUB reading library they share, the checkpoint file schema and its validator, the draft, check, validation-result and report schemas, the synthetic fixture book generator and the prepared and negative fixture generator (`fixture/`) and an EPUBCheck runner (`epubcheck.py`).
+Book preparation tools (docs/PLAN.md section 8). This package holds the `extract`, `build`, `validate`, `verify-check` and `report` commands, the script steps of the `/prep-book` loop (`start-round`, `checker-input`, `save-check`, `issues`), the drafter's instructions (`INSTRUCTIONS.md`), the checker's read guard (`checker_guard.py`), the EPUB reading library they share, the checkpoint file schema and its validator, the draft, check, validation-result and report schemas, the synthetic fixture book generator and the prepared and negative fixture generator (`fixture/`) and an EPUBCheck runner (`epubcheck.py`).
 
 ```sh
 pip install -r tools/prep/requirements.txt
@@ -11,7 +11,15 @@ python3 -m tools.prep build BOOK.epub DRAFT.json -o BOOK.prepared.epub  # step 3
 python3 -m tools.prep validate BOOK.epub BOOK.prepared.epub --work-dir WORKDIR --json validation.json  # step 4
 python3 -m tools.prep verify-check BOOK.epub BOOK.prepared.epub check.json  # script side of step 5
 python3 -m tools.prep report --original BOOK.epub --prepared BOOK.prepared.epub --history WORKDIR -o OUTDIR  # step 7
+
+# the /prep-book loop (see "/prep-book" below)
+python3 -m tools.prep start-round WORKDIR BOOK.epub BOOK.prepared.epub
+python3 -m tools.prep checker-input WORKDIR BOOK.prepared.epub
+python3 -m tools.prep save-check WORKDIR
+python3 -m tools.prep issues WORKDIR
 ```
+
+For the owner's view (how to run `/prep-book`, what READY means, where the files are) see `docs/PREPARING_BOOKS.md`.
 
 Exit status of every command: 0 success, 1 a problem with the input (every problem is listed on stderr), 2 a usage error. For `validate` and `verify-check`, 0 means everything passed and 1 that something failed; for `report`, 0 means READY and 1 NOT READY.
 
@@ -33,6 +41,9 @@ Exit status of every command: 0 success, 1 a problem with the input (every probl
 | `verify_check.py` | `prep verify-check`: what a script can confirm about the checker's `check.json` |
 | `report.py` | `prep report`: the readiness rule, the round history and the validation report |
 | `version.py` | Tool and word-rules versions recorded in results |
+| `loop.py` | The `/prep-book` loop steps: `start-round`, `checker-input`, `save-check`, `issues` |
+| `checker_guard.py` | PreToolUse hook of the `prep-checker` subagent: blocks reads outside the checker folder |
+| `INSTRUCTIONS.md` | The drafter's (and checker's) preparation instructions, versioned (`instructions_version: 1.0`) |
 
 ```python
 from tools.prep.checkpoints import check_file, load_checkpoints, validate_checkpoints, verdict
@@ -481,6 +492,33 @@ WORKDIR/
 
 Round folders are numbered (`01`, `02`, `03`) and read in numeric order. Without `--validation`, `--check` or `--draft`, the latest round that has the file supplies it. Each issue of each round is listed once, with its resolution: a validator failure (check, code, location) is "Fixed in round N" when round N's validation no longer reports it; a checker issue is "Resolved in round N" when round N's `check.json` marks it resolved (with its `resolution`), or "Not raised again ... in round N" when it is gone; an issue the final results still show is "Open". Without a history the files given count as one round.
 
+## `/prep-book`: the loop
+
+`.claude/commands/prep-book.md` is the command; `.claude/agents/prep-checker.md` is the checker; `INSTRUCTIONS.md` is what the drafter follows and the checker judges against. The command runs, per round (at most three): the drafter writes `WORKDIR/draft.json`; `build`; `start-round`; `validate` (on failure the checker is skipped); `checker-input`; the `prep-checker` subagent; `save-check`; `verify-check`; on failure `issues`, and the drafter revises from that list only. It always ends with `report`, which alone decides READY. Work folder after a run:
+
+```
+WORKDIR/
+  source.json, structure.json, text/      prep extract
+  draft.json                              the current draft (the drafter's only file)
+  BOOK.prepared.epub                      prep build of draft.json
+  checker/                                checker-input: the checker's only input (rewritten each round)
+  rounds/NN/draft.json                    start-round: the draft built in round NN
+  rounds/NN/validation.json               prep validate --json
+  rounds/NN/checker-reply.txt             the checker's final message, saved verbatim by the command
+  rounds/NN/check.json                    save-check: the JSON object in that reply, never repaired
+  rounds/NN/verify-check.json             prep verify-check --json
+  rounds/NN/issues.md                     issues: what the drafter may see about the failed round
+```
+
+| Command | Does | Refuses (exit 1) when |
+| --- | --- | --- |
+| `start-round WORKDIR ORIGINAL PREPARED` | Opens round NN (or reopens the latest round if it never reached the validator) and copies `draft.json` to `rounds/NN/draft.json`. Prints ids added or removed since the last round | the original is not the extracted file; the draft's `book.instructions_version` is not `INSTRUCTIONS.md`'s; `PREPARED` is not byte-for-byte `prep build` of the current draft; three rounds are used; the last round already passed; a prompt or checkpoint id moved to another section (`id-moved`); a prompt's exact text reappears under another id (`id-renumbered`) |
+| `checker-input WORKDIR PREPARED [--date D]` | Writes `WORKDIR/checker/`: `book.json` (values to copy into `check.json`: round, date, both SHA-256s, instructions version, issue id prefix `R<round>-`; every section with its paragraph range from the prepared file's anchors, the blocks just before and after it, its checkpoint and prompt ids; the excluded ranges with their reasons), `INSTRUCTIONS.md`, `text/*.txt`, and `sections/<id>.txt` (the section's paragraphs, then its prompts and reference answers) | the round's `validation.json` is missing, failed, or is for another prepared file; the book's instructions version is not the current one; the folder exists and was not written by `checker-input` |
+| `save-check WORKDIR` | Writes `rounds/NN/check.json` from `checker-reply.txt`: the whole reply if it is a JSON object, else the last fenced block that is one, else the text from the first `{` to the last `}`; byte for byte, not re-serialised. A reply without a JSON object is written unchanged (exit 1) so that `verify-check` rejects it | there is no reply |
+| `issues WORKDIR` | Writes and prints `rounds/NN/issues.md`: validator failures; a note when the checker's result was unusable (`verify-check` codes other than `checker-verdict-fail`); the checker's open issues; failed prompts with the failed criteria and the checker's evidence; failed section breaks. Prompts that passed are never listed | there is no round |
+
+**The checker sees only files.** `checker/` holds no draft (so none of the drafter's `supporting_paragraphs`, `x_changes` or other notes), no earlier `check.json` and no round history. The subagent's tools are `Read`, `Glob` and `Grep` only, so it cannot change anything, and its `PreToolUse` hook (`checker_guard.py`, with `onFailure: block`) blocks any read outside a folder whose `book.json` has `format` `rsvp-checker-input`, a Glob or Grep without a `path`, and absolute or `..` patterns. Claude Code runs a project subagent's frontmatter hooks only in a trusted workspace; elsewhere the read rule rests on the agent's instructions. The checker returns `check.json` as its final message (it has no write tool); the command saves it verbatim and `verify-check` decides whether it is usable, so a malformed result is a failed round, never a pass. Checker issue ids carry the round (`R1-I1`), because the checker never sees earlier rounds; `report` lists an issue a later round does not raise again as "Not raised again".
+
 ## Synthetic fixture book
 
 `fixture/generate.py` writes `fixtures/books/fixture.epub`, `fixture.draft.json`, `fixture.expected.json` and `README.md` from the data in `fixture/content.py`, byte for byte reproducibly and with the standard library only. `fixtures/books/README.md` has the content inventory and word counts.
@@ -490,7 +528,7 @@ python3 tools/prep/fixture/generate.py           # regenerate after editing fixt
 python3 tools/prep/fixture/generate.py --check   # exit 1 and name each stale file
 ```
 
-`fixture/prepared.py` then writes, from the committed `fixture.epub` and `fixture.draft.json`, the prepared fixture `fixture.prepared.epub` (`prep build` output), a passing sample checker result `fixture.check.json`, and `negative/`: prepared copies broken in one way each (`broken-link.prepared.epub`: checkpoint c0002's section s0004 has no end anchor; also a checkpoint naming a missing section, a misspelt end anchor, anchors in the wrong document, a section spanning two documents, start after end, a changed word, an extra member, a wrong `source_sha256`, a `word_count` off by one) and checker results `verify-check` must reject (a citation outside the section, a missing prompt, a stale hash, a pass without citation, an unjustified overall verdict, a failed check). `negative/manifest.json` names, for each file, the exact checks and codes it must fail; `tests/test_validate.py` and `tests/test_verify_check.py` iterate it. `python3 tools/prep/fixture/prepared.py --check` exits 1 if a file is stale.
+`fixture/prepared.py` then writes, from the committed `fixture.epub` and `fixture.draft.json`, the prepared fixture `fixture.prepared.epub` (`prep build` output), a passing sample checker result `fixture.check.json`, and `negative/`: prepared copies broken in one way each (`broken-link.prepared.epub`: checkpoint c0002's section s0004 has no end anchor; also a checkpoint naming a missing section, a misspelt end anchor, anchors in the wrong document, a section spanning two documents, start after end, a changed word, an extra member, a wrong `source_sha256`, a `word_count` off by one) and checker results `verify-check` must reject (a citation outside the section, a missing prompt, a stale hash, a pass without citation, an unjustified overall verdict, a failed check). It also writes two **checker fixtures**, each a draft and its prepared copy that `prep validate` passes but that carry one planted content fault only the AI checker can catch: `unsupported-answer` (prompt `c0001-p1`'s answer adds a detail that only the next section states; criterion `supported_by_section`) and `answer-given-away` (prompt `c0002-p1` names its own answer; criterion `does_not_give_away_answer`). They carry the current `INSTRUCTIONS.md` version so `checker-input` accepts them. `negative/manifest.json` names, for each file, the exact checks and codes it must fail (`checker`: the prompt and criterion the checker must fail); `tests/test_validate.py` and `tests/test_verify_check.py` iterate it. `python3 tools/prep/fixture/prepared.py --check` exits 1 if a file is stale.
 
 `fixture.expected.json` is the ground truth other layers compare against, including the firmware's WordIndex tests (task R3). It is computed from the content model in `content.py`, not by parsing the EPUB, with the generator's own small text splitter. Before writing anything, the generator runs the word pass (`words.py`) on every XHTML document it produced and refuses if the two routes disagree; `tests/test_fixture.py` compares the committed file with the word pass, `prep extract`'s blocks and `prep build`'s anchors on `fixture.epub` again. An error in either route therefore shows up as a difference.
 

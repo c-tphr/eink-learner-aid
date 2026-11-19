@@ -1,0 +1,138 @@
+{
+  "format": "rsvp-validation",
+  "version": 1,
+  "tool": {
+    "name": "tools.prep",
+    "version": "1.0.0",
+    "word_rules_version": 1,
+    "epubcheck_version": "5.3.0"
+  },
+  "created": "2026-11-19T11:45:50Z",
+  "original": {
+    "file": "fixture.epub",
+    "sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c"
+  },
+  "prepared": {
+    "file": "fixture.prepared.epub",
+    "sha256": "5ce896509473045e9ccd44409bd707c1cee08d8982ff7b6c2fe7e67f66cb9d49"
+  },
+  "draft": {
+    "file": "draft.json",
+    "sha256": "dfd4c57e4a5215f2e8ecdfb6133b6775c22bec948481af26a426e7a087b51ca5"
+  },
+  "coverage_mode": "draft",
+  "passed": true,
+  "checks": [
+    {
+      "name": "open",
+      "title": "Both files open as EPUBs and every spine document parses",
+      "status": "pass",
+      "failures": [],
+      "details": []
+    },
+    {
+      "name": "source-hash",
+      "title": "The checkpoint file names the original's SHA-256, and the original was not changed",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "source_sha256 matches the original (9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c)",
+        "the original is byte-identical before and after validation"
+      ]
+    },
+    {
+      "name": "checkpoint-item",
+      "title": "The package declares rsvp/checkpoints.json exactly once, as application/json",
+      "status": "pass",
+      "failures": [],
+      "details": []
+    },
+    {
+      "name": "checkpoint-file",
+      "title": "The checkpoint file passes its schema and cross-reference rules (unique ids, plain text)",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "5 sections, 2 checkpoints, 4 prompts"
+      ]
+    },
+    {
+      "name": "firmware-limits",
+      "title": "The checkpoint file is within the firmware's limits",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "2846 bytes"
+      ]
+    },
+    {
+      "name": "anchors",
+      "title": "Every section's two anchors exist once, in its chapter, as empty spans, in order, without overlap",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "5 of 5 sections resolved to two anchors in their chapter"
+      ]
+    },
+    {
+      "name": "word-boundaries",
+      "title": "Every anchor sits between two words, outside tables and code blocks",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "10 anchors checked"
+      ]
+    },
+    {
+      "name": "coverage",
+      "title": "Sections cover the body text; everything else is footnotes or listed excluded matter",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "exclusions from the draft",
+        "text/title.xhtml: words 0-19 excluded by the draft: Front matter: title page.",
+        "text/title.xhtml: 0 of 20 words in sections, 0 in footnotes",
+        "text/chapter-1.xhtml: 427 of 451 words in sections, 24 in footnotes",
+        "text/chapter-2.xhtml: 608 of 608 words in sections, 0 in footnotes",
+        "text/chapter-3.xhtml: 321 of 321 words in sections, 0 in footnotes",
+        "text/endnotes.xhtml: 0 of 34 words in sections, 34 in footnotes"
+      ]
+    },
+    {
+      "name": "word-counts",
+      "title": "Every section's word_count equals the words between its anchors",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "5 sections counted"
+      ]
+    },
+    {
+      "name": "text-unchanged",
+      "title": "Every spine document has the original's words, flags, markers and footnote marks",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "5 spine documents compared word for word"
+      ]
+    },
+    {
+      "name": "archive-unchanged",
+      "title": "Only the anchors, one manifest line and the checkpoint file differ from the original",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "12 original members; changed: OEBPS/content.opf, OEBPS/text/chapter-1.xhtml, OEBPS/text/chapter-2.xhtml, OEBPS/text/chapter-3.xhtml"
+      ]
+    },
+    {
+      "name": "epubcheck",
+      "title": "EPUBCheck reports no errors",
+      "status": "pass",
+      "failures": [],
+      "details": [
+        "EPUBCheck 5.3.0: 0 errors, 0 warnings"
+      ]
+    }
+  ]
+}

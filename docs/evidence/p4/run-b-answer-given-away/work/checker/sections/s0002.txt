@@ -1,0 +1,21 @@
+# Section s0002: Winding the clockwork
+# Document text/chapter-1.xhtml (whole text: text/d02-chapter-1.txt).
+# Paragraphs d02-p007 to d02-p010 (4 blocks), 194 words.
+# Just before it: d02-p006 (section s0001). Just after it: end of text/chapter-1.xhtml.
+# Cite only the paragraph references below; they are this section's whole text.
+
+[d02-p007] heading h2, 3 words, id c1-p007
+Winding the Clockwork
+
+[d02-p008] paragraph, 83 words, id c1-p008
+The lens did not turn by magic. Beneath it sat a clockwork drive, worked by a heavy iron weight that hung on a cable down the hollow centre of the tower. As the weight sank, the gears turned the lens once every forty seconds, and its four bright panels gave four flashes on each turn. When the weight reached the bottom, the lens stopped, and a still light was worse than no light at all, because a ship might mistake it for another.
+
+[d02-p009] paragraph, 52 words, id c1-p009
+So the weight had to be wound back up every four hours, all night long. Ione showed Dr. Vane the crank and the brass counter beside it. Forty turns of the crank lifted the weight to the top. Forty turns! By the tenth, the doctor's arms were burning, and Ione only smiled.
+
+[d02-p010] paragraph, 56 words, id c1-p010
+That first night they sat in the watch room below the lamp and took turns to sleep. Every hour Ione wrote the time, the weather and the state of the light in the log. Nothing happened at all, and Dr. Vane decided that this was exactly what a good night at a lighthouse should look like.
+
+## No checkpoint
+
+The drafter gave this section no checkpoint.

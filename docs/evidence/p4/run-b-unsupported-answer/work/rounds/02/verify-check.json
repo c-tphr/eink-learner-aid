@@ -1,0 +1,29 @@
+{
+  "format": "rsvp-check-verification",
+  "version": 1,
+  "tool": {
+    "name": "tools.prep",
+    "version": "1.0.0"
+  },
+  "created": "2026-11-19T11:51:32Z",
+  "original": {
+    "file": "fixture.epub",
+    "sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c"
+  },
+  "prepared": {
+    "file": "fixture.prepared.epub",
+    "sha256": "b38765ad3bbf62a4f154204acf8e3d132caca47b5bb3a429247f965df214f810"
+  },
+  "check": {
+    "file": "check.json",
+    "sha256": "f02eeb33b4758191a9fd75299a47708ac7f56b07f2bbfb2d2840cb8163435070"
+  },
+  "checker": {
+    "model": "claude-fable-5-2",
+    "date": "2026-11-19"
+  },
+  "checker_verdict": "pass",
+  "consistent": true,
+  "passed": true,
+  "failures": []
+}

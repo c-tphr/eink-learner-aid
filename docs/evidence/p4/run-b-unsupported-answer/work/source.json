@@ -1,0 +1,117 @@
+{
+  "format": "rsvp-prep-source",
+  "version": 1,
+  "source_file": "fixture.epub",
+  "source_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "title": "The Lighthouse Keeper's Almanac",
+  "language": "en",
+  "opf_path": "OEBPS/content.opf",
+  "opf_dir": "OEBPS",
+  "spine": [
+    {
+      "index": 1,
+      "prefix": "d01",
+      "idref": "title",
+      "href": "text/title.xhtml",
+      "media_type": "application/xhtml+xml",
+      "linear": true,
+      "title": "Title page",
+      "text_file": "text/d01-title.txt",
+      "blocks": 3,
+      "first_paragraph": "d01-p001",
+      "last_paragraph": "d01-p003",
+      "words": 20,
+      "footnote_blocks": 0
+    },
+    {
+      "index": 2,
+      "prefix": "d02",
+      "idref": "chapter-1",
+      "href": "text/chapter-1.xhtml",
+      "media_type": "application/xhtml+xml",
+      "linear": true,
+      "title": "The Lamp Room",
+      "text_file": "text/d02-chapter-1.txt",
+      "blocks": 10,
+      "first_paragraph": "d02-p001",
+      "last_paragraph": "d02-p010",
+      "words": 451,
+      "footnote_blocks": 1
+    },
+    {
+      "index": 3,
+      "prefix": "d03",
+      "idref": "chapter-2",
+      "href": "text/chapter-2.xhtml",
+      "media_type": "application/xhtml+xml",
+      "linear": true,
+      "title": "The Fog Season",
+      "text_file": "text/d03-chapter-2.txt",
+      "blocks": 13,
+      "first_paragraph": "d03-p001",
+      "last_paragraph": "d03-p013",
+      "words": 608,
+      "footnote_blocks": 0
+    },
+    {
+      "index": 4,
+      "prefix": "d04",
+      "idref": "chapter-3",
+      "href": "text/chapter-3.xhtml",
+      "media_type": "application/xhtml+xml",
+      "linear": true,
+      "title": "The Keeper's Log",
+      "text_file": "text/d04-chapter-3.txt",
+      "blocks": 8,
+      "first_paragraph": "d04-p001",
+      "last_paragraph": "d04-p008",
+      "words": 321,
+      "footnote_blocks": 0
+    },
+    {
+      "index": 5,
+      "prefix": "d05",
+      "idref": "endnotes",
+      "href": "text/endnotes.xhtml",
+      "media_type": "application/xhtml+xml",
+      "linear": true,
+      "title": "Notes",
+      "text_file": "text/d05-endnotes.txt",
+      "blocks": 0,
+      "first_paragraph": null,
+      "last_paragraph": null,
+      "words": 34,
+      "footnote_blocks": 3
+    }
+  ],
+  "toc": [
+    {
+      "label": "The Lamp Room",
+      "href": "text/chapter-1.xhtml",
+      "depth": 1,
+      "source": "nav",
+      "paragraph": "d02-p001"
+    },
+    {
+      "label": "The Fog Season",
+      "href": "text/chapter-2.xhtml",
+      "depth": 1,
+      "source": "nav",
+      "paragraph": "d03-p001"
+    },
+    {
+      "label": "The Keeper's Log",
+      "href": "text/chapter-3.xhtml",
+      "depth": 1,
+      "source": "nav",
+      "paragraph": "d04-p001"
+    },
+    {
+      "label": "Notes",
+      "href": "text/endnotes.xhtml",
+      "depth": 1,
+      "source": "nav",
+      "paragraph": null
+    }
+  ]
+}
