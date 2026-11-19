@@ -6,12 +6,14 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "FixtureBook.h"
 #include "lib/CheckpointCore/BookState.h"
+#include "lib/CheckpointCore/CheckpointFlow.h"
 #include "lib/CheckpointCore/CheckpointIndex.h"
 #include "lib/CheckpointCore/CheckpointSource.h"
 #include "lib/CheckpointCore/CheckpointTrigger.h"
@@ -390,4 +392,154 @@ TEST(ReadingSessionState, AnotherEditionKeepsOnlyTheGradesOfThisBooksPrompts) {
             reading::StateSource::Read);
   EXPECT_STREQ(state.bookSha256, cp.index.sourceSha256());
   EXPECT_TRUE(state.hasPosition);
+}
+
+// --- Rereading (task C4): what ReadingSession passes to the trigger rules and the flow ---
+
+namespace {
+
+// c0001's section s0001 is chapter 1 words [0, 233); s0002 (no checkpoint) follows it to the chapter's end.
+uint16_t sectionNumber(const Checkpoints& cp, const char* id) {
+  return static_cast<uint16_t>(cp.index.findSection(id));
+}
+
+}  // namespace
+
+TEST(ReadingSessionReread, RsvpStopsAtTheRereadSectionsEndWithoutFiring) {
+  Checkpoints cp;
+  Chapter ch1(cp, CH1, "text/chapter-1.xhtml", CHAPTER_1);
+  const uint16_t s0001 = sectionNumber(cp, "s0001");
+  // Trigger rule 6: the reread section's own end gives RereadEnd, never Fire.
+  const checkpoint::Step step = reading::rsvpCheckpointStep(ch1.sections, 232, 233, s0001);
+  EXPECT_EQ(step.kind, StepKind::RereadEnd);
+  EXPECT_EQ(step.section.section, s0001);
+  EXPECT_EQ(step.section.start, 0u);
+  EXPECT_EQ(step.section.end, 233u);
+  // While another section is being reread, c0001's end fires nothing either.
+  EXPECT_EQ(reading::rsvpCheckpointStep(ch1.sections, 232, 233, sectionNumber(cp, "s0004")).kind, StepKind::None);
+  // The word source still flags the end, so the scheduler stops there and asks.
+  EXPECT_NE(reading::sectionEndFlags(ch1.sections, 232, 233) & rsvp::TOKEN_CHECKPOINT, 0);
+  EXPECT_TRUE(checkpoint::stopAfterWord(ch1.sections, 232, s0001));
+}
+
+TEST(ReadingSessionReread, PageViewLeavingTheLastPageOfTheRereadReturnsInsteadOfFiring) {
+  Checkpoints cp;
+  Chapter ch2(cp, CH2, "text/chapter-2.xhtml", CHAPTER_2);
+  const uint16_t s0004 = sectionNumber(cp, "s0004");
+  const uint32_t words = ch2.reader.wordCount();
+  const reading::PageWords last = reading::pageWords(ch2.reader, ch2.startOf(490), reading::NO_NEXT_PAGE);
+  ASSERT_EQ(last.last, words - 1);
+  EXPECT_EQ(checkpoint::pageAdvance(ch2.sections, last.first, last.last).kind, StepKind::Fire);
+  EXPECT_EQ(checkpoint::pageAdvance(ch2.sections, last.first, last.last, s0004).kind, StepKind::RereadEnd);
+  // The pages before it within the section read on.
+  const reading::PageWords before = reading::pageWords(ch2.reader, ch2.startOf(381), ch2.startOf(490));
+  EXPECT_EQ(checkpoint::pageAdvance(ch2.sections, before.first, before.last, s0004).kind, StepKind::None);
+}
+
+TEST(ReadingSessionReread, APageKeepsTheRereadWhileItShowsAWordOfTheSection) {
+  Checkpoints cp;
+  Chapter ch2(cp, CH2, "text/chapter-2.xhtml", CHAPTER_2);
+  const checkpoint::SectionRange range =
+      ch2.sections.range(static_cast<uint16_t>(ch2.sections.findSection(sectionNumber(cp, "s0004"))));
+  ASSERT_EQ(range.start, 311u);
+  ASSERT_EQ(range.end, 608u);
+  const reading::PageReading none;
+  // The section's first page starts before it (words 282-380): inside, counted from the section's start.
+  const reading::PageWords first = reading::pageWords(ch2.reader, ch2.startOf(282), ch2.startOf(381));
+  reading::RereadPagePlace p = reading::rereadPagePlace(first, CHAPTER_2, none, range);
+  EXPECT_TRUE(p.inside);
+  EXPECT_EQ(p.word, 311u);
+  // ... or from the reading word when it lies later on that page (RSVP left to page view there).
+  p = reading::rereadPagePlace(first, CHAPTER_2, {true, CHAPTER_2, 350}, range);
+  EXPECT_TRUE(p.inside);
+  EXPECT_EQ(p.word, 350u);
+  // A page inside it: its first word.
+  const reading::PageWords middle = reading::pageWords(ch2.reader, ch2.startOf(381), ch2.startOf(490));
+  p = reading::rereadPagePlace(middle, CHAPTER_2, none, range);
+  EXPECT_TRUE(p.inside);
+  EXPECT_EQ(p.word, 381u);
+  // A page before it (paging back past the start): outside.
+  const reading::PageWords earlier = reading::pageWords(ch2.reader, ch2.startOf(200), ch2.startOf(282));
+  p = reading::rereadPagePlace(earlier, CHAPTER_2, none, range);
+  EXPECT_FALSE(p.inside);
+  EXPECT_EQ(p.word, 200u);
+  // Another chapter (a table-of-contents jump): outside.
+  EXPECT_FALSE(reading::rereadPagePlace(middle, CHAPTER_1, none, range).inside);
+  // A page with no word of its own counts from the word after it.
+  const reading::PageWords image{false, 400, 0};
+  p = reading::rereadPagePlace(image, CHAPTER_2, none, range);
+  EXPECT_TRUE(p.inside);
+  EXPECT_EQ(p.word, 400u);
+  EXPECT_FALSE(reading::rereadPagePlace(reading::PageWords{false, 608, 0}, CHAPTER_2, none, range).inside);
+}
+
+TEST(ReadingSessionReread, StepsAndEntriesStayInsideTheSection) {
+  const checkpoint::SectionRange range{0, 2, 311, 608};
+  EXPECT_EQ(reading::intoSection(range, 0), 311u);
+  EXPECT_EQ(reading::intoSection(range, 400), 400u);
+  EXPECT_EQ(reading::intoSection(range, 608), 607u);
+  EXPECT_TRUE(reading::rereadStepStays(range, 311));
+  EXPECT_TRUE(reading::rereadStepStays(range, 607));
+  EXPECT_FALSE(reading::rereadStepStays(range, 310)) << "a sentence step back across the start does not move";
+  EXPECT_FALSE(reading::rereadStepStays(range, 608)) << "nor one forward across the end";
+}
+
+TEST(ReadingSessionReread, AfterARereadPageViewNeverStaysOnThisPage) {
+  // The page that fired is no longer the one shown: with no page words, the resume is a later page.
+  const reading::PageWords none;
+  EXPECT_EQ(reading::pageResumeFor(1, 400, none, {1, 233}), reading::PageResume::LaterPage);
+  EXPECT_EQ(reading::pageResumeFor(2, 608, none, {3, 0}), reading::PageResume::Chapter);
+}
+
+TEST(ReadingSessionReread, TheFlowFollowsThePagesOfAPageViewReread) {
+  // The decisions above driving lib/CheckpointCore's flow as ReadingSession does: c0001 fires, Incorrect,
+  // reread in page view, pages inside the section move the reread place, paging past the end or leaving
+  // the section goes back to the prompt; the resume place and the first grade never change.
+  Checkpoints cp;
+  Chapter ch1(cp, CH1, "text/chapter-1.xhtml", CHAPTER_1);
+  auto state = std::make_unique<checkpoint::BookState>();
+  checkpoint::CheckpointFlow flow(*state, cp.index);
+  const reading::PageWords fired = reading::pageWords(ch1.reader, ch1.startOf(184), ch1.startOf(295));
+  const checkpoint::Step fire = checkpoint::pageAdvance(ch1.sections, fired.first, fired.last);
+  ASSERT_EQ(fire.kind, StepKind::Fire);
+  ASSERT_TRUE(flow.start(fire, checkpoint::ReadingMode::Page).accepted);
+  ASSERT_TRUE(flow.handle(checkpoint::FlowEvent::Reveal).accepted);
+  ASSERT_TRUE(flow.handle(checkpoint::FlowEvent::Incorrect).gradeRecorded);
+  ASSERT_TRUE(flow.handle(checkpoint::FlowEvent::RereadPage).accepted);
+  const checkpoint::Place resume = state->active.resume;
+  EXPECT_EQ(resume.position, (Position{CHAPTER_1, 233}));
+
+  const reading::PageReading none;
+  const auto moveTo = [&](const reading::PageWords& page, uint16_t chapter, checkpoint::NavSource source) {
+    const reading::RereadPagePlace p = reading::rereadPagePlace(page, chapter, none, flow.section());
+    return flow.rereadMoved(checkpoint::Place{Position{chapter, p.word}, checkpoint::ReadingMode::Page}, source);
+  };
+  const reading::PageWords page2 = reading::pageWords(ch1.reader, ch1.startOf(108), ch1.startOf(184));
+  checkpoint::Transition t = moveTo(page2, CHAPTER_1, checkpoint::NavSource::NextPage);
+  EXPECT_EQ(t.state, checkpoint::FlowState::Rereading);
+  EXPECT_EQ(state->active.reread.position, (Position{CHAPTER_1, 108}));
+  EXPECT_EQ(flow.rereadSection(), sectionNumber(cp, "s0001"));
+  // The next-page action from the page with the section's last word ends the reread (as the reader asks).
+  EXPECT_EQ(checkpoint::pageAdvance(ch1.sections, fired.first, fired.last, flow.rereadSection()).kind,
+            StepKind::RereadEnd);
+  t = flow.handle(checkpoint::FlowEvent::RereadReachedEnd);
+  EXPECT_EQ(t.state, checkpoint::FlowState::PromptHidden);
+  EXPECT_EQ(flow.storedGrade(), checkpoint::Grade::Incorrect) << "shown as recorded on the prompt";
+
+  // Again, then a jump to another chapter: back to the prompt as Return early.
+  ASSERT_TRUE(flow.handle(checkpoint::FlowEvent::Reveal).accepted);
+  ASSERT_FALSE(flow.handle(checkpoint::FlowEvent::Incorrect).gradeRecorded) << "the first grade stays";
+  ASSERT_TRUE(flow.handle(checkpoint::FlowEvent::RereadPage).accepted);
+  Chapter ch2(cp, CH2, "text/chapter-2.xhtml", CHAPTER_2);
+  const reading::PageWords elsewhere = reading::pageWords(ch2.reader, 0, ch2.startOf(50));
+  t = moveTo(elsewhere, CHAPTER_2, checkpoint::NavSource::TableOfContents);
+  EXPECT_EQ(t.state, checkpoint::FlowState::PromptHidden);
+  EXPECT_TRUE(t.leftSection);
+  // Correct on the retry moves on and finishes; the resume place is the original one.
+  ASSERT_TRUE(flow.handle(checkpoint::FlowEvent::Reveal).accepted);
+  t = flow.handle(checkpoint::FlowEvent::Correct);
+  EXPECT_TRUE(t.finished);
+  EXPECT_FALSE(t.gradeRecorded);
+  EXPECT_EQ(t.resume, resume);
+  EXPECT_EQ(state->grades.find("c0001-p1"), checkpoint::Grade::Incorrect);
 }

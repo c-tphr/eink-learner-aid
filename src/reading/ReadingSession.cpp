@@ -8,8 +8,8 @@
 #include <Memory.h>
 
 #include "CheckpointBook.h"
-#include "RsvpPosition.h"
 #include "MappedInputManager.h"
+#include "RsvpPosition.h"
 #include "activities/Activity.h"
 #include "activities/RenderLock.h"
 #include "controls/ControlMap.h"
@@ -212,8 +212,8 @@ std::unique_ptr<Activity> ReadingSession::startCheckpoint(GfxRenderer& renderer,
   // The flow and the state it changes, from now until the checkpoint ends, a reread included (78 KB,
   // nearly all of it the grade table; PSRAM on the Picco). Before task C4 CheckpointActivity allocated
   // the same block while it showed. Without it the activity ends as Failed and reading goes on.
-  made->request.progress = std::shared_ptr<checkpointentry::Progress>(
-      makeUniqueNoThrow<checkpointentry::Progress>(book->index()).release());
+  made->request.progress =
+      std::shared_ptr<checkpointentry::Progress>(makeUniqueNoThrow<checkpointentry::Progress>(book->index()).release());
   if (!made->request.progress) {
     LOG_ERR("CPT", "OOM: checkpoint flow and state (%u bytes)",
             static_cast<unsigned>(sizeof(checkpointentry::Progress)));
@@ -273,8 +273,8 @@ checkpoint::Place ReadingSession::startReread(const readingsession::CheckpointRu
   const checkpoint::SectionRange& r = run.request.fire.section;
   checkpoint::Place at;
   at.position = checkpoint::Position{r.chapter, r.start};
-  at.mode = run.outcome->end == checkpointui::End::RereadRsvp ? checkpoint::ReadingMode::Rsvp
-                                                               : checkpoint::ReadingMode::Page;
+  at.mode =
+      run.outcome->end == checkpointui::End::RereadRsvp ? checkpoint::ReadingMode::Rsvp : checkpoint::ReadingMode::Page;
   if (rereading()) {
     at = progress->state.active.reread;
   } else {

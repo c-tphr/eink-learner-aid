@@ -9,16 +9,19 @@ and never decides a flow rule itself. Layouts and controls follow `docs/spikes/S
 Built by task C3a (#93) as a self-contained activity: a caller pushes it with "this checkpoint of
 this book" and reads how it ended. C2 (#26) decides when a checkpoint fires and C3 (#27) connects the
 two (`reading::ReadingSession::startCheckpoint()`, from RSVP and from the reader's next-page action;
-`src/reading/README.md`, "ReadingSession"); C4 (#28) does the reread itself.
+`src/reading/README.md`, "ReadingSession"); C4 (#28) does the reread itself: the flow and its state
+moved into the reading session, the activity opens again on them for the prompt after a reread, and
+`RereadScreens.cpp` draws the page-view reread bar and its list (`src/reading/README.md`, "Rereading").
 
 Everything here is compiled only with the RSVP feature flag (`docs/ARCHITECTURE-RSVP.md`).
 
 | File | What it holds | Host-tested |
 | --- | --- | --- |
-| `CheckpointLaunch.h` | The entry point: `checkpointentry::create()` with a `Request` (a Fire step of the trigger rules and the mode in use) and the shared `Outcome` it fills | |
+| `CheckpointLaunch.h` | The entry point: `checkpointentry::create()` with a `Request` (a Fire step of the trigger rules, the mode in use, and the session's `Progress`: the flow and its state) and the shared `Outcome` it fills; `saveTransition()`, the state file write of a transition, which the session also uses during a reread; the reread bar and list (task C4) | |
 | `CheckpointActivity.h/.cpp` | The activity: input, flow events, state file writes, drawing | no (simulator scenarios) |
 | `CheckpointScreens.h/.cpp` | Pure: flow state to screen, items and default highlight per screen, item to flow event, answer paging, how a checkpoint ended | yes |
 | `CheckpointSave.h/.cpp` | Pure: what a transition writes to the state file, the grade time | yes |
+| `RereadScreens.cpp` | The page-view reread bar (drawn over the page, S4 row 31) and the list a side-key hold opens during a reread (task C4) | no (simulator scenarios) |
 
 Host tests: `test/checkpoint_activity` (`CheckpointScreensTest`, `CheckpointSaveTest`).
 
@@ -41,7 +44,7 @@ startActivityForResult(checkpointentry::create(renderer, mappedInput, epub->getP
 | --- | --- | --- |
 | `Finished` | The last prompt was graded Correct, or continued or skipped | `resume`: the first word after the break, in `Request::mode` (the state file's `position` is already that) |
 | `Skipped` | Skip checkpoint | `resume`, as above |
-| `RereadRsvp`, `RereadPage` | Reread chosen after Incorrect at prompt `promptIndex` | `reread`: the section's first word in the chosen mode. The state file holds the checkpoint with `reread`; task C4 rereads, then calls `CheckpointFlow::rereadMoved()` / `handle(ReturnEarly)` and shows the prompt again |
+| `RereadRsvp`, `RereadPage` | Reread chosen after Incorrect at prompt `promptIndex` | `reread`: the section's first word in the chosen mode. The state file holds the checkpoint with `reread`; the session rereads (`ReadingSession::startReread()`), and when the reread ends a new activity opens on the same flow at that prompt (task C4) |
 | `Failed` | Could not start: no memory for the session, or the flow refused the request (a step that is not Fire, a checkpoint without prompts) | Unchanged |
 | `None` | Left another way (Home gesture, sleep). Every transition is already in the state file | |
 
@@ -105,6 +108,11 @@ when the clock is set: a year from 2020 to 2135 (`formatGradeTime()`). Otherwise
 device whose clock was never set, the grade is written without `at`, as the codec allows. The
 simulator's clock is the host's, so its scenarios check the format of `at`, not its value.
 
+**Back at the prompt after a reread** (task C4). The caller passes the session's flow in PromptHidden:
+the activity reads and writes nothing first (the session saved the return), logs `back`, and shows the
+prompt with its answer hidden and, since the prompt has its first grade, "Recorded earlier: Incorrect".
+Reveal is the retry and Skip question is Continue (S4 row 32).
+
 **What a restart sees.** The state file always holds the checkpoint in progress at its current
 prompt (or its reread), and `position` before the break. Restoring it on reopening is task C5: until
 then a reopened book opens before the break (the reader's page, or RSVP at the frame that was on
@@ -117,7 +125,8 @@ DBG lines, tag `CPT` unless noted; stable for the scenarios. Numbers are decimal
 | Line | When |
 | --- | --- |
 | `open checkpoint=<id> prompts=<n> section=<id> mode=<rsvp\|page> resume_ch=<c> resume_word=<w> state=<missing\|read\|invalid\|unreadable\|no-memory> grades=<n> activity_bytes=<b> session_bytes=<b> accepted=<0\|1>` | The activity started the flow |
-| `saved after=<start\|reveal\|correct\|incorrect\|skip-prompt\|skip-checkpoint\|reread-rsvp\|reread-page\|continue> prompt=<id that got its first grade\|-> grade=<correct\|incorrect\|none> active=<id\|none> prompt_index=<i> position=<ch:word:mode\|none> ok=<0\|1>` | The state file was written (always before the next `screen` line) |
+| `saved after=<start\|reveal\|correct\|incorrect\|skip-prompt\|skip-checkpoint\|reread-rsvp\|reread-page\|continue\|reread-moved\|reread-reached-end\|return-early\|reread-left-section> prompt=<id that got its first grade\|-> grade=<correct\|incorrect\|none> active=<id\|none> prompt_index=<i> position=<ch:word:mode\|none> ok=<0\|1> reread=<ch:word:mode\|none>` | The state file was written (always before the next `screen` line). The last four reasons are the session's writes during a reread (`saveTransition()`) |
+| `back checkpoint=<id> prompt=<i>/<n> mode=<rsvp\|page> activity_bytes=<b>` | The activity opened on a flow that went back to its prompt after a reread |
 | `event=<flow event> prompt=<id> accepted=<0\|1> refusal=<n> state=<flow state> grade_recorded=<0\|1> save=<no\|position\|now>` | An item was activated |
 | `screen=<Prompt\|Answer\|Incorrect> question=<i>/<n> prompt=<id> recorded=<none\|correct\|incorrect> focus=<Item> part=<p>/<parts> lines=<answer lines> refresh=<clear\|update>` | After every refresh |
 | `answer part=<p>/<parts> move=<cycle\|swipe-next\|swipe-previous> changed=<0\|1>` | A paging gesture on the answer box |
@@ -129,8 +138,9 @@ DBG lines, tag `CPT` unless noted; stable for the scenarios. Numbers are decimal
 
 | What | Bytes | When |
 | --- | --- | --- |
-| The activity object | 4,016 (simulator, 64-bit) | While shown. Mostly the prompt (1,201), answer (2,401) and prompt id (65) buffers, read once per prompt so that drawing never reads the card |
-| `Session`: `BookState` and `CheckpointFlow` | 78,056 (simulator) | While shown; one heap block (PSRAM on the Picco). The flow needs a `BookState`; it holds the grades of the whole book |
+| The activity object | 4,056 (simulator, 64-bit; 4,016 before task C4) | While shown. Mostly the prompt (1,201), answer (2,401) and prompt id (65) buffers, read once per prompt so that drawing never reads the card |
+| `checkpointentry::Progress`: `BookState` and `CheckpointFlow` | 78,056 (simulator) | Allocated by `ReadingSession::startCheckpoint()` and kept until the checkpoint ends, a reread included (task C4; before it the activity allocated the same block while it showed). One heap block (PSRAM on the Picco). The flow needs a `BookState`; it holds the grades of the whole book. Logged as `session_bytes` in the `open` line |
+| The reread list | one small activity per hold | While the list shows |
 | `editBookState()` | about 78 KB plus the file's size | During each write (`src/reading/BookStateFile.h`) |
 | Wrapped lines | a vector of short strings, about 1 KB for a long answer | During one paint, freed when it ends; paints happen on input only |
 | `reading::CheckpointBook` | 72,544 (simulator) | Owned by the caller while the book is open (`src/reading/README.md`) |

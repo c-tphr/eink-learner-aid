@@ -229,9 +229,9 @@ bool CheckpointActivity::start() {
   }
   if (progress->flow.state() == checkpoint::FlowState::PromptHidden) {
     // Back at the prompt after a reread (task C4): the flow already went back to it and saved that.
-    LOG_DBG("CPT", "back checkpoint=%s prompt=%u/%u mode=%s activity_bytes=%u", book->index().checkpointId(
-                progress->flow.checkpoint()), progress->flow.promptIndex() + 1, progress->flow.promptCount(),
-            modeName(request.mode), static_cast<unsigned>(sizeof(CheckpointActivity)));
+    LOG_DBG("CPT", "back checkpoint=%s prompt=%u/%u mode=%s activity_bytes=%u",
+            book->index().checkpointId(progress->flow.checkpoint()), progress->flow.promptIndex() + 1,
+            progress->flow.promptCount(), modeName(request.mode), static_cast<unsigned>(sizeof(CheckpointActivity)));
     enterScreen();
     return true;
   }
@@ -485,7 +485,8 @@ void CheckpointActivity::paint() {
 void CheckpointActivity::paintHeader(const bool capital, const char* suffix) {
   char question[48];
   snprintf(question, sizeof(question), capital ? tr(STR_CP_QUESTION_OF_CAPITAL) : tr(STR_CP_QUESTION_OF),
-           static_cast<unsigned>(progress->flow.promptIndex() + 1), static_cast<unsigned>(progress->flow.promptCount()));
+           static_cast<unsigned>(progress->flow.promptIndex() + 1),
+           static_cast<unsigned>(progress->flow.promptCount()));
   char line[160];
   if (capital) {
     snprintf(line, sizeof(line), "%s%s%s", question, suffix ? " · " : "", suffix ? suffix : "");

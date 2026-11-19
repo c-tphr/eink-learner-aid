@@ -146,9 +146,7 @@ class RsvpActivity final : public Activity {
   void savePosition(checkpoint::ReadingMode mode, const char* reason,
                     checkpoint::NavSource rereadSource = checkpoint::NavSource::RsvpPlayback);
   // The pause screen's items: PAUSE, or PAUSE_REREAD with "Back to the question" during a reread.
-  const controls::Screen& pauseLayout() const {
-    return rereadScreen.load() ? controls::PAUSE_REREAD : controls::PAUSE;
-  }
+  const controls::Screen& pauseLayout() const { return rereadScreen.load() ? controls::PAUSE_REREAD : controls::PAUSE; }
   // Updates rereadScreen from the session (RenderLock held).
   void noteRereading();
   // Home gesture and sleep: the reader's own progress, through HandOff (once), at the next word or,

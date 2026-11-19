@@ -579,8 +579,8 @@ void RsvpActivity::openCheckpoint() {
       // Back at the prompt after a reread (task C4).
       activity = entry.session->promptAgain(renderer, mappedInput, run);
     } else {
-      activity = entry.session->startCheckpoint(renderer, mappedInput, pendingCheckpoint,
-                                                checkpoint::ReadingMode::Rsvp, before, run);
+      activity = entry.session->startCheckpoint(renderer, mappedInput, pendingCheckpoint, checkpoint::ReadingMode::Rsvp,
+                                                before, run);
     }
     // CheckpointActivity writes the position before the break: what this session wrote last is stale.
     positionSaved = false;
@@ -634,8 +634,7 @@ void RsvpActivity::returnFromCheckpoint(const readingsession::CheckpointRun& run
       // highlighted, "Checkpoint done"; nothing plays until Play.
       status = done ? Status::CheckpointDone : Status::Paused;
       // The activity already saved this place when it finished; savePosition() skips a repeat.
-      if (done && run.outcome->saved && place.position.chapter == spine &&
-          place.position.word == source.position()) {
+      if (done && run.outcome->saved && place.position.chapter == spine && place.position.word == source.position()) {
         positionSaved = true;
         savedPlace.position = place.position;
         savedPlace.mode = checkpoint::ReadingMode::Rsvp;
@@ -790,8 +789,8 @@ void RsvpActivity::drawPauseScreen(const bool clearing) {
     backend.update();
   }
   needClear = false;
-  LOG_DBG("RSVP", "pause screen focus=%s refresh=%s status=\"%s\"",
-          controls::itemName(pauseLayout().zones[focus].item), clearing ? "clear" : "update", statusLine);
+  LOG_DBG("RSVP", "pause screen focus=%s refresh=%s status=\"%s\"", controls::itemName(pauseLayout().zones[focus].item),
+          clearing ? "clear" : "update", statusLine);
 }
 
 void RsvpActivity::paintButton(const int i) {
@@ -1148,8 +1147,8 @@ void RsvpActivity::stepSentence(const bool forward) {
     const bool moved = forward ? reading::sentenceForward(index.reader(), from, sentenceWindow, to)
                                : reading::sentenceBack(index.reader(), from, sentenceWindow, to);
     // During a reread a step stays inside the section (task C4): one that would leave it does not move.
-    const bool stays = !rereadScreen.load() || !entry.session ||
-                       reading::rereadStepStays(entry.session->rereadRange(), to);
+    const bool stays =
+        !rereadScreen.load() || !entry.session || reading::rereadStepStays(entry.session->rereadRange(), to);
     if (moved && to != from && stays) {
       source.seek(to);
       scheduler.reposition();

@@ -4,12 +4,12 @@
 single binding table for the RSVP, checkpoint, reread and device-test screens, and the input adapter
 that turns the firmware's key and touch events into control events. Filled by task R4a (#21); R4b
 (#22) added the pause screen's steppers and save buttons (S4 rows 6-11); C3a (#93) the three
-checkpoint screens (S4 rows 17-29) and the answer box's vertical swipe; the reread (C4) and
-device-test (D3a) screens add their screens and zones to the same table.
+checkpoint screens (S4 rows 17-29) and the answer box's vertical swipe; C4 (#28) the reread's
+screens (S4 rows 30-31); device-test (D3a) screens add their screens and zones to the same table.
 
 | File | What it holds | Host-tested |
 | --- | --- | --- |
-| `ControlMap.h/.cpp` | Key roles (`KEYS`), timings (hold 0.7 s, repeat 0.4 s, arming 0.3 s), events, actions and contexts, `BINDINGS` and `resolve()`, screens with their items in focus order and touch zones (`PAUSE`; `BANNER`, the non-prose banner's Continue and Stay, task R5; `CHECKPOINT_PROMPT`, `CHECKPOINT_ANSWER`, `CHECKPOINT_INCORRECT`), `hit()` | yes |
+| `ControlMap.h/.cpp` | Key roles (`KEYS`), timings (hold 0.7 s, repeat 0.4 s, arming 0.3 s), events, actions and contexts, `BINDINGS` and `resolve()`, screens with their items in focus order and touch zones (`PAUSE`; `BANNER`, the non-prose banner's Continue and Stay, task R5; `CHECKPOINT_PROMPT`, `CHECKPOINT_ANSWER`, `CHECKPOINT_INCORRECT`; `PAUSE_REREAD`, `REREAD_BAR`, `REREAD_CHOICES`, task C4), `hit()` | yes |
 | `ControlGesture.h/.cpp` | `GestureReader`: one frame of input to one event (short press on release, hold, hold repeat, Confirm, tap, Back, vertical swipe with its start; the arming guard of a new screen) | yes |
 | `ControlInput.h/.cpp` | The adapter: the only control code that reads `MappedInputManager` | no (simulator scenarios) |
 | `ControlDefaults.h` | Seeds "Page turn long press" from `KEYS` before the settings load (called from `src/main.cpp`) | |
@@ -41,6 +41,17 @@ and the vertical swipe in `test/checkpoint_activity` (`CheckpointScreensTest`).
 | `CHECKPOINT_INCORRECT` | RereadRsvp, RereadPage, ContinueOn ("Continue"), SkipPrompt, SkipCheckpoint. The default is the reread in the mode in use, which the activity picks (`checkpointui::defaultFocus()`) | 16,216,448,80; 16,308,448,80; 16,400,448,80; then as above |
 
 No checkpoint item repeats while held. Skip checkpoint is last in focus order on every screen.
+
+## The reread's screens (task C4; S4 rows 30-31 and section 8)
+
+| Screen | Items in focus order (default first unless noted) | Zones |
+| --- | --- | --- |
+| `PAUSE_REREAD` | The pause screen's items with `BackToQuestion` after PageView; Play stays the default, so the key path is Up x2, hold; Page view, Menu and Exit are one Up further than on `PAUSE` | `BackToQuestion` 16,128,448,64 (the row that shows the next words otherwise); the rest as `PAUSE` |
+| `REREAD_BAR` | `BackToQuestion`, the page-view bar's button. Touch only: the reader checks a tap against it before its own taps | 248,4,216,64 |
+| `REREAD_CHOICES` | `BackToQuestion`, `SpeedReadHere`, `KeepReading`: the list a side-key hold opens in page view during a reread, where the hold would otherwise enter RSVP | The first three rows of `CHOICE_ZONES` (16,72 / 16,152 / 16,232, 448x72) |
+
+`BackToQuestion`, `SpeedReadHere` and `KeepReading` are in RSVP's two item switches (`itemLabel()`,
+`activate()`) and in `itemName()`. Nothing on these screens repeats while held.
 
 When a hold activates, the adapter hands the held key to `MappedInputManager`'s long-press bookkeeping
 (`wasLongPressed(button, 0)`), so its release is swallowed and the next screen (the reader, after

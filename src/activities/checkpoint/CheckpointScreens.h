@@ -62,7 +62,7 @@ enum class End : uint8_t {
   None,        // not ended (or left another way: Home gesture, sleep; the state file has the checkpoint)
   Finished,    // the last prompt was graded, continued or skipped
   Skipped,     // Skip checkpoint
-  RereadRsvp,  // Reread in RSVP: the prompt waits (task C4 rereads)
+  RereadRsvp,  // Reread in RSVP: the prompt waits while ReadingSession rereads (task C4)
   RereadPage,  // Reread in page view
   Failed,      // could not start (no memory, or the flow refused the request)
 };

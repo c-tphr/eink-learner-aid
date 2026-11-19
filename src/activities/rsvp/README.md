@@ -69,6 +69,7 @@ The position written is always "the next word": the word Play would show first.
 | Home gesture, sleep or power loss while the banner shows | Unchanged (`rsvp`): reopening the book opens RSVP after the item | The item's page |
 | A chapter change during playback | chapter, first word, `rsvp` | Unchanged |
 | A checkpoint (task C2; "Checkpoints" below) | When it shows: the frame on screen, `rsvp`, with the checkpoint in progress (written by CheckpointActivity); when it ends: the first word after the break, `rsvp` | Unchanged; Home or sleep while it shows: the page holding the frame on screen |
+| Any route above during a reread (task C4; "Rereading" below) | Unchanged: the place before the break. The route writes `active_checkpoint.reread` instead (the next word and the mode the route leaves to), when it changed | As for the route |
 
 How often during playback: never per word (SD wear, and a write would delay the next frame on the
 render task). A write happens when playback pauses, which is every way playback ends, and once per
@@ -231,8 +232,8 @@ status line "Checkpoint done" (S4 row 33); nothing plays until Play:
   stop is resolved and the audit's segment carries on; Play continues at that word;
 - the section ended its chapter: the next chapter with prose opens at word 0, a new audit segment as for
   any chapter change; the end of the book: "End of the book";
-- a reread request (task C4, not done yet) resumes as Finished; a checkpoint that could not start
-  resumes after the break with the status "Paused".
+- a checkpoint that could not start resumes after the break with the status "Paused";
+- a reread request, and the checkpoint's end after a reread: "Rereading" below.
 
 The meter is the same session's: time on the checkpoint screens is not playback time, because the
 scheduler closed its active span at the stop and opens a new one at Play. While the checkpoint shows,
@@ -240,6 +241,33 @@ Home and sleep keep what CheckpointActivity wrote when it started (the position 
 frame on screen, mode `rsvp`, and the checkpoint in progress) instead of saving the next word, and save
 the reader's progress at the page holding that frame. A stop that the session does not confirm (a book
 without checkpoint data never flags one) pauses with `reason=checkpoint` as before.
+
+**Rereading** (task C4; `src/reading/README.md`, "Rereading", which has every way out of a reread). A
+reread in RSVP opens, or RSVP seeks, at the section's first word (or the reread place after a mode
+switch) on the pause screen with Play highlighted; the status line starts with "Rereading" and the
+row under Exit, Menu and Page view (the next words otherwise) is "Back to the question"
+(`controls::PAUSE_REREAD`, 16,128,448,64; keys: Up x2 from Play, hold; S4 row 30). Page view, Menu and
+Exit are one Up further away. During the reread:
+
+- the word source still flags the section's end; `rsvpStop()` gives `RereadEnd` instead of a Fire
+  step, so playback stops with the section's last word on screen (`pause reason=reread-end`, then
+  `leave to=checkpoint`) and the prompt opens again over RSVP (`openCheckpoint()` takes the waiting
+  prompt from the session);
+- "Back to the question" ends the reread as Return early and opens the prompt the same way;
+- sentence steps stay inside the section: a step across its start or end does not move;
+- every save of the position (pause, Page view, Menu, Exit, Home, sleep, a non-prose item, an entry)
+  writes the reread place (`active_checkpoint.reread`) through the session instead of `position`,
+  which keeps the place before the break;
+- a non-prose item hands over to page view as always; the reader shows the reread bar with the banner,
+  and Continue opens RSVP again inside the reread.
+
+When the screens close after a reread: Reread in page view closes RSVP to the page holding the
+section's first word (`leave to=reread-page`); a checkpoint that fired in RSVP and ends goes on here
+as above ("Checkpoint done"); one that fired in page view closes RSVP (`leave to=checkpoint-done`) and
+the reader resumes after its break. RSVP opened by the reader for a reread, or for the resume of an
+RSVP checkpoint after a reread in page view, takes its word from the session (`enter ... from=reread`,
+`from=checkpoint`). The move back to the section's start is a `reposition()`: a new audit segment, not a
+violation; the meter counts the reread's words.
 
 **Sentence steps** (`src/reading/RsvpPosition.h`): back goes to the start of the current sentence, or
 of the previous one when already at a start; forward to the next sentence. Held (key path), they
@@ -253,16 +281,19 @@ are decimal, times in ms.
 | Line | When |
 | --- | --- |
 | `state <missing\|read\|invalid\|unreadable\|no-memory> book_wpm=<w> book_words=<k> default_wpm=<w> default_words=<k> wpm=<w> words_per_update=<k> position=<none\|rsvp\|page> ch=<c> word=<w>` | RSVP read the state file: the book's overrides (0: none), the global default, the values used, the saved position |
-| `enter ch=<spine> page_offset=<o> word=<w> chapter_words=<n> activity_bytes=<b> from=<page\|saved\|resumed\|continue>` | RSVP opened at word `w`, by which rule ("Where RSVP opens"; `continue`: Continue on the banner) |
+| `enter ch=<spine> page_offset=<o> word=<w> chapter_words=<n> activity_bytes=<b> from=<page\|saved\|resumed\|continue\|reread\|checkpoint>` | RSVP opened at word `w`, by which rule ("Where RSVP opens"; `continue`: Continue on the banner; `reread`: the session's reread place; `checkpoint`: after the break of a checkpoint that ended in page view, task C4) |
 | `book state <read\|invalid\|unreadable\|no-memory> mode=<none\|rsvp\|page> ch=<c> word=<w>` | A book with a state file opened (`openedInRsvp()`) |
 | `play ch=<spine> word=<w> wpm=<t> words_per_update=<k>` | Play |
 | `frame ch=<spine> first=<i> last=<j> words=<k> hold=<ideal ms> ms=<update ms> text="<text>"` | After every frame shown; `ms` is the backend's measured update time |
 | `clear ch=<spine> ms=<ms>` | A clearing refresh during playback (clearing policy) |
 | `chapter ch=<spine> word=<w> chapter_words=<n>` | Playback moved into the next chapter |
-| `pause reason=<pause\|non-prose\|end-of-book\|index-rebuilt\|display-timeout\|checkpoint> ch=<spine> word=<next word> target=<wpm> delivered=<wpm.d> words=<n> active_ms=<ms> updates=<n> clears=<n> mean_update_ms=<ms> max_update_ms=<ms> audit=<ok\|violated> drawn=<n> segments=<n> violations=<n> gaps=<n> repeats=<n> skipped=<n> declared=<n>` | Playback ended; meter (`DeliveredWpmMeter::stats()`) and word-order audit for the session. Followed by `[DSP] stats ...` |
+| `pause reason=<pause\|non-prose\|end-of-book\|index-rebuilt\|display-timeout\|checkpoint\|reread-end> ch=<spine> word=<next word> target=<wpm> delivered=<wpm.d> words=<n> active_ms=<ms> updates=<n> clears=<n> mean_update_ms=<ms> max_update_ms=<ms> audit=<ok\|violated> drawn=<n> segments=<n> violations=<n> gaps=<n> repeats=<n> skipped=<n> declared=<n>` | Playback ended; meter (`DeliveredWpmMeter::stats()`) and word-order audit for the session. Followed by `[DSP] stats ...` |
 | `pause screen focus=<Item> refresh=<clear\|update> status="<first line>"` | The pause screen was refreshed |
 | `sentence <back\|forward> ch=<spine> from=<w> to=<w>` | A sentence step |
 | `leave to=<page-view\|menu\|exit> ch=<spine> word=<w> offset=<visible offset>` | Leaving RSVP |
+| `reread ch=<spine> word=<w>` | A reread in RSVP starts here, after the screens closed (task C4) |
+| `leave to=reread-page ch=<c> word=<w> offset=<o>` | A reread in page view: RSVP closes to the page holding the section's first word |
+| `leave to=checkpoint-done end=<finished\|skipped\|failed>` | A checkpoint that fired in page view ended over RSVP after a reread: the reader resumes it |
 | `leave to=checkpoint ch=<spine> first=<w> last=<w>` | Stopped at a checkpoint: the frame on screen (its last word ends the section); CheckpointActivity follows |
 | `leave to=item kind=<image\|table\|code> ch=<spine> word=<next word> offset=<item start offset>` | Handing over to page view at a non-prose item |
 | `[ERR] [RSVP] display timeout ch=<spine> word=<next word>: pausing` | A word update timed out; the pause follows |
@@ -281,8 +312,8 @@ are decimal, times in ms.
 
 ## Memory
 
-The activity is one heap object made when RSVP opens (`activity_bytes` in the enter line, 5,464
-bytes in the simulator: the scheduler with its 300-byte frame, the 1.9 KB index reader, the 2.3 KB
+The activity is one heap object made when RSVP opens (`activity_bytes` in the enter line, 5,512
+bytes in the simulator since task C4, which added one flag: the scheduler with its 300-byte frame, the 1.9 KB index reader, the 2.3 KB
 sentence window, the band geometry; R4b's entry parameters, values, status and last saved place add
 40 bytes; R5's `Entry::after`, timeout watch and two flags 24 bytes). The `HandOff` the reader makes
 at each entry (one `make_shared`, as before) grows by `ItemStop`, the meter and audit kept across an

@@ -178,12 +178,18 @@ inline constexpr Screen PAUSE{PAUSE_ZONES, static_cast<uint8_t>(sizeof(PAUSE_ZON
 // view, which shows the next words otherwise, becomes "Back to the question". Play stays the default, so
 // the key path is Up x2 and hold.
 inline constexpr Zone PAUSE_REREAD_ZONES[] = {
-    {Item::Exit, 16, 52, 136, 64, false},           {Item::Menu, 172, 52, 136, 64, false},
-    {Item::PageView, 328, 52, 136, 64, false},      {Item::BackToQuestion, 16, 128, 448, 64, false},
-    {Item::SentenceBack, 16, 204, 448, 64, true},   {Item::Play, 16, 280, 448, 120, false},
-    {Item::SentenceForward, 16, 412, 448, 64, true}, {Item::WpmDown, 16, 488, 96, 64, true},
-    {Item::WpmUp, 368, 488, 96, 64, true},          {Item::WordsDown, 16, 564, 96, 64, true},
-    {Item::WordsUp, 368, 564, 96, 64, true},        {Item::SaveDefault, 16, 640, 216, 64, false},
+    {Item::Exit, 16, 52, 136, 64, false},
+    {Item::Menu, 172, 52, 136, 64, false},
+    {Item::PageView, 328, 52, 136, 64, false},
+    {Item::BackToQuestion, 16, 128, 448, 64, false},
+    {Item::SentenceBack, 16, 204, 448, 64, true},
+    {Item::Play, 16, 280, 448, 120, false},
+    {Item::SentenceForward, 16, 412, 448, 64, true},
+    {Item::WpmDown, 16, 488, 96, 64, true},
+    {Item::WpmUp, 368, 488, 96, 64, true},
+    {Item::WordsDown, 16, 564, 96, 64, true},
+    {Item::WordsUp, 368, 564, 96, 64, true},
+    {Item::SaveDefault, 16, 640, 216, 64, false},
     {Item::SaveBook, 248, 640, 216, 64, false},
 };
 inline constexpr Screen PAUSE_REREAD{
