@@ -1,0 +1,47 @@
+// GitHub Codespaces / dev container for trying the firmware in the BOOX Picco
+// simulator. Once the Codespace is open, run in its terminal:
+//
+//   ./scripts/sim.sh
+//
+// and open the address it prints (docs/SIMULATOR.md). Creating the Codespace
+// already installs the tools and builds the simulator (updateContentCommand),
+// so that first run only starts it. scripts/sim.sh does not depend on this
+// file: it installs anything missing itself.
+{
+  "name": "eink-learner-aid (Picco simulator)",
+  // Plain Ubuntu 24.04 with a non-root "vscode" user that has sudo; the same
+  // Ubuntu release the project's cloud sessions use.
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  // A small init process as PID 1, so the display and simulator processes
+  // that ./scripts/sim.sh starts in the background are cleaned up (reaped)
+  // once they exit or are stopped.
+  "init": true,
+  "hostRequirements": {
+    // The first build compiles the whole firmware: about 3 minutes on 4 cores.
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  // Install the packages, PlatformIO and the simulator's libraries, copy the
+  // test books and build the simulator; starts nothing. Also runs when a
+  // prebuild is configured for the repository.
+  "updateContentCommand": "./scripts/sim.sh --prepare",
+  "forwardPorts": [6080],
+  "portsAttributes": {
+    "6080": {
+      "label": "Picco simulator (noVNC)",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  // Do not forward anything else on its own: the VNC server (5901) listens on
+  // localhost only and is reached through noVNC; the simulator's file-transfer
+  // server (8080/8081) can be forwarded by hand from the Ports tab.
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["docs/SIMULATOR.md"]
+    }
+  }
+}

@@ -2,11 +2,16 @@
 # Prepare a machine to build `picco` (firmware) and `simulator_picco` offline.
 #
 #   ./scripts/cloud-setup.sh
+#   ./scripts/cloud-setup.sh --simulator-only
 #
 # Installs system packages, PlatformIO, the git submodules, and every
 # toolchain, framework package and library both environments need, so that a
 # later `pio run -e picco` / `pio run -e simulator_picco` downloads nothing.
 # Idempotent and non-interactive; a second run only checks.
+#
+# --simulator-only prepares `simulator_picco` alone (platform `native`): no
+# ESP32 platform, toolchain or Arduino framework is fetched. scripts/sim.sh
+# uses it, because the owner's Codespace only runs the simulator.
 #
 # Works in Claude Code cloud sessions (TLS-intercepting proxy), GitHub Actions
 # and Codespaces. See docs/net-smoke-report.md for why PlatformIO's packages
@@ -24,6 +29,19 @@ set -euo pipefail
 
 PIO_VERSION="6.2.0"
 ENVS=(picco simulator_picco)
+for arg in "$@"; do
+  case "$arg" in
+    --simulator-only) ENVS=(simulator_picco) ;;
+    -h | --help)
+      sed -n '2,/^$/s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"
+      exit 0
+      ;;
+    *)
+      printf '[setup] unknown option: %s (try --help)\n' "$arg" >&2
+      exit 2
+      ;;
+  esac
+done
 APT_PACKAGES=(
   build-essential cmake git curl ca-certificates xz-utils unzip
   python3 python3-venv pkg-config
@@ -181,6 +199,7 @@ phase_prefetch() {
 
 say "repo: $REPO_ROOT"
 say "PlatformIO core dir: ${PLATFORMIO_CORE_DIR:-$HOME/.platformio}"
+say "environments: ${ENVS[*]}"
 if agent_proxy_status >/dev/null; then
   say "intercepting proxy: detected (Claude Code agent proxy at $(proxy_url)); using the pre-fetch path, because 'pio run' alone fails TLS verification here"
 elif [[ -n "$(proxy_url)" ]]; then
@@ -202,4 +221,8 @@ say "  total                  ${TOTAL}s"
 if (( TOTAL > 300 )); then
   say "note: over 300s; cloud environments cache a setup script only if it finishes in about five minutes"
 fi
-say "ready: pio run -e picco && pio run -e simulator_picco"
+if [[ ${#ENVS[@]} -eq 1 ]]; then
+  say "ready: pio run -e ${ENVS[0]}"
+else
+  say "ready: pio run -e picco && pio run -e simulator_picco"
+fi
