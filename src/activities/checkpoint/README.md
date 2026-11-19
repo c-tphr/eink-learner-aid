@@ -21,7 +21,7 @@ Everything here is compiled only with the RSVP feature flag (`docs/ARCHITECTURE-
 | `CheckpointActivity.h/.cpp` | The activity: input, flow events, state file writes, drawing | no (simulator scenarios) |
 | `CheckpointScreens.h/.cpp` | Pure: flow state to screen, items and default highlight per screen, item to flow event, answer paging, how a checkpoint ended | yes |
 | `CheckpointSave.h/.cpp` | Pure: what a transition writes to the state file, the grade time | yes |
-| `RereadScreens.cpp` | The page-view reread bar (drawn over the page, S4 row 31) and the list a side-key hold opens during a reread (task C4) | no (simulator scenarios) |
+| `RereadScreens.cpp` | The page-view reread bar (drawn over the reader's status-bar row, below the text area; its layout is `controls::rereadBarLayout()`, host-tested) and the list a side-key hold opens during a reread (task C4) | the layout yes, the drawing no (simulator scenarios) |
 
 Host tests: `test/checkpoint_activity` (`CheckpointScreensTest`, `CheckpointSaveTest`).
 

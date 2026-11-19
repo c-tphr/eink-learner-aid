@@ -9,7 +9,7 @@ screens (S4 rows 30-31); device-test (D3a) screens add their screens and zones t
 
 | File | What it holds | Host-tested |
 | --- | --- | --- |
-| `ControlMap.h/.cpp` | Key roles (`KEYS`), timings (hold 0.7 s, repeat 0.4 s, arming 0.3 s), events, actions and contexts, `BINDINGS` and `resolve()`, screens with their items in focus order and touch zones (`PAUSE`; `BANNER`, the non-prose banner's Continue and Stay, task R5; `CHECKPOINT_PROMPT`, `CHECKPOINT_ANSWER`, `CHECKPOINT_INCORRECT`; `PAUSE_REREAD`, `REREAD_BAR`, `REREAD_CHOICES`, task C4), `hit()` | yes |
+| `ControlMap.h/.cpp` | Key roles (`KEYS`), timings (hold 0.7 s, repeat 0.4 s, arming 0.3 s), events, actions and contexts, `BINDINGS` and `resolve()`, screens with their items in focus order and touch zones (`PAUSE`; `BANNER`, the non-prose banner's Continue and Stay, task R5; `CHECKPOINT_PROMPT`, `CHECKPOINT_ANSWER`, `CHECKPOINT_INCORRECT`; `PAUSE_REREAD`, `rereadBarLayout()`, `REREAD_CHOICES`, task C4), `hit()` | yes |
 | `ControlGesture.h/.cpp` | `GestureReader`: one frame of input to one event (short press on release, hold, hold repeat, Confirm, tap, Back, vertical swipe with its start; the arming guard of a new screen) | yes |
 | `ControlInput.h/.cpp` | The adapter: the only control code that reads `MappedInputManager` | no (simulator scenarios) |
 | `ControlDefaults.h` | Seeds "Page turn long press" from `KEYS` before the settings load (called from `src/main.cpp`) | |
@@ -47,7 +47,7 @@ No checkpoint item repeats while held. Skip checkpoint is last in focus order on
 | Screen | Items in focus order (default first unless noted) | Zones |
 | --- | --- | --- |
 | `PAUSE_REREAD` | The pause screen's items with `BackToQuestion` after PageView; Play stays the default, so the key path is Up x2, hold; Page view, Menu and Exit are one Up further than on `PAUSE` | `BackToQuestion` 16,128,448,64 (the row that shows the next words otherwise); the rest as `PAUSE` |
-| `REREAD_BAR` | `BackToQuestion`, the page-view bar's button. Touch only: the reader checks a tap against it before its own taps | 248,4,216,64 |
+| `rereadBarLayout()` | `BackToQuestion`, the page-view bar's button. Touch only: the reader checks a tap against it before its own taps. Computed from the reader's metrics: a strip from its text area's bottom to the screen's bottom edge (at least `REREAD_BAR_MIN_H`, 24 px, growing upward by at most one line of text), the button 248 wide at the right. This replaces S4 row 31's top bar | Default settings: strip 773-800, button 216,774,248,26 (`src/reading/README.md`, "Rereading", has the other settings) |
 | `REREAD_CHOICES` | `BackToQuestion`, `SpeedReadHere`, `KeepReading`: the list a side-key hold opens in page view during a reread, where the hold would otherwise enter RSVP | The first three rows of `CHOICE_ZONES` (16,72 / 16,152 / 16,232, 448x72) |
 
 `BackToQuestion`, `SpeedReadHere` and `KeepReading` are in RSVP's two item switches (`itemLabel()`,

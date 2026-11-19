@@ -12,11 +12,11 @@ reference images are in `tools/simtest/scenarios/cp_reread_*/refs/`; the behavio
 
 | File | Screen |
 | --- | --- |
-| `cp_reread_rsvp_end-t_rsvp_reread_pause.png` | RSVP's pause screen at the start of a reread: status "Rereading", "Back to the question" in the row under Exit, Menu and Page view (S4 row 30), Play highlighted |
+| `cp_reread_rsvp_end-t_rsvp_reread_pause.png` | RSVP's pause screen at the start of a reread: status "Rereading", "Back to the question" in the row under Exit, Menu and Page view (S4 row 30), Play highlighted, and the next words ("The Visitor from the Mainland On the") in the row above the key hint |
 | `cp_reread_rsvp_end-t_prompt_after_reread.png` | The prompt after the reread reached the section's end by itself: question 2 of 3, answer hidden, "Recorded earlier: Incorrect" |
-| `cp_reread_page_early-t_page_reread_bar.png` | Page view at the section's first page with the reread bar: "Rereading this section" and "Back to the question" (S4 row 31, 248,4,216,64) |
+| `cp_reread_page_early-t_page_reread_bar.png` | Page view at the section's first page with the reread bar over the status-bar row, below the text area (y 773-800): "Rereading" and "Back to the question" (button 216,774,248,26). Every line of the page is visible |
 | `cp_reread_page_early-k_reread_list.png` | The list a side-key hold opens during a page-view reread: "Back to the question" (default), "Speed read from here", "Keep reading" |
-| `cp_reread_no_other_fire-k_reread_item_banner.png` | An RSVP reread stopped at the image inside s0001: page view with the non-prose banner and the reread bar; Continue goes back into the reread |
+| `cp_reread_no_other_fire-k_reread_item_banner.png` | An RSVP reread stopped at the image inside s0001: page view with the non-prose banner, which covers the bottom of the page (the reread bar included); Continue goes back into the reread |
 | `cp_reread_twice-t_rsvp_resume_after_page_reread.png` | A checkpoint that fired in RSVP, reread in page view, skipped: RSVP's pause screen after the break (chapter 3 word 0), "Checkpoint done" |
 | `cp_reread_restart-t_reopened_page.png` | After a power loss during a page-view reread: the book reopens at the reread page without the bar (nothing restores the reread until task C5) |
 

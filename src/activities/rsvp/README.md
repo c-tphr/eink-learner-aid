@@ -246,8 +246,9 @@ without checkpoint data never flags one) pauses with `reason=checkpoint` as befo
 reread in RSVP opens, or RSVP seeks, at the section's first word (or the reread place after a mode
 switch) on the pause screen with Play highlighted; the status line starts with "Rereading" and the
 row under Exit, Menu and Page view (the next words otherwise) is "Back to the question"
-(`controls::PAUSE_REREAD`, 16,128,448,64; keys: Up x2 from Play, hold; S4 row 30). Page view, Menu and
-Exit are one Up further away. During the reread:
+(`controls::PAUSE_REREAD`, 16,128,448,64; keys: Up x2 from Play, hold; S4 row 30). The next words move to
+the note row above the key hint (y 712-752), unless a note ("End of the book", "This chapter cannot be
+speed read") needs it. Page view, Menu and Exit are one Up further away. During the reread:
 
 - the word source still flags the section's end; `rsvpStop()` gives `RereadEnd` instead of a Fire
   step, so playback stops with the section's last word on screen (`pause reason=reread-end`, then
@@ -258,8 +259,16 @@ Exit are one Up further away. During the reread:
 - every save of the position (pause, Page view, Menu, Exit, Home, sleep, a non-prose item, an entry)
   writes the reread place (`active_checkpoint.reread`) through the session instead of `position`,
   which keeps the place before the break;
-- a non-prose item hands over to page view as always; the reader shows the reread bar with the banner,
-  and Continue opens RSVP again inside the reread.
+- a non-prose item hands over to page view as always; the banner covers the bottom of the page, the
+  reread bar included, and Continue opens RSVP again inside the reread.
+
+**The page-view reread bar** (task C4; replaces S4 row 31's top bar at 248,4,216,64, which hid the page's
+first two lines). In page view the reread shows a strip over the reader's status-bar row, from the
+bottom of its text area to the screen's bottom edge: "Rereading" (or "Rereading this section" where it
+fits) at the left and a "Back to the question" button at the right. With the default settings the
+strip is y 773-800 and the button 216,774,248,26; it covers no line of text. Other settings, and the
+key path (a side-key hold opens a list whose default row is "Back to the question"):
+`src/reading/README.md`, "Rereading".
 
 When the screens close after a reread: Reread in page view closes RSVP to the page holding the
 section's first word (`leave to=reread-page`); a checkpoint that fired in RSVP and ends goes on here
