@@ -12,7 +12,7 @@ What happens in the session:
 ## How to use this sheet
 
 * Do one numbered line at a time. Tick the box when it is done.
-* Text in a grey box that starts with `powershell` is a **command**. Type it exactly into the PowerShell window and press Enter.
+* A line that starts with "Command:" holds a **command** in a grey box. Type only the text in the box, exactly, into the PowerShell window and press Enter. A line that starts with "Phrase:" holds a confirmation phrase: type only the text in the box.
 * Text in a grey box after "you see" is what the **tool prints**, or what the **Picco's screen** shows. It may be one line of a longer text.
 * `<...>` stands for something that differs on your PC, for example a file name or a version number.
 * Lines with `____` are for you to write on. The same fields are on the [results sheet](#appendix-e-results-sheet) at the end.

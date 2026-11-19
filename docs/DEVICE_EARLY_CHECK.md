@@ -33,7 +33,7 @@ If you use the repository ZIP now and get the kit later, the session checklist (
 
 ## 2. Setup (once; needs the internet)
 
-Type:
+Type the command in the grey box (only the text in the box, not the word "Command:"):
 
 Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 setup`
 
