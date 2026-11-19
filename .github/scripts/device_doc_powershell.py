@@ -225,8 +225,8 @@ def check_lines(shell, scratch, checks):
         os.remove(os.path.join(folder, "sd-card", "books", "fixture.epub"))
 
     code, out, err, shown = run("manifest", kit("incomplete kit", removed))
-    checks.check("MANIFEST line, one file missing: names it after 'DIFFERENT:' (and PowerShell shows an error)",
-                 out[-2:] == ["DIFFERENT: sd-card/books/fixture.epub", "Check done."]
+    checks.check("MANIFEST line, one file missing: names it after 'DIFFERENT:', after a 'Cannot find path' error",
+                 out[-2:] == ["DIFFERENT: sd-card/books/fixture.epub", "Check done."] and "Cannot find path" in err
                  and not [line for line in out if line.startswith("DIFFERENT:")][1:], shown)
 
     os.makedirs(stick)

@@ -105,7 +105,7 @@ Write the version here: ____________
 
    Command: <!--pwsh-->`Get-Content .\MANIFEST.sha256 | ForEach-Object { $p = $_.Split(' ', 3); if ((Get-FileHash $p[2]).Hash -ne $p[0]) { 'DIFFERENT: ' + $p[2] } }; 'Check done.'`
 
-   It must print only `Check done.`. A line starting `DIFFERENT:` means the extraction went wrong: delete the kit folder and extract again.
+   It must print only `Check done.`. A line starting `DIFFERENT:` means the extraction went wrong: delete the kit folder and extract again. (When a file is missing, PowerShell also shows a red error with "Cannot find path" just before its `DIFFERENT:` line.)
 
 ### What is in the kit folder
 
