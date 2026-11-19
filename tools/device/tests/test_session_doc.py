@@ -265,6 +265,15 @@ def test_every_typed_session_command_is_marked(doc):
     assert not unmarked, "a session.ps1 command without the <!--cmd--> marker: %s" % unmarked
 
 
+@pytest.mark.parametrize("doc", [SESSION_DOC, EARLY_DOC], ids=["session", "early-check"])
+def test_every_other_powershell_line_is_marked(doc):
+    """PowerShell lines that are not session.ps1 commands carry <!--pwsh-->: the device-tool-windows
+    job runs each of them (.github/scripts/device_doc_powershell.py)."""
+    text = read(doc)
+    unmarked = re.findall(r"(?<!<!--pwsh-->)`(\(?(?:Get-|Set-|Remove-|Test-|Expand-)[^`]*)`", text)
+    assert not unmarked, "a PowerShell line without the <!--pwsh--> marker: %s" % unmarked
+
+
 def test_typed_phrases_are_the_tools_phrases():
     typed = marked(SESSION_DOC, "type")
     assert set(typed) == PHRASES, typed

@@ -247,6 +247,17 @@ jobs:
           $results | Format-Table -AutoSize | Out-String -Width 220 | Tee-Object -FilePath (Join-Path $logDir 'results.txt') | Write-Host
           if ($results | Where-Object { -not $_.OK }) { Write-Host '::error::a session.ps1 command did not exit as documented'; exit 1 }
           exit 0
+      - name: Checklist PowerShell lines and the tool's printed commands, typed as shown
+        # The lines docs/DEVICE_SESSION.md asks the owner to type by hand (marked <!--pwsh-->: the
+        # zip's hash, the MANIFEST.sha256 loop, Get-FileHash) run in this shell, taken from the
+        # document, on a kit zip made from synthetic images: intact, then damaged. Then every
+        # command piccoflash prints for the owner runs as printed (plus -DryRun) from the session
+        # folder, including a restore of a backup whose path has a space, an apostrophe and a $.
+        if: ${{ !cancelled() && steps.fixture.outcome == 'success' }}
+        run: |
+          python .github/scripts/device_doc_powershell.py --shell $env:MATRIX_EXE `
+            --scratch (Join-Path $env:RUNNER_TEMP 'doc-lines') --session (Join-Path $env:RUNNER_TEMP 'picco session')
+          if ($LASTEXITCODE -ne 0) { Write-Host '::error::a checklist line or a printed command did not do what the sheets say'; exit 1 }
       - name: Upload session logs
         if: always()
         uses: actions/upload-artifact@v6

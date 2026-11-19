@@ -7,7 +7,8 @@ labels: ["area:device"]
 
 <!--
 This repository is PUBLIC. Attach or paste ONLY the summary file
-(work\early-check-summary-<time>.txt) made by `.\session.ps1 summary`.
+(work\session-summary-<time>.txt; older kits named it early-check-summary-<time>.txt)
+made by `powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`.
 
 NEVER attach:
   - picco-backup-*.bin, or its .json (the backup holds the Picco's settings area, possibly
@@ -36,7 +37,7 @@ Paste the `[session] STOPPED:` line here (it contains no private data):
 
 ## Summary file
 
-Attach `early-check-summary-....txt`, or paste its whole text between the lines below:
+Attach `session-summary-....txt` (or, from an older kit, `early-check-summary-....txt`), or paste its whole text between the lines below:
 
 ```
 

@@ -18,7 +18,8 @@ Keep those on your PC and on your USB stick or second disk only.
 Attach ONLY:
   - every file from /rsvp-bench/ on the Picco's SD card (*.json; ignore *.tmp);
   - the serial logs work\serial-<time>.log (search them for your Wi-Fi network's name first);
-  - the summary work\early-check-summary-<time>.txt made by `session.ps1 summary`.
+  - the summary work\session-summary-<time>.txt made by
+    `powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`.
 If GitHub refuses a .json or .log file, put them in one ZIP (with no .bin inside) and attach that.
 
 Copy the answers from the results sheet (Appendix E of docs/DEVICE_SESSION.md).
@@ -104,7 +105,7 @@ Flash output from `Writing (do not unplug the Picco until this says DONE)` to `D
 
 - [ ] Every file from `/rsvp-bench/`
 - [ ] The serial log(s) `serial-<time>.log`, checked for my Wi-Fi network's name
-- [ ] The summary `early-check-summary-<time>.txt`
+- [ ] The summary `session-summary-<time>.txt`
 - [ ] I attached no `.bin` file, no backup, no `work` folder and nothing from `work\logs`
 
 ## How it felt (open questions)
@@ -118,7 +119,7 @@ Flash output from `Writing (do not unplug the Picco until this says DONE)` to `D
 
 - Windows version, PowerShell version:
 - COM port; did it change after a restart?
-- Antivirus, network or other problems with `session.ps1`:
+- Antivirus, network or other problems with the tool:
 
 ## Anything that went wrong
 
