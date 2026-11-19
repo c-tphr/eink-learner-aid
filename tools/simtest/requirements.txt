@@ -1,0 +1,4 @@
+# tools/simtest: Python 3.11 or newer (tomllib), the standard library and Pillow.
+# System packages: xvfb (Xvfb), and the simulator's own SDL2/OpenSSL runtime.
+Pillow>=10.1
+pytest>=7  # only for the harness's self-tests
