@@ -1,0 +1,31 @@
+# Sleep and wake through the simulator's relaunch: SLEEP holds the power key,
+# the firmware enters deep sleep, a key press while asleep makes the simulator
+# exec itself again (same pid, same SD folder) and run the steps after `wake`.
+# After a sleep the firmware reopens the last book by itself.
+description = "Read to chapter 1, sleep, wake with the power key: the book reopens on the same page"
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+]
+
+steps = [
+  { wait_screen = "Browse Files" },
+  { press = "ENTER" },
+  { wait_screen = "SD card | books" },
+  { press = "ENTER" },
+  { wait_screen = "fixture | .epub" },
+  { press = "ENTER" },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { shot = "before_sleep" },
+  { sleep = true },
+  { wait_log = "Entering deep sleep" },
+  { wake = "POWER" },
+  # From here on the relaunched process runs CROSSPOINT_SIM_INPUT_SCRIPT_AFTER_WAKE.
+  { wait_log = "Loaded cache: 1, 0", note = "the reader reopened spine 1, page 0" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { shot = "after_wake" },
+  { compare = "before_sleep" },
+  { compare = "after_wake", same_as = "before_sleep" },
+]

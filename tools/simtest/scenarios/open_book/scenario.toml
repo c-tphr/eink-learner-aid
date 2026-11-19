@@ -1,0 +1,51 @@
+# Opens the fixture book from a fresh SD card and turns pages by key and by touch.
+# Screens: Home, file browser (root, /books), title page, then four page turns.
+description = "Home -> file browser -> open fixture.epub, turn pages by key and by swipe; the firmware writes its book cache and progress"
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+]
+
+steps = [
+  { wait_screen = "Browse Files", note = "a fresh card boots to Home with Browse Files selected" },
+  { shot = "home" },
+  { press = "ENTER" },
+  { wait_screen = "SD card | books" },
+  { shot = "files_root" },
+  { tap = [240, 138], note = "touch the 'books' row" },
+  { wait_screen = "fixture | .epub" },
+  { shot = "files_books" },
+  { press = "ENTER", note = "open the selected book" },
+  # Each page turn ends with this log line, after the page is fully drawn
+  # (including the grayscale pass) and progress.bin is written.
+  { wait_log = "Progress saved: spine=0 offset=0 page=0" },
+  { shot = "title_page" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { shot = "key_ch1_p1" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { shot = "key_ch1_p2" },
+  { swipe = [400, 400, 80, 400], note = "swipe left: the default touch page-turn gesture" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { shot = "swipe_ch1_p3" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=3" },
+  { shot = "swipe_ch1_p4" },
+  { screen_has = "4/5", note = "status bar: page 4 of 5 in chapter 1" },
+  { screen_lacks = "The Lamp Room 1/5" },
+  { quit = true },
+  { expect_file = "books/fixture.epub" },
+  { expect_file = ".crosspoint/epub_*/book.bin" },
+  { expect_file = ".crosspoint/epub_*/sections/1.bin" },
+  { expect_file = ".crosspoint/epub_*/progress.bin", hex_prefix = "0100 0300" },
+  { expect_json = ".crosspoint/state.json", pointer = "/openEpubPath", equals = "/books/fixture.epub" },
+  { compare = "home" },
+  { compare = "files_root" },
+  { compare = "files_books" },
+  { compare = "title_page" },
+  { compare = "key_ch1_p1" },
+  { compare = "key_ch1_p2" },
+  { compare = "swipe_ch1_p3" },
+  { compare = "swipe_ch1_p4" },
+]
