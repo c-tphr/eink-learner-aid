@@ -1580,7 +1580,7 @@ bool EpubReaderActivity::openRereadChoices() {
   return true;
 }
 
-void EpubReaderActivity::notePageShown() {
+void EpubReaderActivity::notePageShown(const int textBottom) {
   if (!RSVP_FEATURE_ENABLED || !readingSession || !section) return;
   readingsession::PageSpan page;
   page.spine = currentSpineIndex;
@@ -1589,6 +1589,8 @@ void EpubReaderActivity::notePageShown() {
     page.nextStartOffset = section->getVisibleTextOffsetForPage(static_cast<uint16_t>(section->currentPage + 1))
                                .value_or(page.nextStartOffset);
   }
+  page.textBottom = static_cast<int16_t>(textBottom);
+  page.lineHeight = static_cast<int16_t>(renderer.getLineHeight(SETTINGS.getReaderFontId()));
   readingsession::pageShown(renderer, *readingSession, page);
 }
 
@@ -2262,7 +2264,8 @@ void EpubReaderActivity::renderBook() {
     const auto start = millis();
     renderContents(std::move(p), orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
     LOG_DBG("ERS", "Rendered page in %dms", millis() - start);
-    notePageShown();  // RSVP builds: during a page-view reread, its bar over the page
+    // RSVP builds: during a page-view reread, its bar over the status-bar row, below the text area.
+    notePageShown(renderer.getScreenHeight() - orientedMarginBottom);
     lastRenderCompleteMs = millis();
     markPageRendered();
   }

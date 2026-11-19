@@ -74,6 +74,7 @@ steps = [
   { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Rereading · 1000 WPM target · \\d+ actual\"" },
   { wait_log = "\\[CTL\\] Pause armed" },
   { screen_has = "Back to the question" },
+  { screen_has = "The Visitor from the Mainland On the", note = "where Play starts: the next words, moved to the row above the key hint" },
   { shot = "t_rsvp_reread_pause" },
   { tap = [240, 340], note = "Play: the section again" },
   { wait_log = "\\[RSVP\\] play ch=2 word=311 wpm=1000 words_per_update=1" },

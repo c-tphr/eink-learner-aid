@@ -209,7 +209,7 @@ class EpubReaderActivity final : public ReaderActivity {
   bool showCheckpoint(std::unique_ptr<Activity> activity, const std::shared_ptr<readingsession::CheckpointRun>& run);
   bool openRereadPrompt();
   bool openRereadChoices();
-  void notePageShown();
+  void notePageShown(int textBottom);
   // Toolbar reader menu (see Overlay above).
   bool usesToolbarMenu() const;
   void openOverlay(Overlay target);

@@ -86,7 +86,7 @@ steps = [
   { wait_log = "\\[CPT\\] resume end=finished mode=page ch=1 word=233 reread=1" },
   { wait_log = "\\[CPT\\] page resume later-page ch=1 word=233 ", note = "after the original break, not where the jump went" },
   { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
-  { screen_lacks = "Rereading this" },
+  { screen_lacks = "Back to the question" },
 
   # Pass 2: keys, RSVP.
   { press = "UP" },

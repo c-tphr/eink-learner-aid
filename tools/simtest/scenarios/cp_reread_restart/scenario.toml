@@ -76,7 +76,7 @@ steps = [
   { tap = [240, 175], note = "the continue-reading card" },
   { wait_log = "\\[CPT\\] session open checkpoints=1 " },
   { wait_log = "Progress saved: spine=2 offset=\\d+ page=4", note = "the reader's own progress: the reread page" },
-  { screen_lacks = "Rereading this", note = "nothing restores the reread yet (task C5)" },
+  { screen_lacks = "Back to the question", note = "nothing restores the reread yet (task C5)" },
   { shot = "t_reopened_page" },
   { swipe = [400, 400, 80, 400] },
   { wait_log = "\\[CPT\\] page advance ch=2 first=381 from=381 last=489 step=none reread=-" },

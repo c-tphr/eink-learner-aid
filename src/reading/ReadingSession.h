@@ -38,6 +38,10 @@ struct PageSpan {
   int spine = 0;
   uint32_t startOffset = 0;
   uint32_t nextStartOffset = UINT32_MAX;  // UINT32_MAX on the chapter's last page
+  // pageShown() only (task C4): where the reader's text area ends (its screen height minus its bottom
+  // margin) and one line of its text, for the reread bar (controls::rereadBarLayout()).
+  int16_t textBottom = 0;
+  int16_t lineHeight = 0;
 };
 
 // A checkpoint that fired, kept by the session while it is in progress and by the result handlers.
@@ -168,6 +172,7 @@ inline std::shared_ptr<CheckpointRun> checkpointRun(const reading::ReadingSessio
 #include "ChapterWordIndex.h"
 #include "ReadingSessionRules.h"
 #include "activities/checkpoint/CheckpointLaunch.h"
+#include "controls/ControlMap.h"
 
 namespace readingsession {
 
@@ -279,6 +284,9 @@ class ReadingSession {
   const PageReading& pageReadingWord() const { return pageReading; }
   // Why page view moved last (notePageMove()); a page shown without one was a jump.
   void notePageSource(checkpoint::NavSource source) { pageSource = source; }
+  // The reread bar's button as last drawn (RenderLock), for a tap on it; none before the first draw.
+  void setRereadButton(const controls::Zone& button) { rereadButton = button; }
+  const controls::Zone& rereadButtonZone() const { return rereadButton; }
   checkpoint::NavSource takePageSource();
   // The visible offset of a word's start (the page holding it), and a chapter's word count.
   bool wordOffset(int spine, uint32_t word, uint32_t& offset);
@@ -320,6 +328,7 @@ class ReadingSession {
   bool rsvpResumeValid = false;
   checkpoint::Place rsvpResume;
   uint16_t rsvpResumeFrom = 0;
+  controls::Zone rereadButton{controls::Item::BackToQuestion, 0, 0, 0, 0, false};
 };
 
 }  // namespace reading

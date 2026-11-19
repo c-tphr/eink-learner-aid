@@ -258,18 +258,57 @@ TEST(ControlMap, RereadPauseScreenAddsBackToTheQuestion) {
   EXPECT_STREQ(itemName(Item::BackToQuestion), "BackToQuestion");
 }
 
-TEST(ControlMap, RereadBarAndListMatchS4Row31) {
-  ASSERT_EQ(REREAD_BAR.count, 1);
-  const Zone& bar = REREAD_BAR.zones[0];
-  EXPECT_EQ(bar.item, Item::BackToQuestion);
-  EXPECT_EQ(bar.x, 248);
-  EXPECT_EQ(bar.y, 4);
-  EXPECT_EQ(bar.w, 216);
-  EXPECT_EQ(bar.h, 64);
-  EXPECT_EQ(hit(REREAD_BAR, 356, 36)->item, Item::BackToQuestion) << "S4 section 9, row 31";
-  EXPECT_EQ(hit(REREAD_BAR, 240, 400), nullptr) << "the page itself is not the bar";
-  EXPECT_EQ(hit(REREAD_BAR, 120, 36), nullptr) << "the bar's label is not a target";
+TEST(ControlMap, RereadBarSitsBelowTheTextAreaWithTheDefaultSettings) {
+  // The Picco's reader with the default settings (measured in the simulator: `reread bar metrics`): the
+  // text area ends at y 773 of 800, one line of text is 40 px. The strip covers the status-bar row only.
+  const RereadBarLayout bar = rereadBarLayout(480, 800, 773, 40);
+  EXPECT_EQ(bar.top, 773);
+  EXPECT_TRUE(bar.clearOfText);
+  EXPECT_GE(bar.top, 773) << "the bar's top is at or below the text area's bottom";
+  EXPECT_EQ(bar.button.item, Item::BackToQuestion);
+  EXPECT_EQ(bar.button.x, 216);
+  EXPECT_EQ(bar.button.y, 774);
+  EXPECT_EQ(bar.button.w, 248);
+  EXPECT_EQ(bar.button.h, 26);
+  EXPECT_EQ(bar.button.y + bar.button.h, 800) << "down to the screen's edge";
+  EXPECT_EQ(bar.labelW, 184);
+  const Screen screen{&bar.button, 1, 0};
+  EXPECT_EQ(hit(screen, 340, 787)->item, Item::BackToQuestion) << "the scenarios' tap";
+  EXPECT_EQ(hit(screen, 340, 772), nullptr) << "the text area is not the bar";
+  EXPECT_EQ(hit(screen, 100, 787), nullptr) << "the bar's label is not a target";
+}
 
+TEST(ControlMap, RereadBarWithOtherReaderSettings) {
+  // Measured in the simulator. More space below the text: a taller button, still clear of the text.
+  RereadBarLayout bar = rereadBarLayout(480, 800, 738, 40);  // screen margin 40
+  EXPECT_EQ(bar.top, 738);
+  EXPECT_TRUE(bar.clearOfText);
+  EXPECT_EQ(bar.button.h, 61);
+  bar = rereadBarLayout(480, 800, 768, 40);  // the progress bar shown
+  EXPECT_TRUE(bar.clearOfText);
+  EXPECT_EQ(bar.button.h, 31);
+  // Landscape: the same strip along the 800 px side.
+  bar = rereadBarLayout(800, 480, 453, 40);
+  EXPECT_EQ(bar.top, 453);
+  EXPECT_TRUE(bar.clearOfText);
+  EXPECT_EQ(bar.button.x, 536);
+  EXPECT_EQ(bar.button.h, 26);
+  // The status bar hidden: 8 px below the text area. The strip takes REREAD_BAR_MIN_H and so covers the
+  // bottom 16 px of the text area: at most the last line, never more.
+  bar = rereadBarLayout(480, 800, 792, 40);
+  EXPECT_EQ(bar.top, 800 - REREAD_BAR_MIN_H);
+  EXPECT_FALSE(bar.clearOfText);
+  EXPECT_LE(792 - bar.top, 40);
+  EXPECT_EQ(bar.button.h, 23);
+  // Never more than one line into the text area, however little space there is.
+  bar = rereadBarLayout(480, 800, 800, 10);
+  EXPECT_EQ(bar.top, 790);
+  bar = rereadBarLayout(480, 800, 800, 0);
+  EXPECT_EQ(bar.top, 800) << "no line may be covered: no strip";
+  EXPECT_EQ(bar.button.h, 0);
+}
+
+TEST(ControlMap, RereadListMatchesS4Row31) {
   // The list of the side-key hold: "Back to the question" the default, then Speed read and Keep reading,
   // on the generic list's rows.
   const Item order[] = {Item::BackToQuestion, Item::SpeedReadHere, Item::KeepReading};

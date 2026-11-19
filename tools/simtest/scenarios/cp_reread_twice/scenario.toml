@@ -79,7 +79,7 @@ steps = [
   { wait_log = "\\[RSVP\\] leave to=reread-page ch=2 word=311 offset=\\d+" },
   { wait_log = "\\[CPT\\] reread page ch=2 first=282 last=380 any=1 inside=1 word=311" },
   { wait_log = "\\[CPT\\] reread bar shown" },
-  { tap = [356, 36], note = "the bar's Back to the question" },
+  { tap = [340, 787], note = "the bar's Back to the question" },
   { wait_log = "\\[CPT\\] reread end by=bar event=return-early accepted=1 state=prompt-hidden" },
   { wait_log = "\\[CPT\\] back checkpoint=c0002 prompt=1/3 mode=rsvp " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },

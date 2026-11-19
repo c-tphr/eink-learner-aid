@@ -869,9 +869,10 @@ void RsvpActivity::paintPauseScreen() {
   snprintf(positionLine, sizeof(positionLine), "%s%s", shown.c_str(), line);
   renderer.drawText(UI_10_FONT_ID, MARGIN, POSITION_Y, positionLine);
 
-  // The words Play starts with; during a reread "Back to the question" takes their row (S4 row 30).
+  // The words Play starts with. During a reread "Back to the question" takes their row (S4 row 30) and
+  // they move to the note row above the key hint, unless a note needs it.
   char next[rsvp::FRAME_TEXT_CAPACITY + 1] = {};
-  if (index.isOpen() && !rereading) {
+  if (index.isOpen()) {
     wordindex::IndexWordSource peekSource(index.reader());
     peekSource.seek(position);
     size_t length = 0;
@@ -890,8 +891,10 @@ void RsvpActivity::paintPauseScreen() {
       }
     }
   }
-  renderer.drawCenteredText(UI_12_FONT_ID, NEXT_WORDS_Y + (NEXT_WORDS_H - renderer.getLineHeight(UI_12_FONT_ID)) / 2,
-                            next);
+  if (!rereading) {
+    renderer.drawCenteredText(UI_12_FONT_ID, NEXT_WORDS_Y + (NEXT_WORDS_H - renderer.getLineHeight(UI_12_FONT_ID)) / 2,
+                              next);
+  }
 
   for (int i = 0; i < pauseLayout().count; ++i) paintButton(i);
 
@@ -917,7 +920,12 @@ void RsvpActivity::paintPauseScreen() {
     case Note::None:
       break;
   }
-  if (noteText) renderer.drawCenteredText(UI_10_FONT_ID, NOTE_Y + (HINT_Y - NOTE_Y - smallHeight) / 2, noteText);
+  if (noteText) {
+    renderer.drawCenteredText(UI_10_FONT_ID, NOTE_Y + (HINT_Y - NOTE_Y - smallHeight) / 2, noteText);
+  } else if (rereading) {
+    renderer.drawCenteredText(UI_12_FONT_ID, NOTE_Y + (HINT_Y - NOTE_Y - renderer.getLineHeight(UI_12_FONT_ID)) / 2,
+                              next);
+  }
   renderer.drawCenteredText(UI_10_FONT_ID, HINT_Y + (HINT_H - smallHeight) / 2, tr(STR_RSVP_KEY_HINT));
 }
 

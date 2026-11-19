@@ -19,6 +19,7 @@
 #include <string>
 
 #include "CheckpointScreens.h"
+#include "controls/ControlMap.h"
 
 class Activity;
 class GfxRenderer;
@@ -89,9 +90,10 @@ bool saveTransition(const std::string& bookPath, const reading::CheckpointBook& 
 
 // --- Rereading in page view (task C4; S4 row 31; RereadScreens.cpp).
 
-// Draws the reread bar over the top of the page in the frame buffer ("Rereading this section" and the
-// "Back to the question" button, controls::REREAD_BAR) and shows it with a fast refresh. Render task.
-void drawRereadBar(GfxRenderer& renderer);
+// Draws the reread bar over the reader's status-bar row in the frame buffer (`bar`,
+// controls::rereadBarLayout(): "Rereading this section" and the "Back to the question" button) and
+// shows it with a fast refresh. Render task.
+void drawRereadBar(GfxRenderer& renderer, const controls::RereadBarLayout& bar);
 
 // The list a side-key hold opens during a page-view reread: "Back to the question" (the default),
 // "Speed read from here", "Keep reading" (controls::REREAD_CHOICES). `chosen` is set when it finishes;

@@ -490,6 +490,21 @@ void notePageMove(reading::ReadingSession& session, const PageMove move) {
       move == PageMove::PreviousPage ? checkpoint::navSourceName(checkpoint::NavSource::PreviousPage) : "chapter-skip");
 }
 
+namespace {
+
+// The bar over the reader's status-bar row, at the reader's own metrics; its button is kept for a tap.
+void drawBar(GfxRenderer& renderer, reading::ReadingSession& session, const PageSpan& page) {
+  const controls::RereadBarLayout bar =
+      controls::rereadBarLayout(static_cast<int16_t>(renderer.getScreenWidth()),
+                                static_cast<int16_t>(renderer.getScreenHeight()), page.textBottom, page.lineHeight);
+  LOG_DBG("CPT", "reread bar metrics screen=%dx%d text_bottom=%d line=%d", renderer.getScreenWidth(),
+          renderer.getScreenHeight(), page.textBottom, page.lineHeight);
+  session.setRereadButton(bar.button);
+  checkpointentry::drawRereadBar(renderer, bar);
+}
+
+}  // namespace
+
 void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const PageSpan& page) {
   // Every page shown takes the source of the move that showed it, so none is left for a later page.
   const checkpoint::NavSource source = session.takePageSource();
@@ -501,7 +516,7 @@ void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const Pa
     if (!session.pageWordsOf(page, words)) {
       // No word index for the section's own chapter: the reread stays where it was.
       LOG_ERR("CPT", "reread page ch=%d: no word index, the reread place stays", page.spine);
-      checkpointentry::drawRereadBar(renderer);
+      drawBar(renderer, session, page);
       return;
     }
     place = reading::rereadPagePlace(words, range.chapter, session.pageReadingWord(), range);
@@ -514,7 +529,7 @@ void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const Pa
           static_cast<unsigned long>(words.first), static_cast<unsigned long>(words.last), words.any ? 1 : 0,
           place.inside ? 1 : 0, static_cast<unsigned long>(place.word));
   if (session.rereadMoved(to, source, "page") != reading::ReadingSession::RereadMove::Stays) return;
-  checkpointentry::drawRereadBar(renderer);
+  drawBar(renderer, session, page);
 }
 
 bool promptDue(const reading::ReadingSession& session) { return session.promptDue(); }
@@ -533,10 +548,11 @@ bool rereadBarTapped(const MappedInputManager& input, reading::ReadingSession& s
       !input.wasScreenTapped(x, y)) {
     return false;
   }
-  const controls::Zone* z = controls::hit(controls::REREAD_BAR, x, y);
+  RenderLock lock;  // the flow and the drawn button belong to the render task too
+  const controls::Screen bar{&session.rereadButtonZone(), 1, 0};
+  const controls::Zone* z = controls::hit(bar, x, y);
   if (z == nullptr) return false;
   LOG_DBG("CTL", "RereadBar select=%s", controls::itemName(z->item));
-  RenderLock lock;  // the flow belongs to the render task too
   return session.endReread(checkpoint::FlowEvent::ReturnEarly, "bar");
 }
 

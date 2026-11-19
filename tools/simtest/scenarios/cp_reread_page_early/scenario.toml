@@ -4,8 +4,8 @@
 # (s0004 starts at 311 on it), 4 holds 381-489, 5 holds 490-607.
 #
 # Pass 1, touch: page forward from chapter 2's last page fires c0002 in page view. p1 Reveal, Correct; p2
-# Reveal, Incorrect, Reread in page view: the page holding word 311 (page 3) with the top bar "Rereading
-# this section" and "Back to the question". A swipe turns to page 4 (the reread place moves to 381 and is
+# Reveal, Incorrect, Reread in page view: the page holding word 311 (page 3) with the bar over the status-bar row,
+# below the text area: "Rereading" and "Back to the question". A swipe turns to page 4 (the reread place moves to 381 and is
 # saved). A tap on the bar's button goes back to p2, answer hidden, "Recorded earlier: Incorrect". Reveal,
 # Correct (the stored grade stays Incorrect); p3 Reveal, Correct. Page view resumes at chapter 3's first
 # page, the first word after the break.
@@ -14,7 +14,7 @@
 # default); hold again: back to p2. Reveal, Incorrect, hold: the reread again. Down three times: pages 4
 # and 5, then the advance from page 5 (which shows the section's last word) returns to p2 by itself.
 # Reveal, Correct; p3 Skip question. Chapter 3's first page. The grades are pass 1's.
-description = "Reread in page view after Incorrect: the top bar, Return early by the bar (touch) and by the hold list (keys), paging past the section's end returns by itself; Correct keeps the stored Incorrect; resume after the break in page view"
+description = "Reread in page view after Incorrect: the bar below the text area, Return early by the bar (touch) and by the hold list (keys), paging past the section's end returns by itself; Correct keeps the stored Incorrect; resume after the break in page view"
 
 env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
 
@@ -65,9 +65,10 @@ steps = [
   { wait_log = "\\[CPT\\] reread start mode=page checkpoint=c0002 section=s0004 prompt=1 ch=2 start=311 last_word=607" },
   { wait_log = "\\[CPT\\] page resume reread-page ch=2 word=311 offset=\\d+" },
   { wait_log = "\\[CPT\\] reread page ch=2 first=282 last=380 any=1 inside=1 word=311", note = "the page holding the section's first word" },
-  { wait_log = "\\[CPT\\] reread bar shown" },
+  { wait_log = "\\[CPT\\] reread bar metrics screen=480x800 text_bottom=773 line=40", note = "the reader's text area ends at y 773 with the default settings" },
+  { wait_log = "\\[CPT\\] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label=\"Rereading\"", note = "the bar's top is the text area's bottom: no line of text is covered" },
   { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
-  { screen_has = "Rereading this | Back to the" },
+  { screen_has = "Rereading | Back to the question" },
   { shot = "t_page_reread_bar" },
   { swipe = [400, 400, 80, 400], note = "a page turn reads on inside the section" },
   { wait_log = "\\[CPT\\] page advance ch=2 first=282 from=311 last=380 step=none reread=s0004" },
@@ -75,7 +76,7 @@ steps = [
   { wait_log = "\\[CPT\\] saved after=reread-moved prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:381:page", note = "the reread place is kept up to date at page turns" },
   { wait_log = "\\[CPT\\] reread bar shown" },
   { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
-  { tap = [356, 36], note = "the bar's Back to the question: Return early" },
+  { tap = [340, 787], note = "the bar's Back to the question (216,774,248,26): Return early" },
   { wait_log = "\\[CTL\\] RereadBar select=BackToQuestion" },
   { wait_log = "\\[CPT\\] reread end by=bar event=return-early accepted=1 state=prompt-hidden" },
   { wait_log = "\\[CPT\\] saved after=return-early prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=none" },
@@ -97,7 +98,7 @@ steps = [
   { wait_log = "\\[CPT\\] resume end=finished mode=page ch=3 word=0 reread=1" },
   { wait_log = "\\[CPT\\] page resume chapter ch=3 word=0 " },
   { wait_log = "Progress saved: spine=3 offset=0 page=0", note = "the page holding the first word after the break" },
-  { screen_lacks = "Rereading this section" },
+  { screen_lacks = "Back to the question" },
 
   # Pass 2: keys.
   { press = "UP" },
