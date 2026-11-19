@@ -14,7 +14,7 @@ Durations are wall time of the job on a GitHub-hosted runner (4 vCPU Linux, `win
 | `host-tests` | The CMake/GoogleTest host suite (upstream's tests plus `rsvp_core`, `checkpoint_core` and later ones) builds from a clean tree and passes, including the targets built with ASan/UBSan. | DUR | DUR |
 | `prep-tests` | `tools/prep` tests pass with Java and the pinned EPUBCheck present. **A skipped test fails the job**, so a missing Java or a failed EPUBCheck download cannot pass silently. The committed fixture files are what `fixture/generate.py` produces. | DUR | DUR |
 | `device-tool-tests` | `tools/device` tests pass in a virtualenv built from `tools/device/requirements-test.txt` (pinned esptool 5.6.0); a skipped test fails the job. | DUR | DUR |
-| `device-tool-windows (powershell)`, `(pwsh)` | On Windows, under Windows PowerShell 5.1 and PowerShell 7: `session.ps1` parses; PSScriptAnalyzer 1.23.0 (default rules plus the 5.1/7.0 compatibility rules, with a self-test that the compatibility rules are active) reports nothing; and the offline commands run from an owner-style folder whose path contains a space: `setup` (twice: download, hash check and pip install of the private Python, then the "already set up" path), `plan`, `flash -DryRun`, `restore <backup> -DryRun`, `identify -DryRun`, `summary`, `ports`, each with its documented exit code. The kit and work folder are synthetic (see below). | DUR | DUR |
+| `device-tool-windows (powershell)`, `(pwsh)` | On Windows, under Windows PowerShell 5.1 and PowerShell 7: `session.ps1` parses; PSScriptAnalyzer 1.23.0 reports nothing, with its default rules and with the compatibility rules (`PSUseCompatibleSyntax` for 5.1 and 7.0; `PSUseCompatibleCommands` and `PSUseCompatibleTypes` against the Windows 10 1809 / Server 2019 profiles for 5.1 and 7.0, the set task D5 checked against), after a self-test that those rules are active (they must flag `Get-Error` in a scratch copy); and the offline commands run from an owner-style folder whose path contains a space: `setup` (twice: download, hash check and pip install of the private Python, then the "already set up" path), `plan`, `flash -DryRun`, `restore <backup> -DryRun`, `identify -DryRun`, `summary`, `ports`, each with its documented exit code. The kit and work folder are synthetic (see below). | DUR | DUR |
 | `firmware-picco` | `scripts/cloud-setup.sh` works on a plain runner (it detects that there is no intercepting proxy and runs the same pre-fetch), and `pio run -e picco` builds. Prints the RAM/Flash lines, image sizes and the headroom against the two-slot budget (informational here). | DUR | DUR |
 | `firmware-other-device (x4pro)` | One non-Picco device still compiles (`x4pro`: ESP32-S3, no `custom_sdkconfig`). Upstream's eight-device matrix is disabled in this fork (`docs/BASE.md`). | DUR | DUR |
 | `simulator` | `pio run -e simulator_picco` builds with this project's simulator patches, and the binary starts headless under `xvfb-run`, reaches the Home screen (the firmware logs `Entering activity: Home`), saves a screenshot and quits with exit status 0. | DUR | DUR |
@@ -23,6 +23,15 @@ Durations are wall time of the job on a GitHub-hosted runner (4 vCPU Linux, `win
 | `ci-ok` | Every job above finished with `success` (a failed, cancelled or skipped job fails it). | DUR | DUR |
 
 The longest job sets the run's wall time: WALL cold, WALL warm.
+
+## Runner images
+
+Linux jobs run on `ubuntu-24.04`, the system of the Claude Code cloud sessions where work is done and validated (`docs/PLAN.md` section 11), so a CI result means the same as the lead's own run. They do not use `ubuntu-latest`: on 2026-11-16 that label was Ubuntu 26.04 with GCC 15.2, where two things fail that pass on Ubuntu 24.04 (GCC 13.3), both seen in [run 43960279326](https://github.com/c-tphr/eink-learner-aid/actions/runs/43960279326):
+
+- `host-tests`: `lib/CheckpointCore/StateCodec.cpp:69:14: error: writing 4 bytes into a region of size 2 [-Werror=stringop-overflow=]` (in `Writer::putUInt`, inlined into `putPlace`, target `CheckpointCoreNoRttiCheck`, `-O3 -Werror`). The loop is correct (`n` is at most 10); GCC 15 reports a false positive, and `-Werror` makes it fatal. Upstream's own "CI (build)" unit-test job, which runs on `ubuntu-latest`, failed the same way on earlier pull requests.
+- `simulator`: `.pio/libdeps/simulator_picco/QRCode/src/qrcode.h:37:23: error: 'bool' cannot be defined via 'typedef'`: GCC 15 compiles C as C23, where `bool` is a keyword, and the `ricmoo/QRCode` library typedefs it.
+
+Moving CI to a newer image means fixing both first (in `lib/CheckpointCore`, and for QRCode with a C standard flag in the simulator environment or a patch). Windows jobs use `windows-latest` (Windows Server 2025, Windows PowerShell 5.1.26100, PowerShell 7.6 at the time of writing).
 
 ## Reproducing a job locally
 

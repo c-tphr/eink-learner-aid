@@ -33,7 +33,7 @@ for f in firmware.bin bootloader.bin partitions.bin firmware.map; do
 done
 SIZE_TOOL="$(ls "${PLATFORMIO_CORE_DIR:-$HOME/.platformio}"/packages/toolchain-xtensa-*/bin/xtensa-esp32s3-elf-size 2>/dev/null | head -1 || true)"
 if [[ -n "$SIZE_TOOL" && -f "$DIR/firmware.elf" ]]; then
-  "$SIZE_TOOL" -A "$DIR/firmware.elf" | awk 'NR<=2 || $2 > 0'
+  "$SIZE_TOOL" -A "$DIR/firmware.elf" | awk 'NR<=2 || ($2 > 0 && $1 !~ /^\.(debug|comment|xtensa|riscv)/)'
 fi
 
 APP="$(stat -c %s "$DIR/firmware.bin")"
