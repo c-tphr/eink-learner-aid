@@ -113,10 +113,14 @@ the activity reads and writes nothing first (the session saved the return), logs
 prompt with its answer hidden and, since the prompt has its first grade, "Recorded earlier: Incorrect".
 Reveal is the retry and Skip question is Continue (S4 row 32).
 
-**What a restart sees.** The state file always holds the checkpoint in progress at its current
-prompt (or its reread), and `position` before the break. Restoring it on reopening is task C5: until
-then a reopened book opens before the break (the reader's page, or RSVP at the frame that was on
-screen), and reading on fires the checkpoint again from its first prompt (`cp_skip_grades`).
+**What a restart sees** (task C5). The state file always holds the checkpoint in progress at its
+current prompt (or its reread), and `position` before the break. Reopening the book (from Home, the
+file browser, after a power loss or a wake from sleep) restores it in the plan's order: the reread in
+its mode at its place, else this activity at the saved prompt with its answer hidden, opened the same
+way as after a reread (the session's flow in PromptHidden, `back` in the log), before the reader draws
+any page (`src/reading/README.md`, "Opening a book"). Whether the answer was revealed is not saved, so
+it is always hidden again. Finishing or skipping resumes at the saved `resume` place in the mode the
+checkpoint fired in (`cp_kill_in_prompt`, `cp_kill_in_reread`, `cp_sleep_restore`).
 
 ## Log lines
 
@@ -126,7 +130,7 @@ DBG lines, tag `CPT` unless noted; stable for the scenarios. Numbers are decimal
 | --- | --- |
 | `open checkpoint=<id> prompts=<n> section=<id> mode=<rsvp\|page> resume_ch=<c> resume_word=<w> state=<missing\|read\|invalid\|unreadable\|no-memory> grades=<n> activity_bytes=<b> session_bytes=<b> accepted=<0\|1>` | The activity started the flow |
 | `saved after=<start\|reveal\|correct\|incorrect\|skip-prompt\|skip-checkpoint\|reread-rsvp\|reread-page\|continue\|reread-moved\|reread-reached-end\|return-early\|reread-left-section> prompt=<id that got its first grade\|-> grade=<correct\|incorrect\|none> active=<id\|none> prompt_index=<i> position=<ch:word:mode\|none> ok=<0\|1> reread=<ch:word:mode\|none>` | The state file was written (always before the next `screen` line). The last four reasons are the session's writes during a reread (`saveTransition()`) |
-| `back checkpoint=<id> prompt=<i>/<n> mode=<rsvp\|page> activity_bytes=<b>` | The activity opened on a flow that went back to its prompt after a reread |
+| `back checkpoint=<id> prompt=<i>/<n> mode=<rsvp\|page> activity_bytes=<b>` | The activity opened on a flow that went back to its prompt after a reread, or that the session restored when the book opened (task C5; the session's `restore` lines come first) |
 | `event=<flow event> prompt=<id> accepted=<0\|1> refusal=<n> state=<flow state> grade_recorded=<0\|1> save=<no\|position\|now>` | An item was activated |
 | `screen=<Prompt\|Answer\|Incorrect> question=<i>/<n> prompt=<id> recorded=<none\|correct\|incorrect> focus=<Item> part=<p>/<parts> lines=<answer lines> refresh=<clear\|update>` | After every refresh |
 | `answer part=<p>/<parts> move=<cycle\|swipe-next\|swipe-previous> changed=<0\|1>` | A paging gesture on the answer box |
@@ -139,7 +143,7 @@ DBG lines, tag `CPT` unless noted; stable for the scenarios. Numbers are decimal
 | What | Bytes | When |
 | --- | --- | --- |
 | The activity object | 4,056 (simulator, 64-bit; 4,016 before task C4) | While shown. Mostly the prompt (1,201), answer (2,401) and prompt id (65) buffers, read once per prompt so that drawing never reads the card |
-| `checkpointentry::Progress`: `BookState` and `CheckpointFlow` | 78,056 (simulator) | Allocated by `ReadingSession::startCheckpoint()` and kept until the checkpoint ends, a reread included (task C4; before it the activity allocated the same block while it showed). One heap block (PSRAM on the Picco). The flow needs a `BookState`; it holds the grades of the whole book. Logged as `session_bytes` in the `open` line |
+| `checkpointentry::Progress`: `BookState` and `CheckpointFlow` | 78,056 (simulator) | Allocated by `ReadingSession::startCheckpoint()`, or by `ReadingSession::restoreOnOpen()` when a book opens with a checkpoint in progress (task C5: the file is read straight into it), and kept until the checkpoint ends, a reread included (task C4; before it the activity allocated the same block while it showed). One heap block (PSRAM on the Picco). The flow needs a `BookState`; it holds the grades of the whole book. Logged as `session_bytes` in the `open` line and `progress_bytes` in the `restore` line |
 | The reread list | one small activity per hold | While the list shows |
 | `editBookState()` | about 78 KB plus the file's size | During each write (`src/reading/BookStateFile.h`) |
 | Wrapped lines | a vector of short strings, about 1 KB for a long answer | During one paint, freed when it ends; paints happen on input only |
@@ -152,8 +156,9 @@ Nothing is allocated per frame or per key press besides the paint's line vector.
 `ReadingSession::startCheckpoint()` makes the activity when ordinary forward reading fires a checkpoint
 (RSVP pushes it over itself; page view over the reader), with `Request::before`, the reading position
 before the break, which the start's write saves as `position` together with the checkpoint in progress.
-A book closed while the checkpoint shows therefore reopens before the break, where reading on fires it
-again (restoring the prompt itself is task C5). C3a's temporary simulator entry
+A book closed while the checkpoint shows reopens at the same prompt with its answer hidden (task C5;
+the restored activity is made by `ReadingSession::promptAgain()`, as after a reread). C3a's temporary
+simulator entry
 (`CheckpointSimEntry`, `CROSSPOINT_SIM_CHECKPOINT`) is gone; its scenarios `cp_screens_touch`,
 `cp_screens_keys`, `cp_long_answer` and `cp_skip_grades` reach their checkpoints by reading. Every
 read and write of the state file uses the book's identity (`book_sha256` and the open index), so the

@@ -681,8 +681,7 @@ TEST(ReadingSessionRestore, AnActiveRereadWinsAndOpensInItsOwnMode) {
 TEST(ReadingSessionRestore, ARereadOutsideItsSectionShowsThePromptInstead) {
   Checkpoints cp;
   auto state = std::make_unique<checkpoint::BookState>();
-  const Restored r = restoreFrom(cp,
-                                 stateWith(cp, R"({"id": "c0002", "prompt_index": 1,
+  const Restored r = restoreFrom(cp, stateWith(cp, R"({"id": "c0002", "prompt_index": 1,
     "resume": {"chapter": 3, "word": 0, "mode": "page"}, "reread": {"mode": "page", "chapter": 2, "word": 100}})"),
                                  *state);
   EXPECT_EQ(r.plan.view, checkpoint::OpenView::Prompt);
@@ -703,7 +702,8 @@ TEST(ReadingSessionRestore, WhatCannotBeRestoredOpensAtTheBestRemainingView) {
     Position at;
   };
   const Case cases[] = {
-      {"unknown checkpoint", R"({"id": "c0099", "prompt_index": 0, "resume": {"chapter": 3, "word": 0, "mode": "page"}})",
+      {"unknown checkpoint",
+       R"({"id": "c0099", "prompt_index": 0, "resume": {"chapter": 3, "word": 0, "mode": "page"}})",
        checkpoint::NOTE_UNKNOWN_CHECKPOINT, Position{3, 0}},
       {"prompt out of range",
        R"({"id": "c0002", "prompt_index": 5, "resume": {"chapter": 3, "word": 0, "mode": "page"}})",

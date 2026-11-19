@@ -4,10 +4,9 @@
 
 #include <Epub.h>
 #include <HalStorage.h>
+#include <I18n.h>
 #include <Logging.h>
 #include <Memory.h>
-
-#include <I18n.h>
 
 #include <cstdio>
 
@@ -140,8 +139,7 @@ checkpoint::Step ReadingSession::rsvpStop(const int spine, const uint32_t lastSh
   return step;
 }
 
-bool ReadingSession::openPageIndex(const int spine, const ChapterWordIndex::BuildNotice notice,
-                                   void* noticeContext) {
+bool ReadingSession::openPageIndex(const int spine, const ChapterWordIndex::BuildNotice notice, void* noticeContext) {
   if (!layout) return false;
   if (layout->pageIndex.isOpen() && layout->pageIndex.spineIndex() == spine) return true;
   layout->pageIndex.close();
@@ -409,7 +407,8 @@ readingsession::OpenRestore ReadingSession::restoreOnOpen(GfxRenderer& renderer)
   // The checkpoint block (78 KB, nearly all of it the grade table; PSRAM on the Picco): the file is read
   // straight into the state the flow drives, kept as the checkpoint in progress when one is restored
   // and freed on return otherwise. No second state is allocated for the restore.
-  std::shared_ptr<checkpointentry::Progress> made(makeUniqueNoThrow<checkpointentry::Progress>(book->index()).release());
+  std::shared_ptr<checkpointentry::Progress> made(
+      makeUniqueNoThrow<checkpointentry::Progress>(book->index()).release());
   if (!made) {
     LOG_ERR("CPT", "OOM: restore (%u bytes): the book opens at the reader's own page",
             static_cast<unsigned>(sizeof(checkpointentry::Progress)));
@@ -525,8 +524,11 @@ readingsession::OpenRestore ReadingSession::restoreActive(std::shared_ptr<checkp
       setPageUnderRsvp();
     }
   }
-  LOG_DBG("CPT", "restore open show=%s speed_read=%d jump=%d ch=%d offset=%lu", showName(action.show),
-          open.speedRead ? 1 : 0, open.jump ? 1 : 0, open.spine, static_cast<unsigned long>(open.offset));
+  LOG_DBG("CPT", "restore open show=%s speed_read=%d jump=%d ch=%d offset=%lu kept_bytes=%u", showName(action.show),
+          open.speedRead ? 1 : 0, open.jump ? 1 : 0, open.spine, static_cast<unsigned long>(open.offset),
+          current ? static_cast<unsigned>(sizeof(checkpointentry::Progress) + sizeof(readingsession::CheckpointRun) +
+                                          sizeof(checkpointentry::Outcome))
+                  : 0u);
   return open;
 }
 

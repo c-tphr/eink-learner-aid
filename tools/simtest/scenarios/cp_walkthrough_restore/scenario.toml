@@ -1,0 +1,107 @@
+# Steps 9 and 10 of the device session's walk-through (src/activities/devicetest/Acceptance.cpp,
+# WALK_STEPS; docs/DEVICE_SESSION.md Appendix A), done by touch exactly as the owner reads them, so that
+# their "Expected:" texts are proven true of the firmware (task C5). The prepared fixture's c0001
+# (section s0001, chapter 1 words 0-232, one question; its last word "same." is on chapter 1's third
+# page, words 184-294, which also holds word 233, the first after the break). The state file holds
+# c0001's grade from walk-through step 1 (Correct).
+#
+# Step 9: Select Chapter, The Lamp Room; turn pages until question 1 of 1 shows; the Home swipe; open
+# the book again: it opens at question 1 of 1, answer hidden, "Recorded earlier: Correct". Skip
+# checkpoint: page view shows the page with "did the same." again (it holds the first word after the
+# break), without the question.
+# Step 10: Select Chapter, The Lamp Room; turn pages until question 1 of 1 shows; Reveal, Incorrect,
+# Reread in page view; turn one page; sleep; wake: page view in the reread on the same page, the strip at
+# the bottom with "Rereading" and the "Back to the question" button. Tap it: question 1 of 1, answer
+# hidden. Skip checkpoint: the page with "did the same." again.
+description = "Walk-through steps 9 and 10 as the owner does them: close during a question, sleep during a page-view reread; the book reopens on the same screen"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}, \"grades\": {\"c0001-p1\": {\"first\": \"correct\"}}}\n", dst = "books/fixture.prepared.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # Step 9.
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents (Select Chapter)" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 460], note = "The Lamp Room" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400], note = "turn pages until question 1 of 1 shows" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=correct focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { swipe = [240, 780, 240, 300], note = "swipe up from the bottom edge: Home" },
+  { wait_log = "Entering activity: Home" },
+  { wait_log = "No known cover image for thumbnail" },
+  { tap = [240, 175], note = "open fixture.prepared.epub again (the continue-reading card)" },
+  { wait_log = "\\[CPT\\] restore view=prompt checkpoint=c0001 prompt=1/1 place=1:233:page resume=1:233:page notes=none " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=correct focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { screen_has = "Checkpoint · question 1 of 1 | Recorded earlier: Correct" },
+  { screen_lacks = "Correct | Incorrect", note = "the answer is hidden: no grade buttons" },
+  { shot = "step9_reopened_question" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=0 ch=1 word=233 mode=page saved=1" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { screen_has = "same." },
+  { screen_lacks = "question" },
+
+  # Step 10.
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents (Select Chapter)" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 460], note = "The Lamp Room" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=correct focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal answer" },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [360, 620], note = "Incorrect" },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { tap = [240, 348], note = "Reread in page view" },
+  { wait_log = "\\[CPT\\] reread bar shown" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400], note = "turn one page" },
+  { wait_log = "\\[CPT\\] saved after=reread-moved prompt=- grade=none active=c0001 prompt_index=0 position=none ok=1 reread=1:108:page" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { shot = "step10_before_sleep" },
+  { sleep = true, note = "hold the power button until the device sleeps" },
+  { wait_log = "Entering deep sleep" },
+  { wake = "POWER" },
+  { wait_log = "\\[CPT\\] restore view=reread checkpoint=c0001 prompt=1/1 place=1:108:page resume=1:233:page notes=none " },
+  { wait_log = "\\[CPT\\] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label=\"Rereading\"" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1", note = "the same page" },
+  { screen_has = "Rereading | Back to the question" },
+  { shot = "step10_after_wake" },
+  { tap = [340, 787], note = "the strip's Back to the question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=correct focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=0 ch=1 word=233 mode=page saved=1" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { screen_has = "same." },
+  { screen_lacks = "Back to the question" },
+  { quit = true },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0001-p1/first", equals = "correct" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 1, word = 233, mode = "page" } },
+  { compare = "step10_after_wake", same_as = "step10_before_sleep" },
+  { compare = "step9_reopened_question" },
+  { compare = "step10_before_sleep" },
+]
