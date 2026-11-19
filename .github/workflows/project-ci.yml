@@ -68,8 +68,8 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .ccache
-          key: host-ccache-v1-${{ hashFiles('test/**', 'lib/**', 'src/**', 'freeink-sdk') }}
-          restore-keys: host-ccache-v1-
+          key: host-ccache-v2-${{ hashFiles('test/**', 'lib/**', 'src/**', 'freeink-sdk') }}
+          restore-keys: host-ccache-v2-
       - name: Build and run the host test suite
         run: |
           ccache -z
@@ -104,7 +104,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cache/eink-learner-aid
-          key: epubcheck-${{ hashFiles('tools/prep/epubcheck.py') }}
+          key: epubcheck-v2-${{ hashFiles('tools/prep/epubcheck.py') }}
       - name: Install test requirements
         run: python -m pip install -r tools/prep/requirements.txt
       - name: pytest tools/prep (a skipped test fails the job)
@@ -271,16 +271,16 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.platformio
-          key: pio-packages-v1-${{ runner.os }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
-          restore-keys: pio-packages-v1-${{ runner.os }}-
+          key: pio-packages-v2-ubuntu24-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
+          restore-keys: pio-packages-v2-ubuntu24-
       - name: Restore PlatformIO build cache
         uses: actions/cache@v5
         with:
           path: .cache
-          key: pio-build-v1-picco-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
+          key: pio-build-v2-picco-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
           restore-keys: |
-            pio-build-v1-picco-${{ steps.keys.outputs.sdk }}-
-            pio-build-v1-picco-
+            pio-build-v2-picco-${{ steps.keys.outputs.sdk }}-
+            pio-build-v2-picco-
       - name: scripts/cloud-setup.sh
         run: ./scripts/cloud-setup.sh
       - name: pio run -e picco
@@ -321,16 +321,16 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.platformio
-          key: pio-packages-v1-${{ runner.os }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
-          restore-keys: pio-packages-v1-${{ runner.os }}-
+          key: pio-packages-v2-ubuntu24-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
+          restore-keys: pio-packages-v2-ubuntu24-
       - name: Restore PlatformIO build cache
         uses: actions/cache@v5
         with:
           path: .cache
-          key: pio-build-v1-x4pro-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
+          key: pio-build-v2-x4pro-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
           restore-keys: |
-            pio-build-v1-x4pro-${{ steps.keys.outputs.sdk }}-
-            pio-build-v1-x4pro-
+            pio-build-v2-x4pro-${{ steps.keys.outputs.sdk }}-
+            pio-build-v2-x4pro-
       - name: scripts/cloud-setup.sh
         run: ./scripts/cloud-setup.sh
       - name: pio run -e x4pro
@@ -357,16 +357,16 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.platformio
-          key: pio-packages-v1-${{ runner.os }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
-          restore-keys: pio-packages-v1-${{ runner.os }}-
+          key: pio-packages-v2-ubuntu24-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
+          restore-keys: pio-packages-v2-ubuntu24-
       - name: Restore PlatformIO build cache
         uses: actions/cache@v5
         with:
           path: .cache
-          key: pio-build-v1-simulator_picco-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**', 'scripts/simulator_patches/**') }}
+          key: pio-build-v2-simulator_picco-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**', 'scripts/simulator_patches/**') }}
           restore-keys: |
-            pio-build-v1-simulator_picco-${{ steps.keys.outputs.sdk }}-
-            pio-build-v1-simulator_picco-
+            pio-build-v2-simulator_picco-${{ steps.keys.outputs.sdk }}-
+            pio-build-v2-simulator_picco-
       - name: scripts/cloud-setup.sh (installs SDL2, OpenSSL, Xvfb)
         run: ./scripts/cloud-setup.sh
       - name: pio run -e simulator_picco
@@ -473,17 +473,17 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.platformio
-          key: pio-packages-v1-${{ runner.os }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
-          restore-keys: pio-packages-v1-${{ runner.os }}-
+          key: pio-packages-v2-ubuntu24-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
+          restore-keys: pio-packages-v2-ubuntu24-
       - if: steps.detect.outputs.present == 'true'
         name: Restore PlatformIO build cache
         uses: actions/cache@v5
         with:
           path: .cache
-          key: pio-build-v1-picco_2slot-${{ steps.detect.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
+          key: pio-build-v2-picco_2slot-${{ steps.detect.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
           restore-keys: |
-            pio-build-v1-picco_2slot-${{ steps.detect.outputs.sdk }}-
-            pio-build-v1-picco_2slot-
+            pio-build-v2-picco_2slot-${{ steps.detect.outputs.sdk }}-
+            pio-build-v2-picco_2slot-
       - if: steps.detect.outputs.present == 'true'
         name: scripts/cloud-setup.sh
         run: ./scripts/cloud-setup.sh
