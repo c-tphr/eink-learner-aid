@@ -35,7 +35,7 @@ If you use the repository ZIP now and get the kit later, the session checklist (
 
 Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 setup`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 setup`
 
 The `-ExecutionPolicy Bypass` part lets Windows run the script this one time. It changes no setting on your PC.
 
@@ -58,7 +58,7 @@ The first time, the tool downloads its own copy of Python (from nuget.org, publi
 2. Plug the cable straight into the PC, not through a hub or a monitor.
 3. Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 identify`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 identify`
 
 While the tool is connected, the Picco's screen may freeze or the Picco may restart. That is normal: the tool restarts the chip into its built-in read mode and back. If the screen stays frozen afterwards, restart the Picco with its power button.
 
@@ -78,13 +78,13 @@ Other results:
 
 Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 backup`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 backup`
 
 The tool reads the Picco's whole 16 MB memory twice, showing <!--q-->`Read 1 of 2: all 16 MB (this may take several minutes)...` and then read 2. It keeps the backup only if both reads are identical. Keep the cable still. The time is an estimate: nobody has yet measured how fast this Picco can be read over USB.
 
 **It worked if** you see <!--q-->`BACKUP VERIFIED: both reads are identical.` The tool then shows where the backup file is and its SHA-256, a 64-character fingerprint. It asks you to copy the file (see "Keep the backup safe" below) and then asks:
 
-<!--q-->`When the copy is done, type the LAST 8 characters of the SHA-256 above:`
+The question: <!--q-->`When the copy is done, type the LAST 8 characters of the SHA-256 above:`
 
 Type the last 8 characters of the fingerprint and press Enter. The answer is <!--q-->`Thank you. The backup is confirmed.` If it does not match three times, you see <!--q-->`The backup is verified but not yet confirmed.` That is fine; you will be asked again in the real session.
 
@@ -109,7 +109,7 @@ The backup is two files in the `work` folder, `picco-backup-….bin` and `picco-
 
 Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`
 
 It prints <!--q-->`Summary written:` followed by a file name, `work\early-check-summary-….txt`. This one text file is safe to share. It contains what the tools found (chip, memory, security settings, layout), fingerprints of the files rather than the files themselves, the commands you ran, and the last lines of their logs. The Picco's MAC address is partly hidden, and your Windows user name is removed from file paths. The summary does not contact the Picco.
 

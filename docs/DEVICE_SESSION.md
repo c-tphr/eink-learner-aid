@@ -145,9 +145,8 @@ At the start of the second sitting, connect the Picco and start the serial log a
 ### Make the PC ready (on the session day)
 
 1. [ ] Plug the PC into mains power.
-2. [ ] Windows Settings > System > Power: set "When plugged in, put my device to sleep after" to **Never**. (Set it back after the session.)
+2. [ ] Windows Settings > System > Power (on Windows 10: Power & sleep): set the time before the PC sleeps when plugged in to **Never**. (Set it back after the session.)
 3. [ ] Close other programs that use serial ports: Arduino IDE, serial terminals, other PowerShell windows running `session.ps1`.
-4. [ ] Pause the antivirus scan schedule if you can. Do not switch the antivirus off.
 
 ---
 
@@ -161,7 +160,7 @@ Read-only: changes nothing on the Picco. About 15 minutes (plus 2 to 10 minutes 
 4. [ ] Plug the cable straight into the PC, not through a hub or a monitor.
 5. [ ] In the PowerShell window in the kit folder, type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 setup`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 setup`
 
 The `-ExecutionPolicy Bypass` part lets Windows run the script this one time. It changes no setting on your PC. The first time, the tool downloads its own copy of Python and the flashing library, and checks each download against a fingerprint built into the script.
 
@@ -176,7 +175,7 @@ Read-only: changes nothing on the Picco. About 1 to 2 minutes.
 1. [ ] Check that the Picco is on, on its Home screen, and connected.
 2. [ ] Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 identify`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 identify`
 
 While the tool is connected, the Picco's screen may freeze or the Picco may restart. That is normal: the tool restarts the chip into its built-in read mode and back. If the screen stays frozen afterwards, restart the Picco with its power button.
 
@@ -198,7 +197,7 @@ Read-only: changes nothing on the Picco. Probably 2 to 20 minutes for the reads 
 
 1. [ ] Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 backup`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 backup`
 
 2. [ ] Keep the cable still. The tool reads the Picco's whole 16 MB memory twice. You see <!--q-->`Read 1 of 2: all 16 MB (this may take several minutes)...` and then read 2.
 3. [ ] **It worked if** you see <!--q-->`BACKUP VERIFIED: both reads are identical.` The two reads have the same SHA-256 fingerprint. The tool then shows the backup's file name and its SHA-256 (64 characters, in groups of 8).
@@ -251,19 +250,19 @@ Changes nothing yet. About 5 minutes.
 
 1. [ ] Rehearse the flash. This contacts nothing and writes nothing. Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 flash -DryRun`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 flash -DryRun`
 
 2. [ ] It must end with <!--q-->`DRY RUN RESULT: READY. A real run would ask for the phrase and then write the 4 images above.` If it says <!--q-->`DRY RUN RESULT: NOT READY. A real run would stop before writing anything:` read the reasons below that line. Usually one of steps 2 or 3 is missing in this kit folder's `work` folder: do it, then rehearse again.
 3. [ ] Start the real flash. Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 flash`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 flash`
 
-4. [ ] The tool shows the flash plan (four images, their offsets and fingerprints) and checks the work folder. Each line must start with `[ok]`, for example <!--q-->`[ok]   owner confirmed the backup copy`. (If you see <!--q-->`[ask]  owner has not yet confirmed the backup copy; a real run asks for it first` it asks for the last 8 characters of the backup's SHA-256 first.)
+4. [ ] The tool shows the flash plan (four images, their offsets and fingerprints) and checks the work folder. Each line under "Preconditions in the work folder" must start with `[ok]`, for example <!--q-->`[ok]   owner confirmed the backup copy`. (If you see <!--q-->`[ask]  owner has not yet confirmed the backup copy; a real run asks for it first` it asks for the last 8 characters of the backup's SHA-256 first.)
 5. [ ] Under <!--q-->`What will be destroyed` it lists the regions it replaces, and the line "Only your backup (picco-backup-<...>.bin) can bring these back." Check that this is the file name you wrote in step 3.
 6. [ ] It asks: <!--q-->`To replace Onyx on this Picco, type exactly:  REPLACE ONYX` and <!--q-->`Anything else cancels. Nothing has been written yet.`
 7. [ ] This is the point of no return for Onyx's bootloader. Type, in capital letters, and press Enter:
 
-   <!--type-->`REPLACE ONYX`
+   Phrase: <!--type-->`REPLACE ONYX`
 
 If you type anything else, you see <!--q-->`Cancelled: the phrase did not match. Nothing was written.` Nothing has changed. Start again at line 3 when you are ready.
 
@@ -298,7 +297,7 @@ The serial log records everything the Picco's firmware prints. It is part of the
 
 1. [ ] In the same PowerShell window, type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 monitor -Reset`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 monitor -Reset`
 
 `-Reset` restarts the Picco once, so the log holds its start from the beginning. The tool never sends data to the Picco.
 
@@ -311,14 +310,14 @@ If the Picco restarts, the window may show <!--q-->`waiting for it to come back`
 
 4. [ ] The Picco shows the CrossPoint **Home screen** within about a minute: "Browse Files", "Library", "File Transfer", "Settings".
 
-![Home screen](evidence/f2/simulator_picco-home.png)
+<img src="evidence/f2/simulator_picco-home.png" alt="Home screen" width="240">
 
 *Simulator picture of the Home screen. The real screen is e-ink.*
 
 5. [ ] In the serial log, find the line that starts `[EPD] Picco panel` and write the panel's name: ____________ (YRD0426, DEPG0397, OPM040B3 or SE0400NQW47; unknown until this session)
 6. [ ] Tap **Settings**. The version is at the top right. It must be `<version>-picco2`, with the kit's version. Write it: ____________
 
-![Settings](device-session/settings_root.png)
+<img src="device-session/settings_root.png" alt="Settings" width="240">
 
 *Simulator picture. On the Picco the top right shows the kit's version instead of "dev-simulator". The real screen is e-ink.*
 
@@ -334,7 +333,7 @@ The firmware needs the books from the kit's `sd-card` folder on the Picco's SD c
 
 8. [ ] On the Picco: Home > **File Transfer** > **Create Hotspot**.
 
-![File Transfer](device-session/file_transfer.png)
+<img src="device-session/file_transfer.png" alt="File Transfer" width="240">
 
 *Simulator picture of the File Transfer screen. The real screen is e-ink.*
 
@@ -360,13 +359,13 @@ The Device test menu has every screen for steps 7, 9, 10 and 11. On these screen
 
 1. [ ] Open Settings > **Display** > **Device test** (the first row).
 
-![Settings > Display](evidence/d3b/settings_display_before.png)
+<img src="evidence/d3b/settings_display_before.png" alt="Settings > Display" width="240">
 
 *Simulator picture of Settings > Display. The real screen is e-ink.*
 
 2. [ ] The Device test menu opens. Its second line shows the panel, for example "Panel: DEPG0397 (SSD1677)". Check it is the panel you wrote in step 6.
 
-![Device test menu](evidence/d3b/menu.png)
+<img src="evidence/d3b/menu.png" alt="Device test menu" width="240">
 
 *Simulator picture of the Device test menu. On the Picco the second line names the real panel. The real screen is e-ink.*
 
@@ -378,7 +377,7 @@ The Device test menu has every screen for steps 7, 9, 10 and 11. On these screen
 8. [ ] Tap the screen. Swipe left. Swipe right from the left edge.
 9. [ ] Read the line "Not yet:". Try what it lists again. Every input appears as a numbered line, for example "2. key BTN_DOWN (5) -> Down PageForward NavNext, next, 906 ms, hold".
 
-![Controls check](evidence/d3a/controls_events.png)
+<img src="evidence/d3a/controls_events.png" alt="Controls check" width="240">
 
 *Simulator picture of the Controls check after some inputs. On the Picco the hold times are your own. The real screen is e-ink.*
 
@@ -400,7 +399,7 @@ In this firmware Up means "previous" and Down means "next". If that feels the wr
 12. [ ] Leave the Device test (row "Leave the device test").
 13. [ ] Settings > **Controls** > **Side buttons** > **Layout (reader only)**: set it to **Next/Prev**. This one setting turns the keys round in page view and on the speed-reading and checkpoint screens.
 
-![Controls](device-session/controls.png) ![Side buttons](device-session/side_buttons.png)
+<img src="device-session/controls.png" alt="Controls" width="240"> <img src="device-session/side_buttons.png" alt="Side buttons" width="240">
 
 *Simulator pictures of Settings > Controls and its Side buttons page. The real screen is e-ink.*
 
@@ -410,7 +409,7 @@ The Picco may have no Confirm key. All new screens work without it. Upstream's l
 
 14. [ ] Settings > **Controls** > **Power button** > **Short click**: set it to **Confirm**. A short power press is then Confirm everywhere. A long press still puts the Picco to sleep.
 
-![Power button](device-session/power_button.png)
+<img src="device-session/power_button.png" alt="Power button" width="240">
 
 *Simulator picture of Settings > Controls > Power button. The real screen is e-ink.*
 
@@ -425,19 +424,19 @@ Writes the same firmware into the second app slot. About 10 minutes. Skip it if 
 1. [ ] Check that `update.bin` is in the top folder of the SD card (step 6, line 14).
 2. [ ] Settings > **System** > **SD Card Firmware Update**. (This row appears only on the new two-slot layout, so the simulator picture below does not show it.)
 
-![System](device-session/system.png)
+<img src="device-session/system.png" alt="System" width="240">
 
 *Simulator picture of Settings > System. On the Picco, "Check for Updates" and "SD Card Firmware Update" appear between "Clock" and "Display Refresh". The real screen is e-ink.*
 
 3. [ ] The Picco shows "Select firmware file (.bin)". Choose `update.bin`.
-4. [ ] It shows "Validating firmware..." and then "Update firmware?". Confirm.
-5. [ ] It shows "Do not power off!" while it writes. Wait. The Picco restarts by itself.
+4. [ ] It shows "Validating firmware..." and then the question "Update firmware?" with the file name `update.bin`. Choose to go on (confirm).
+5. [ ] It shows "Do not power off!" while it writes, then "Update complete". Wait. The Picco restarts by itself.
 6. [ ] The Home screen appears again.
 7. [ ] Open Settings > **System**. In the serial log, the new `[UPD] self-update allowed:` line must now say `running 0x800000` (the second app slot). Write it: ____________
 
 **It worked if** the Picco restarted into the Home screen and the log says `running 0x800000`. The version stays the same: it is the same firmware.
 
-**If it goes differently:** "Invalid firmware file", "Firmware is for a different device" or "Firmware write failed" means the Picco still runs the firmware it had (the update writes the other slot and switches only at the end). Write the message here, and carry on with step 9: ____________
+**If it goes differently:** "Update failed", "Invalid firmware file", "Firmware is for a different device" or "Firmware write failed" means the Picco still runs the firmware it had (the update writes the other slot and switches only at the end). Write the message here, and carry on with step 9: ____________
 
 **The Wi-Fi update** (Settings > System > Check for Updates) is not part of this session. It installs only a **published** normal release with a higher version than the running one. No such release exists during the first session, so it would say there is no update.
 
@@ -473,47 +472,47 @@ Look at the last frame before you answer: it stays on the screen, unchanged, unt
 1. [ ] Device test menu > **Display benchmark**.
 2. [ ] **Room temperature.** It starts as "unknown". Choose **Warmer: +1 °C** or **Cooler: -1 °C** until it shows the room's temperature (the first press gives 20 °C). If you have no thermometer, choose **Temperature unknown**. Then **Continue**.
 
-![Room temperature](evidence/d3a/temperature.png)
+<img src="evidence/d3a/temperature.png" alt="Room temperature" width="240">
 
 *Simulator picture of the Room temperature screen. The real screen is e-ink.*
 
 3. [ ] **Overview.** It shows the panel, the battery, the profiles that will run ("To run: Stock, ..."), any that will not run and why, and "Each profile takes about n minutes". Write the profiles to run: ____________ and the estimate: ______ minutes per profile.
 
-![Overview](evidence/d3a/overview.png)
+<img src="evidence/d3a/overview.png" alt="Overview" width="240">
 
 *Simulator picture of the Overview. On the Picco it names the real panel and battery level. The real screen is e-ink.*
 
 4. [ ] Choose **Start the benchmark**.
 5. [ ] Each step shows "<profile> · step k / 10" and what it does. Do not touch the Picco while it runs: **a key or a touch stops the step.**
 
-![A step running](evidence/d3a/progress_word_band.png)
+<img src="evidence/d3a/progress_word_band.png" alt="A step running" width="240">
 
 *Simulator picture of a step running. The real screen is e-ink.*
 
 6. [ ] When the words stop, look at the screen. Then press a key or touch it.
 7. [ ] **"How readable was it?"** Choose **Clean**, **Tolerable** or **Unreadable**. Choose **Repeat step** if you did not watch it. Below the rows it shows the delivered WPM, the words drawn and the order check.
 
-![Rating](evidence/d3a/rating_prompt.png)
+<img src="evidence/d3a/rating_prompt.png" alt="Rating" width="240">
 
 *Simulator picture of the rating question. The real screen is e-ink.*
 
 8. [ ] After the last step of a profile (the endurance run, 300 updates), it also asks **"Was residue visible after the run?"**: **No residue** or **Residue visible**.
 9. [ ] The **profile summary** shows the figures of that profile. Choose **Next profile: <name>**, or **Finish the benchmark** after the last one.
 
-![Profile summary](evidence/d3a/profile_summary_stock.png)
+<img src="evidence/d3a/profile_summary_stock.png" alt="Profile summary" width="240">
 
 *Simulator picture of a profile summary. On the Picco the times are the panel's real times. The real screen is e-ink.*
 
 10. [ ] At the end you see "Benchmark finished" and "Saved as /rsvp-bench/NNNN-bench.json". Write the file name: ____________
 11. [ ] Choose **Back to the device test menu**.
 
-![Run summary](evidence/d3a/run_summary.png)
+<img src="evidence/d3a/run_summary.png" alt="Run summary" width="240">
 
 *Simulator picture of the end of the benchmark. The real screen is e-ink.*
 
 If you stopped a step by accident, the **"Step stopped"** screen offers **Repeat step**, **Skip the rest of this profile** and **End the benchmark**. Choose **Repeat step**.
 
-![Step stopped](evidence/d3a/stop_prompt.png)
+<img src="evidence/d3a/stop_prompt.png" alt="Step stopped" width="240">
 
 *Simulator picture of the "Step stopped" screen. The real screen is e-ink.*
 
@@ -540,14 +539,14 @@ The Picco shows the instructions for every step on its screen. They are also pri
 1. [ ] Device test menu > **Guided acceptance**.
 2. [ ] The start screen says "Display profile: <name>" (Stock until step 11). Choose **Start part A**.
 
-![Guided acceptance start](evidence/d3b/acc_start.png)
+<img src="evidence/d3b/acc_start.png" alt="Guided acceptance start" width="240">
 
 *Simulator picture of the Guided acceptance start screen. The real screen is e-ink.*
 
 3. [ ] Run 1 plays the test passage at 240 WPM. Watch the words. Do not touch the Picco: a key or a touch stops the run. When the words stop, look, then press a key or touch.
 4. [ ] **"Was the last sentence readable?"** Choose **Yes, it was readable** or **No**. Below the rows: the target and delivered WPM, and "Words: 150 / 150, each once, in order" (or "ORDER CHECK FAILED").
 
-![Readable question](evidence/d3b/part_a_readable.png)
+<img src="evidence/d3b/part_a_readable.png" alt="Readable question" width="240">
 
 *Simulator picture of the "readable" question. On the Picco the numbers are measured. The real screen is e-ink.*
 
@@ -555,13 +554,13 @@ The Picco shows the instructions for every step on its screen. They are also pri
 6. [ ] Answer **"Was the last sentence readable?"** again.
 7. [ ] **"Was it slower than 600 WPM?"** Choose **Yes: slower, no word missing** or **No**. Write the delivered WPM shown: ______ WPM
 
-![Slower question](evidence/d3b/part_a_slower.png)
+<img src="evidence/d3b/part_a_slower.png" alt="Slower question" width="240">
 
 *Simulator picture of the "slower" question. On the Picco the numbers are measured. The real screen is e-ink.*
 
 8. [ ] **"Part A done"** shows one line per run and "Automatic check: Pass · your answers: Pass" (or Fail). Write it: ____________. Choose **Continue to part B**.
 
-![Part A done](evidence/d3b/part_a_done.png)
+<img src="evidence/d3b/part_a_done.png" alt="Part A done" width="240">
 
 *Simulator picture of "Part A done". The real screen is e-ink.*
 
@@ -573,7 +572,7 @@ Each step has two screens.
 
 1. [ ] **The instructions:** "Step k of 12", the step's title, what to do, and "Expected:" with what should happen. Read them. Choose **Leave to do this step**. The Device test closes.
 
-![Step instructions](evidence/d3b/step_instructions.png)
+<img src="evidence/d3b/step_instructions.png" alt="Step instructions" width="240">
 
 *Simulator picture of a step's instructions. The real screen is e-ink.*
 
@@ -581,20 +580,20 @@ Each step has two screens.
 3. [ ] Come back: Settings > Display > Device test > **Guided acceptance**. The question opens at once.
 4. [ ] **"Step k: how did it go?"** Choose **Pass** if what happened matched "Expected:". Choose **Fail** if it did not. Choose **Skip this step** if you cannot do it. **Not done yet** goes back to the instructions and records nothing.
 
-![Step question](evidence/d3b/step_result.png)
+<img src="evidence/d3b/step_result.png" alt="Step question" width="240">
 
 *Simulator picture of a step's question. The real screen is e-ink.*
 
 5. [ ] After **Fail**, **"What went wrong?"** asks for a reason: **It did not appear**, **It appeared at the wrong place**, **Wrong mode after it**, **A grade was lost or wrong** or **Something else**. Write what you saw in the [results sheet](#appendix-e-results-sheet).
 
-![What went wrong](evidence/d3b/fail_reasons.png)
+<img src="evidence/d3b/fail_reasons.png" alt="What went wrong" width="240">
 
 *Simulator picture of the fail reasons. The real screen is e-ink.*
 
 6. [ ] Repeat for all twelve steps. Your answers are saved after each one. You can take a break between two steps: the menu row then says, for example, "Guided acceptance: step 4 of 12".
 7. [ ] At the end, **"Guided acceptance done"** shows "Saved as /rsvp-bench/NNNN-acceptance.json", one line per criterion, and "Criterion 6 (preparing books) is not checked on the device." Write the file name: ____________. Choose **Back to the device test menu**.
 
-![Summary](evidence/d3b/summary.png)
+<img src="evidence/d3b/summary.png" alt="Summary" width="240">
 
 *Simulator picture of the summary. The real screen is e-ink.*
 
@@ -608,27 +607,27 @@ Changes settings only. About 5 minutes.
 
 1. [ ] Device test menu > **Choose a profile**. It shows "Now: <profile>", one row per profile you may choose (Stock, and each trial the benchmark unlocked that this panel allows), and below them the ratings from the benchmark file, for example "Trial B · 6 clean · 188 WPM".
 
-![Choose a profile](evidence/d3b/choose_profile.png)
+<img src="evidence/d3b/choose_profile.png" alt="Choose a profile" width="240">
 
 *Simulator picture. On the Picco the ratings and WPM are yours. The real screen is e-ink.*
 
 2. [ ] Choose the profile to keep for reading. A suggestion: the fastest trial (the highest WPM on its row) that you rated **Clean** in every step, or in all but one, and with no residue. If no trial is like that, choose **Stock**.
 3. [ ] **"Keep other trials?"** lists the other trials, each as "lock again". Keep another trial only if you rated it clean too: choose its row to change it to "keep". To return to the factory state, choose Stock and keep nothing.
 
-![Keep other trials](evidence/d3b/keep_trials.png)
+<img src="evidence/d3b/keep_trials.png" alt="Keep other trials" width="240">
 
 *Simulator picture. The real screen is e-ink.*
 
 4. [ ] Choose **Save the choice**.
 5. [ ] **"Profile saved"** shows "Saved as /rsvp-bench/NNNN-choice.json", "Speed reading uses: <profile>", what is kept and what is locked again. Write the profile: ____________ and the file name: ____________
 
-![Profile saved](evidence/d3b/choice_done.png)
+<img src="evidence/d3b/choice_done.png" alt="Profile saved" width="240">
 
 *Simulator picture. The real screen is e-ink.*
 
 6. [ ] If you kept a trial, Settings > Display now has a second row, **Speed read display**, where you can change the profile later.
 
-![Speed read display row](evidence/d3b/settings_row.png)
+<img src="evidence/d3b/settings_row.png" alt="Speed read display row" width="240">
 
 *Simulator picture of Settings > Display with the new row. The real screen is e-ink.*
 
@@ -647,7 +646,7 @@ About 20 minutes.
 1. [ ] In the PowerShell window with the serial log, press **Ctrl+C**. You see <!--q-->`Serial log saved:` and the file's name.
 2. [ ] Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`
 
 3. [ ] You see <!--q-->`Summary written:` and the file name `work\early-check-summary-<time>.txt`. This file is safe to share: it lists what identify and backup found, fingerprints instead of files, and every command you ran with its result. Your MAC address is partly hidden and your Windows user name is removed.
 
@@ -657,7 +656,7 @@ About 20 minutes.
 5. [ ] The serial logs: the files `work\serial-<time>.log` in the kit folder (one for each time you started `monitor`).
 6. [ ] Open each serial log in Notepad. Press Ctrl+F and search for your home Wi-Fi network's name. If you find it, replace it with `WIFI` and save. (With Create Hotspot it should not be there.)
 7. [ ] The summary file `work\early-check-summary-<time>.txt`.
-8. [ ] If step 5 ended with `DONE`: copy the lines of the flash output from <!--q-->`Writing (do not unplug the Picco until this says DONE)` to <!--q-->`DONE: all four images written and verified.` (select them in the PowerShell window and press Enter to copy). These lines hold no private data. If you need to scroll back too far, skip this: the summary records that the flash command ended with exit 0.
+8. [ ] If step 5 ended with `DONE`: copy the lines of the flash output from <!--q-->`Writing (do not unplug the Picco until this says DONE)` to <!--q-->`DONE: all four images written and verified.` (select them with the mouse in the PowerShell window and copy them). These lines hold no private data. If you need to scroll back too far, skip this: the summary records that the flash command ended with exit 0.
 
 ### Open the results issue
 
@@ -681,12 +680,12 @@ The flash stopped before `DONE`. The tool then shows <!--q-->`FLASHING DID NOT C
 1. [ ] Do not unplug the Picco. If the cable came out, plug it back in, straight into the PC.
 2. [ ] Type the restore command with the backup file's name (the tool showed the full path; the part in `work` is enough when you are in the kit folder):
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 restore "work\picco-backup-<...>.bin"`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 restore "work\picco-backup-<...>.bin"`
 
 3. [ ] The tool shows the backup, checks its fingerprint and says <!--q-->`Guard: one image of exactly 16,777,216 bytes at 0x0. APPROVED.`
 4. [ ] It asks <!--q-->`To overwrite the whole Picco flash with this backup, type exactly:  RESTORE BACKUP` Type, in capital letters, and press Enter:
 
-   <!--type-->`RESTORE BACKUP`
+   Phrase: <!--type-->`RESTORE BACKUP`
 
 5. [ ] It writes 16 MB and reads all of it back. This takes several minutes. Do not unplug.
 6. [ ] **It worked if** you see <!--q-->`VERIFIED: the whole flash now equals the backup` and <!--q-->`The Picco has been reset and should start as before.` The Picco runs Onyx's firmware again, exactly as at the backup.
@@ -713,7 +712,7 @@ The flash said `DONE`, but the screen stays blank or still shows Onyx's last pic
 2. [ ] Look at the serial log window (step 6). Lines from the Picco mean it runs: wait a little more.
 3. [ ] If nothing appears: hold the power button for about half a second, then wait one minute.
 4. [ ] If still nothing appears: press Ctrl+C in the log window, then start the log again with `-Reset` (step 6, line 1). Wait one minute.
-5. [ ] If the screen still does not change and the log shows nothing from the firmware: run the restore, as in [flashing stops part-way](#flashing-stops-part-way), lines 2 to 7.
+5. [ ] If the screen still does not change and the log shows nothing from the firmware: press Ctrl+C in the log window (the restore needs the port), then run the restore, as in [flashing stops part-way](#flashing-stops-part-way), lines 2 to 7.
 
 The tool cannot test in advance whether the new firmware starts on this Picco; this is the reason the backup exists.
 
@@ -737,7 +736,7 @@ The tool says <!--q-->`COULD NOT REACH THE PICCO'S CHIP. Nothing was read or wri
 4. [ ] Close any other program that might use the port (serial terminal, Arduino IDE, another `session.ps1` window, including one running `monitor`).
 5. [ ] List the serial ports the tool sees:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 ports`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 ports`
 
    It prints <!--q-->`Serial ports:` and one line per port. The Picco's line ends with `<- Espressif USB-Serial/JTAG`. Its name is `COM` and a number.
 6. [ ] Open Device Manager (right-click Start > **Device Manager**) > **Ports (COM & LPT)**. Unplug and plug in the Picco and watch which entry appears, for example "USB Serial Device (COM5)".
@@ -763,7 +762,7 @@ Later firmware fixes come as an SD-card update file. If the firmware starts but 
 
 ## After the session
 
-* **Keep using the Picco.** It runs the new firmware. Speed read and the checkpoints work in any EPUB; prepared books have checkpoints.
+* **Keep using the Picco.** It runs the new firmware. Speed read works in any EPUB; checkpoints appear only in prepared books.
 * **A later fix** arrives as an SD-card update file, `update.bin` in a new kit, or `eink-learner-aid-v<version>-picco2.bin` on a release. Copy it to the SD card's top folder and choose Settings > System > **SD Card Firmware Update**, as in step 8. No PC and no cable are needed.
 * **Wi-Fi updates** (Settings > System > **Check for Updates**) offer a release only when the team has published a normal release with a higher version.
 * **To return to Onyx's firmware**, connect the Picco, open PowerShell in the kit folder and run the restore of [Recovery](#flashing-stops-part-way), lines 2 to 6. You need the kit folder and both backup files.
@@ -874,19 +873,19 @@ Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 
 ## Appendix B: screens you meet in Part B
 
-![RSVP pause screen](evidence/r4a/pause-entry.png)
+<img src="evidence/r4a/pause-entry.png" alt="RSVP pause screen" width="240">
 
 *Simulator picture of the speed-reading pause screen (RSVP). The top line shows the target and the actual pace. The real screen is e-ink.*
 
-![Checkpoint question](evidence/c3a/cp_screens_touch-a_prompt.png)
+<img src="evidence/c3a/cp_screens_touch-a_prompt.png" alt="Checkpoint question" width="240">
 
 *Simulator picture of a checkpoint question, before the answer is shown. The real screen is e-ink.*
 
-![Recorded earlier](evidence/c3a/cp_screens_touch-c_prompt1_recorded.png)
+<img src="evidence/c3a/cp_screens_touch-c_prompt1_recorded.png" alt="Recorded earlier" width="240">
 
 *Simulator picture of a question from an earlier pass, with "Recorded earlier". The real screen is e-ink.*
 
-![Picture banner](evidence/r5/image-banner.png)
+<img src="evidence/r5/image-banner.png" alt="Picture banner" width="240">
 
 *Simulator picture of the banner at a picture in an ordinary book. The real screen is e-ink.*
 

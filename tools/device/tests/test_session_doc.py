@@ -251,6 +251,14 @@ def test_commands_are_real_session_ps1_commands(doc):
 
 
 @pytest.mark.parametrize("doc", [SESSION_DOC, EARLY_DOC], ids=["session", "early-check"])
+def test_no_line_starts_with_a_marker(doc):
+    """A line that starts with "<!--" is an HTML block in Markdown (CommonMark and GitHub): its code
+    span would print with literal backticks, which PowerShell reads as escape characters."""
+    bad = [line for line in read(doc).splitlines() if re.match(r"^\s{0,3}<!--", line)]
+    assert not bad, "start the line with a word, e.g. 'Command: <!--cmd-->`...`': %s" % bad
+
+
+@pytest.mark.parametrize("doc", [SESSION_DOC, EARLY_DOC], ids=["session", "early-check"])
 def test_every_typed_session_command_is_marked(doc):
     text = read(doc)
     unmarked = re.findall(r"(?<!-->)`(powershell [^`]*session\.ps1[^`]*)`", text)
@@ -290,7 +298,7 @@ def anchors(path):
 
 def links(path):
     text = re.sub(r"`[^`\n]*`", "", read(path))
-    return re.findall(r"!?\[[^\]]*\]\(([^)\s]+)\)", text)
+    return re.findall(r"!?\[[^\]]*\]\(([^)\s]+)\)", text) + re.findall(r"<img [^>]*src=\"([^\"]+)\"", text)
 
 
 @pytest.mark.parametrize("doc", [SESSION_DOC, EARLY_DOC, TEMPLATE], ids=["session", "early-check", "template"])
@@ -308,8 +316,9 @@ def test_relative_links_and_pictures_resolve(doc):
 
 def test_every_picture_is_from_the_simulator_and_says_so():
     lines = read(SESSION_DOC).splitlines()
-    pictures = [i for i, line in enumerate(lines) if line.startswith("![")]
+    pictures = [i for i, line in enumerate(lines) if line.startswith(("![", "<img "))]
     assert len(pictures) >= 25
+    assert not [line for line in lines if "![" in line], "use <img ... width=...> so the printed copy stays short"
     for i in pictures:
         near = " ".join(lines[i - 2:i + 3])
         assert "imulator" in near and "e-ink" in near, "picture without the simulator caption: %s" % lines[i]
@@ -322,7 +331,7 @@ def test_session_pictures_equal_the_scenario_references():
     for name in names:
         with open(os.path.join(PICTURES, name), "rb") as a, open(os.path.join(SCENARIO_REFS, name), "rb") as b:
             assert a.read() == b.read(), "docs/device-session/%s differs from the scenario's reference" % name
-        assert "](device-session/%s)" % name in text, "docs/device-session/%s is not used" % name
+        assert 'src="device-session/%s"' % name in text, "docs/device-session/%s is not used" % name
 
 
 # --- the guided acceptance steps -------------------------------------------------------------------

@@ -102,11 +102,17 @@ def tool_files():
     return sorted("piccoflash/" + f for f in os.listdir(pkg) if f.endswith(".py"))
 
 
+def doc_targets(text):
+    """Link targets of Markdown links and <img> tags outside code spans, without #anchors."""
+    text = re.sub(r"`[^`\n]*`", "", text)
+    found = re.findall(r"!?\[[^\]]*\]\(([^)\s]+)\)", text) + re.findall(r"<img [^>]*src=\"([^\"]+)\"", text)
+    return [t.split("#")[0] for t in found if not re.match(r"^[a-z]+:", t) and not t.startswith("#")]
+
+
 def linked_pictures(doc):
     """Kit paths of the pictures a repository document links to (an independent reading of the links)."""
-    text = re.sub(r"`[^`\n]*`", "", open(os.path.join(mrk.REPO, doc), encoding="utf-8").read())
     found = set()
-    for target in re.findall(r"!?\[[^\]]*\]\(([^)\s#]+)(?:#[^)\s]*)?\)", text):
+    for target in doc_targets(open(os.path.join(mrk.REPO, doc), encoding="utf-8").read()):
         if not re.match(r"^[a-z]+:", target) and target.lower().endswith((".png", ".jpg", ".jpeg")):
             found.add(os.path.normpath(os.path.join("docs", target)).replace(os.sep, "/"))
     return sorted(found)
@@ -376,10 +382,8 @@ def test_final_kit_holds_the_session_checklist_and_everything_it_links_to(build,
         doc = zf.read("docs/DEVICE_SESSION.md")
         assert doc == open(os.path.join(mrk.REPO, "docs", "DEVICE_SESSION.md"), "rb").read()
         assert "Open first: docs\\DEVICE_SESSION.md" in zf.read("KIT-README.txt").decode("ascii")
-        text = re.sub(r"`[^`\n]*`", "", doc.decode("utf-8"))
-        targets = [t.split("#")[0] for t in re.findall(r"!?\[[^\]]*\]\(([^)\s]+)\)", text)
-                   if not re.match(r"^[a-z]+:", t) and not t.startswith("#")]
-        assert targets, "the checklist links to no picture"
+        targets = doc_targets(doc.decode("utf-8"))
+        assert len(targets) >= 25, "the checklist links to too few pictures: %s" % targets
         for target in targets:
             kit_path = os.path.normpath(os.path.join("docs", target)).replace(os.sep, "/")
             assert kit_path in names, "the kit lacks %s, linked from DEVICE_SESSION.md" % kit_path
@@ -408,13 +412,16 @@ def test_refuses_a_checklist_that_links_outside_the_kit(build, tmp_path, monkeyp
 
 def test_copies_linked_pictures_and_accepts_links_to_kit_documents(build, tmp_path, monkeypatch):
     doc = write_doc(tmp_path, "[sheet](DEVICE_EARLY_CHECK.md#3-identify) [web](https://example.org/a.png) "
-                              "[here](#top) `![code](not/a/link.png)`\n![a](pics/a.png) ![a again](pics/a.png)\n")
+                              "[here](#top) `![code](not/a/link.png)`\n![a](pics/a.png) ![a again](pics/a.png)\n"
+                              '<img src="pics/b.png" alt="b" width="240">\n')
     write(str(tmp_path / "docs" / "pics" / "a.png"), b"\x89PNG picture")
+    write(str(tmp_path / "docs" / "pics" / "b.png"), b"\x89PNG second")
     monkeypatch.setattr(mrk, "SESSION_DOC", (doc, "docs/DEVICE_SESSION.md"))
     code, log = run_kit(tmp_path / "out", build, kind="final")
     assert code == 0, log
     with zipfile.ZipFile(str(tmp_path / "out" / "dist" / "picco-2slot-2.0.1.zip")) as zf:
         assert zf.read("docs/pics/a.png") == b"\x89PNG picture"
+        assert zf.read("docs/pics/b.png") == b"\x89PNG second"
         assert not [n for n in zf.namelist() if "not/a/link" in n]
 
 

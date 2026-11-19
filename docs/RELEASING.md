@@ -33,7 +33,11 @@ picco-2slot-<version>/
     books/                  fixture.epub, fixture.prepared.epub, paine-essays.epub, paine-essays.prepared.epub
   docs/                     DEVICE_EARLY_CHECK.md, DEVICE_SESSION.md (when it exists),
                             paine-essays.validation-report.md, paine-essays.LICENSE.md
+    evidence/, device-session/   every picture DEVICE_SESSION.md and DEVICE_EARLY_CHECK.md link to,
+                            at the same path relative to the document as in the repository
 ```
+
+`KIT-README.txt` says to open `docs\DEVICE_SESSION.md` first when the kit has it (always in a `final` kit), otherwise `docs\DEVICE_EARLY_CHECK.md`. The kit's documents are read offline or printed, so the kit builder copies every picture they link to into the kit at the same relative path. It refuses the kit if a document links to anything else that is not in the kit (a missing picture, a file outside `docs/`, or another repository document); links to web addresses, to the other kit documents and within the page are fine.
 
 `paine-essays.epub` (the unprepared original) is the kit's ordinary EPUB without checkpoint data: none of the upstream test books under `test/epubs/` is real prose (they are rendering test pages), and it is real public-domain prose already in the repository (`fixtures/books/REAL_BOOKS.md`).
 
@@ -125,7 +129,7 @@ A `preview` is published, if at all, with `-F draft=false` only (it stays a pre-
 ### Before publishing a `final` kit
 
 - The run that made it is green end to end, including both Windows jobs, and Project CI is green on the same commit.
-- `docs/DEVICE_SESSION.md` is in the zip, and `KIT-README.txt` says to open it first.
+- `docs/DEVICE_SESSION.md` is in the zip with its pictures, and `KIT-README.txt` says to open it first.
 - The version is the one intended, above every earlier release; nothing newer is waiting as a draft.
 - The zip and Wi-Fi asset hashes in the notes equal the downloaded files and their attestations verify.
 - Hardware: until the device session has happened, nothing in the kit has run on a Picco. Publishing a `final` kit as latest only matters for Wi-Fi updates of devices already on the two-slot layout; before the session there are none. After the session, publish a fix only once it has been checked as far as the simulator and the host tests can.

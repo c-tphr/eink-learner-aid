@@ -80,7 +80,7 @@ SESSION_DOC = ("docs/DEVICE_SESSION.md", "docs/DEVICE_SESSION.md")
 # Files a kit document may link to besides another kit document: its pictures. They are copied
 # into the kit at the same path relative to the document, so the kit's copy is complete offline.
 DOC_ASSET_EXTENSIONS = (".png", ".jpg", ".jpeg")
-DOC_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)\)")
+DOC_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)\)|<img\s[^>]*?src=\"([^\"]+)\"")
 CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
 URL_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 IMAGES = ("bootloader.bin", "partitions.bin", "boot_app0.bin", "firmware.bin")
@@ -353,10 +353,11 @@ def tool_entries():
 
 
 def doc_link_targets(text):
-    """Relative link and image targets in a Markdown text, without their #anchor (URLs, in-page
-    anchors and anything inside code spans are left out)."""
+    """Relative link and image targets in a Markdown text (Markdown links and HTML <img> tags),
+    without their #anchor (URLs, in-page anchors and anything inside code spans are left out)."""
     out = []
-    for target in DOC_LINK_RE.findall(CODE_SPAN_RE.sub("", text)):
+    for link, img in DOC_LINK_RE.findall(CODE_SPAN_RE.sub("", text)):
+        target = link or img
         path = target.split("#", 1)[0]
         if URL_RE.match(target) or not path or path in out:
             continue
