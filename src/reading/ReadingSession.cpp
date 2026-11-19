@@ -417,6 +417,12 @@ readingsession::OpenRestore ReadingSession::restoreOnOpen(GfxRenderer& renderer)
   }
   const StateLoad load = loadBookState(path, identity(), made->state);
   const checkpoint::BookState& state = made->state;
+  if (load.shaMismatch) {
+    // Written for another edition: checkpoint::applyBookChangeRule() dropped the position and any
+    // checkpoint in progress as the file was read. The file says so before anything shows.
+    const bool ok = writeBookState(path, state);
+    LOG_INF("CPT", "restore dropped reason=other-edition grades=%u saved=%d", state.grades.count(), ok ? 1 : 0);
+  }
   // The line rsvpentry::openedInRsvp() logs for a book without checkpoint data.
   LOG_DBG("RSVP", "book state %s mode=%s ch=%u word=%lu", stateSourceName(load.source),
           state.hasPosition ? modeName(state.position.mode) : "none", state.position.position.chapter,
@@ -467,10 +473,16 @@ readingsession::OpenRestore ReadingSession::restoreActive(std::shared_ptr<checkp
   char place[40];
   placeText(plan.place, place, sizeof(place));
   char resume[40] = "none";
-  if (state.hasActive) placeText(state.active.resume, resume, sizeof(resume));
-  LOG_DBG("CPT", "restore view=%s checkpoint=%s prompt=%u/%u place=%s resume=%s notes=%s progress_bytes=%u",
-          openViewName(plan.view), savedId, savedPrompt,
-          state.hasActive ? static_cast<unsigned>(index.promptCount(plan.checkpoint)) : 0u, place, resume, notes,
+  // "<saved prompt>/<prompts>", or "<saved prompt>/-" when the checkpoint was dropped.
+  char prompt[16];
+  if (state.hasActive) {
+    placeText(state.active.resume, resume, sizeof(resume));
+    snprintf(prompt, sizeof(prompt), "%u/%u", savedPrompt, static_cast<unsigned>(index.promptCount(plan.checkpoint)));
+  } else {
+    snprintf(prompt, sizeof(prompt), "%u/-", savedPrompt);
+  }
+  LOG_DBG("CPT", "restore view=%s checkpoint=%s prompt=%s place=%s resume=%s notes=%s progress_bytes=%u",
+          openViewName(plan.view), savedId, prompt, place, resume, notes,
           static_cast<unsigned>(sizeof(checkpointentry::Progress)));
   if (plan.notes != 0) {
     // What could not be restored is gone from the state: the file says so before anything shows.
