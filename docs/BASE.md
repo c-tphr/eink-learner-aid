@@ -51,6 +51,7 @@ Every upstream file is byte-identical to `490813ff`, except the ones listed here
 | `scripts/patch_simulator.py`, `scripts/simulator_patches/` | Added | Patches applied to the fetched simulator library (see "Simulator" below) (task F2) |
 | `docs/net-smoke-report.md`, `docs/evidence/f2/` | Added | Smoke test report and evidence (task F2) |
 | `test/CMakeLists.txt` | **Modified, two lines added**: `add_subdirectory(rsvp_core)` (task R1) and `add_subdirectory(checkpoint_core)` (task C1a), after `add_subdirectory(protected_paths)` | Registers the project's host-test directories with upstream's test build |
+| `.gitignore` | Two negation lines after `.claude/*` so `.claude/commands/` and `.claude/agents/` are tracked | The `/prep-book` command and the checker subagent live there (P4) |
 
 Upstream's own `docs/` files are merged into `docs/` unchanged; no file names collided. Files that later tasks add in their own directories (for example `tools/prep/`) are new files, not changes to upstream files; `git diff --diff-filter=MD` (step 3 below) lists only upstream files that were modified or deleted.
 

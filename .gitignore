@@ -28,6 +28,9 @@ lib/EpdFont/scripts/output/
 # Claude Code: keep local agent state out (worktrees, scheduled-task
 # locks, settings.local, scout CLEANUP.md).
 .claude/*
+# eink-learner-aid: the preparation workflow's command and checker agent are part of the repo
+!.claude/commands/
+!.claude/agents/
 /managed_components
 /.dummy
 /CMakeLists.txt
