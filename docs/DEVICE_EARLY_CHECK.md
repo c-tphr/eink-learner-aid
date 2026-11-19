@@ -14,9 +14,22 @@ There is no flashing here. If anything on screen asks you to type `REPLACE ONYX`
 
 ## 1. Get the files
 
+There are two ways to get the tool. Both give the same `session.ps1`. Use the kit if the team has told you that a kit is ready; otherwise use the repository ZIP.
+
+**With the device kit** (the files you will also use in the real session):
+
+1. Sign in to github.com and open <https://github.com/c-tphr/eink-learner-aid/releases>. The kit is in a release marked **Draft**, which you see only when you are signed in.
+2. Under **Assets**, download `picco-2slot-<version>.zip` (`<version>` is the release's version).
+3. Right-click the ZIP and choose **Extract All…**. Extract it to a short, plain folder such as `C:\picco\picco-2slot-<version>`. Avoid Documents, Desktop and OneDrive folders: they can interfere with large files.
+4. In File Explorer, open that folder (the kit folder: it holds `session.ps1`). Click the address bar, type `powershell` and press Enter. A blue or black PowerShell window opens in that folder. Type every command below into that window. Where this sheet says `tools\device`, read "the kit folder".
+
+**With the repository ZIP** (works without a release):
+
 1. Open <https://github.com/c-tphr/eink-learner-aid>. Click the green **Code** button, then **Download ZIP**.
 2. Right-click the downloaded ZIP and choose **Extract All…**. Extract it to a short, plain folder such as `C:\picco`. Avoid Documents, Desktop and OneDrive folders: they can interfere with large files.
 3. In File Explorer, open `C:\picco\eink-learner-aid-main\tools\device`. Click the address bar, type `powershell` and press Enter. A blue or black PowerShell window opens in that folder. Type every command below into that window.
+
+If you use the repository ZIP now and get the kit later, the session checklist (`DEVICE_SESSION.md`, "If you already did the early check") says how to bring this check's `work` folder into the kit folder.
 
 ## 2. Setup (once; needs the internet)
 
@@ -125,7 +138,7 @@ If nothing appears with two cables, stop there and report it (step 6, with the s
 | 3 | already converted |
 | 4 | the Picco could not be reached; nothing was written |
 
-Everything the tools produce is in `tools\device\work`:
+Everything the tools produce is in the `work` folder beside `session.ps1` (`tools\device\work`, or `work` in the kit folder):
 
 * `identify-….json` and three `.bin` files (keep private);
 * the backup `.bin` and `.json` (keep private, keep a copy);
