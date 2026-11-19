@@ -96,6 +96,13 @@ const char* itemName(const Item item) {
       return "RereadPage";
     case Item::ContinueOn:
       return "Continue";
+    // Rereading (task C4).
+    case Item::BackToQuestion:
+      return "BackToQuestion";
+    case Item::SpeedReadHere:
+      return "SpeedReadHere";
+    case Item::KeepReading:
+      return "KeepReading";
   }
   return "?";
 }

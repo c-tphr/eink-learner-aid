@@ -87,6 +87,8 @@ const char* itemLabel(const Item item) {
       return tr(STR_RSVP_SAVE_DEFAULT);
     case Item::SaveBook:
       return tr(STR_RSVP_SAVE_BOOK);
+    case Item::BackToQuestion:
+      return tr(STR_CP_BACK_TO_QUESTION);
     case Item::WpmDown:
     case Item::WpmUp:
     case Item::WordsDown:
@@ -110,7 +112,9 @@ const char* itemLabel(const Item item) {
     case Item::ChoiceRow6:
     case Item::ChoiceRow7:
     case Item::ControlsFinish:
-      break;  // checkpoint and device test screens draw their own labels
+    case Item::SpeedReadHere:
+    case Item::KeepReading:
+      break;  // checkpoint, reread list and device test screens draw their own labels
   }
   return "";
 }
@@ -322,16 +326,58 @@ reading::SavedWord RsvpActivity::loadState() {
 
 void RsvpActivity::load() {
   scheduler.resetSession();
-  focus = controls::PAUSE.defaultIndex;
+  noteRereading();
+  focus = pauseLayout().defaultIndex;
   if (entry.after) {
     loadContinued();
+    // Continue after an item during a reread: the reread goes on here, in RSVP (task C4).
+    if (rereadScreen.load()) savePosition(checkpoint::ReadingMode::Rsvp, "enter", checkpoint::NavSource::ModeSwitch);
     drawPauseScreen(true);
     phase.store(Phase::Paused);
     guardRestartPending.store(true);
     return;
   }
   const reading::SavedWord saved = loadState();
-  if (entry.resume && saved.valid && saved.chapter < epub->getSpineItemsCount()) spine = saved.chapter;
+  // During a reread RSVP opens at the reread place; after a checkpoint that fired in RSVP and ended in
+  // page view, after its break (task C4; ReadingSession::rsvpStart()).
+  checkpoint::Place at;
+  uint16_t from = 0;
+  const reading::ReadingSession::RsvpStart start =
+      entry.session ? entry.session->rsvpStart(at, from) : reading::ReadingSession::RsvpStart::None;
+  if (start == reading::ReadingSession::RsvpStart::AfterCheckpoint) {
+    if (openChapter(from)) {
+      moveAfterCheckpoint(at.position);
+      status = Status::CheckpointDone;
+    } else {
+      note = Note::ChapterFailed;
+    }
+    LOG_DBG("RSVP", "enter ch=%d page_offset=%lu word=%lu chapter_words=%lu activity_bytes=%u from=checkpoint", spine,
+            static_cast<unsigned long>(entry.pageStartOffset), static_cast<unsigned long>(source.position()),
+            static_cast<unsigned long>(index.isOpen() ? index.reader().wordCount() : 0),
+            static_cast<unsigned>(sizeof(RsvpActivity)));
+  } else if (start == reading::ReadingSession::RsvpStart::Reread) {
+    spine = at.position.chapter;
+    if (openChapter(spine)) {
+      source.seek(at.position.word);
+      scheduler.reposition();
+      savePosition(checkpoint::ReadingMode::Rsvp, "enter", checkpoint::NavSource::ModeSwitch);
+    } else {
+      note = Note::ChapterFailed;
+    }
+    LOG_DBG("RSVP", "enter ch=%d page_offset=%lu word=%lu chapter_words=%lu activity_bytes=%u from=reread", spine,
+            static_cast<unsigned long>(entry.pageStartOffset), static_cast<unsigned long>(source.position()),
+            static_cast<unsigned long>(index.isOpen() ? index.reader().wordCount() : 0),
+            static_cast<unsigned>(sizeof(RsvpActivity)));
+  } else {
+    if (entry.resume && saved.valid && saved.chapter < epub->getSpineItemsCount()) spine = saved.chapter;
+    openAtPage(saved);
+  }
+  drawPauseScreen(true);
+  phase.store(Phase::Paused);
+  guardRestartPending.store(true);
+}
+
+void RsvpActivity::openAtPage(const reading::SavedWord& saved) {
   if (openChapter(spine)) {
     const reading::EntryChoice choice =
         reading::chooseEntry(index.reader(), spine, entry.pageStartOffset, entry.pageEndOffset, saved, entry.resume);
@@ -345,9 +391,6 @@ void RsvpActivity::load() {
     note = Note::ChapterFailed;
     LOG_ERR("RSVP", "enter ch=%d failed: no word index", spine);
   }
-  drawPauseScreen(true);
-  phase.store(Phase::Paused);
-  guardRestartPending.store(true);
 }
 
 void RsvpActivity::loadContinued() {
@@ -440,10 +483,17 @@ void RsvpActivity::enterPause(const Note pauseNote, const char* reason) {
   pauseRequested.store(false);
   timeoutPause = false;
   note = pauseNote;
-  focus = controls::PAUSE.defaultIndex;
+  focus = pauseLayout().defaultIndex;
   logPause(reason);
   drawPauseScreen(true);  // the clearing refresh that ends playback carries the pause screen
   savePosition(checkpoint::ReadingMode::Rsvp, reason);
+  if (entry.session && entry.session->promptDue()) {
+    // The pause left the section being reread (task C4): its prompt again.
+    checkpointBefore = source.position();
+    phase.store(Phase::Checkpoint);
+    checkpointPending.store(true);
+    return;
+  }
   phase.store(Phase::Paused);
   guardRestartPending.store(true);
 }
@@ -492,7 +542,8 @@ void RsvpActivity::stopAtCheckpoint() {
   const rsvp::Frame& frame = scheduler.lastFrame();
   const checkpoint::Step step =
       entry.session ? entry.session->rsvpStop(spine, frame.lastWordIndex, source.position()) : checkpoint::Step{};
-  if (step.kind != checkpoint::StepKind::Fire) {
+  const bool rereadEnd = step.kind == checkpoint::StepKind::RereadEnd;
+  if (step.kind != checkpoint::StepKind::Fire && !rereadEnd) {
     enterPause(Note::None, "checkpoint");
     return;
   }
@@ -501,8 +552,13 @@ void RsvpActivity::stopAtCheckpoint() {
   pauseRequested.store(false);
   timeoutPause = false;
   // The meter and audit of the session so far; time in the checkpoint is outside playback.
-  logPause("checkpoint");
-  pendingCheckpoint = step;
+  logPause(rereadEnd ? "reread-end" : "checkpoint");
+  if (rereadEnd) {
+    // A reread reached its section's end (task C4): back to the prompt, which openCheckpoint() shows.
+    entry.session->endReread(checkpoint::FlowEvent::RereadReachedEnd, "rsvp-playback");
+  } else {
+    pendingCheckpoint = step;
+  }
   checkpointBefore = frame.firstWordIndex;
   LOG_DBG("RSVP", "leave to=checkpoint ch=%d first=%lu last=%lu", spine,
           static_cast<unsigned long>(frame.firstWordIndex), static_cast<unsigned long>(frame.lastWordIndex));
@@ -519,10 +575,20 @@ void RsvpActivity::openCheckpoint() {
     before.position.chapter = static_cast<uint16_t>(spine);
     before.position.word = checkpointBefore;
     before.mode = checkpoint::ReadingMode::Rsvp;
-    activity = entry.session->startCheckpoint(renderer, mappedInput, pendingCheckpoint, checkpoint::ReadingMode::Rsvp,
-                                              before, run);
+    if (entry.session->promptDue()) {
+      // Back at the prompt after a reread (task C4).
+      activity = entry.session->promptAgain(renderer, mappedInput, run);
+    } else {
+      activity = entry.session->startCheckpoint(renderer, mappedInput, pendingCheckpoint,
+                                                checkpoint::ReadingMode::Rsvp, before, run);
+    }
     // CheckpointActivity writes the position before the break: what this session wrote last is stale.
     positionSaved = false;
+  }
+  if (!activity && run) {
+    // No memory for the prompt after a reread: the checkpoint ends there, as Failed.
+    returnFromCheckpoint(*run);
+    return;
   }
   if (!activity) {
     // No memory for the screens: reading goes on after the break.
@@ -538,32 +604,92 @@ void RsvpActivity::openCheckpoint() {
 }
 
 void RsvpActivity::returnFromCheckpoint(const readingsession::CheckpointRun& run) {
+  const checkpointui::End end = run.outcome->end;
+  const bool rereadRsvp = end == checkpointui::End::RereadRsvp;
+  const bool rereadPage = end == checkpointui::End::RereadPage;
+  if (rereadPage || (!rereadRsvp && run.request.mode == checkpoint::ReadingMode::Page)) {
+    leaveAfterCheckpoint(run);
+    return;
+  }
   {
     RenderLock lock;
     // CheckpointActivity restored the reader's orientation when it closed.
     renderer.setOrientation(GfxRenderer::Orientation::Portrait);
-    const checkpoint::Place place = entry.session->endCheckpoint(run);
-    moveAfterCheckpoint(place.position);
-    const checkpointui::End end = run.outcome->end;
-    const bool done = end == checkpointui::End::Finished || end == checkpointui::End::Skipped ||
-                      end == checkpointui::End::RereadRsvp || end == checkpointui::End::RereadPage;
-    // Plan section 7, point 6, and S4 row 33: the pause screen at the first word after the break, Play
-    // highlighted, "Checkpoint done"; nothing plays until Play.
-    status = done ? Status::CheckpointDone : Status::Paused;
-    focus = controls::PAUSE.defaultIndex;
-    needClear = true;
-    // The activity already saved this place when it finished; savePosition() skips a repeat.
-    if (done && run.outcome->saved && place.position.chapter == spine && place.position.word == source.position()) {
-      positionSaved = true;
-      savedPlace.position = place.position;
-      savedPlace.mode = checkpoint::ReadingMode::Rsvp;
+    if (rereadRsvp) {
+      // Task C4: the pause screen at the section's first word, Play highlighted, with "Back to the
+      // question"; the move back opens a new segment of the word-order audit (Scheduler::reposition()).
+      const checkpoint::Place at = entry.session->startReread(run);
+      note = Note::None;
+      if (at.position.chapter != spine && !openChapter(at.position.chapter)) note = Note::ChapterFailed;
+      source.seek(at.position.word);
+      scheduler.reposition();
+      status = Status::Paused;
+      positionSaved = false;
+      LOG_DBG("RSVP", "reread ch=%d word=%lu", spine, static_cast<unsigned long>(source.position()));
+    } else {
+      const checkpoint::Place place = entry.session->endCheckpoint(run);
+      moveAfterCheckpoint(place.position);
+      const bool done = end == checkpointui::End::Finished || end == checkpointui::End::Skipped;
+      // Plan section 7, point 6, and S4 row 33: the pause screen at the first word after the break, Play
+      // highlighted, "Checkpoint done"; nothing plays until Play.
+      status = done ? Status::CheckpointDone : Status::Paused;
+      // The activity already saved this place when it finished; savePosition() skips a repeat.
+      if (done && run.outcome->saved && place.position.chapter == spine &&
+          place.position.word == source.position()) {
+        positionSaved = true;
+        savedPlace.position = place.position;
+        savedPlace.mode = checkpoint::ReadingMode::Rsvp;
+      }
     }
-    savePosition(checkpoint::ReadingMode::Rsvp, "checkpoint");
+    noteRereading();
+    focus = pauseLayout().defaultIndex;
+    needClear = true;
+    if (!rereadRsvp) savePosition(checkpoint::ReadingMode::Rsvp, "checkpoint");
     phase.store(Phase::Paused);
     guardRestartPending.store(true);
   }
   requestUpdate();
 }
+
+void RsvpActivity::leaveAfterCheckpoint(const readingsession::CheckpointRun& run) {
+  {
+    RenderLock lock;
+    if (run.outcome->end == checkpointui::End::RereadPage) {
+      // A reread in page view (task C4): the reader shows the page holding the section's first word,
+      // with the reread bar. The flow already saved the reread place.
+      const checkpoint::Place at = entry.session->startReread(run);
+      uint32_t offset = 0;
+      const bool found = at.position.chapter == spine && index.isOpen()
+                             ? reading::pageViewOffset(index.reader(), at.position.word, offset)
+                             : entry.session->wordOffset(at.position.chapter, at.position.word, offset);
+      if (!found) offset = 0;
+      handOff->then = rsvpentry::HandOff::Then::PageView;
+      handOff->spineIndex = at.position.chapter;
+      handOff->visibleTextOffset = offset;
+      entry.session->setPageReading(at.position.chapter, at.position.word);
+      LOG_DBG("RSVP", "leave to=reread-page ch=%u word=%lu offset=%lu", at.position.chapter,
+              static_cast<unsigned long>(at.position.word), static_cast<unsigned long>(offset));
+    } else {
+      // The checkpoint fired in page view and ended here after a reread in RSVP: the reader resumes
+      // after its break (readingsession::afterPageCheckpoint()).
+      handOff->then = rsvpentry::HandOff::Then::CheckpointDone;
+      LOG_DBG("RSVP", "leave to=checkpoint-done end=%s", checkpointui::endName(run.outcome->end));
+    }
+  }
+  finish();
+}
+
+void RsvpActivity::backToQuestion() {
+  {
+    RenderLock lock;
+    if (!entry.session || !entry.session->endReread(checkpoint::FlowEvent::ReturnEarly, "pause-screen")) return;
+    checkpointBefore = source.position();
+    phase.store(Phase::Checkpoint);
+  }
+  openCheckpoint();
+}
+
+void RsvpActivity::noteRereading() { rereadScreen.store(entry.session && entry.session->rereading()); }
 
 void RsvpActivity::moveAfterCheckpoint(const checkpoint::Position& resume) {
   note = Note::None;
@@ -665,11 +791,11 @@ void RsvpActivity::drawPauseScreen(const bool clearing) {
   }
   needClear = false;
   LOG_DBG("RSVP", "pause screen focus=%s refresh=%s status=\"%s\"",
-          controls::itemName(controls::PAUSE.zones[focus].item), clearing ? "clear" : "update", statusLine);
+          controls::itemName(pauseLayout().zones[focus].item), clearing ? "clear" : "update", statusLine);
 }
 
 void RsvpActivity::paintButton(const int i) {
-  const controls::Zone& z = controls::PAUSE.zones[i];
+  const controls::Zone& z = pauseLayout().zones[i];
   const bool focused = i == focus;
   if (focused) {
     renderer.fillRect(z.x, z.y, z.w, z.h, true);
@@ -700,8 +826,10 @@ void RsvpActivity::paintPauseScreen() {
   const int smallHeight = renderer.getLineHeight(UI_10_FONT_ID);
   char line[160];
 
-  // Status: "Paused" or a save's outcome, the target and delivered WPM, then the position.
-  const char* lead = tr(STR_RSVP_PAUSED);
+  // Status: "Paused" ("Rereading" during a reread) or a save's outcome, the target and delivered WPM, then
+  // the position.
+  const bool rereading = rereadScreen.load();
+  const char* lead = rereading ? tr(STR_CP_REREADING) : tr(STR_RSVP_PAUSED);
   switch (status) {
     case Status::SavedDefault:
       lead = tr(STR_RSVP_SAVED_DEFAULT);
@@ -742,9 +870,9 @@ void RsvpActivity::paintPauseScreen() {
   snprintf(positionLine, sizeof(positionLine), "%s%s", shown.c_str(), line);
   renderer.drawText(UI_10_FONT_ID, MARGIN, POSITION_Y, positionLine);
 
-  // The words Play starts with.
+  // The words Play starts with; during a reread "Back to the question" takes their row (S4 row 30).
   char next[rsvp::FRAME_TEXT_CAPACITY + 1] = {};
-  if (index.isOpen()) {
+  if (index.isOpen() && !rereading) {
     wordindex::IndexWordSource peekSource(index.reader());
     peekSource.seek(position);
     size_t length = 0;
@@ -766,7 +894,7 @@ void RsvpActivity::paintPauseScreen() {
   renderer.drawCenteredText(UI_12_FONT_ID, NEXT_WORDS_Y + (NEXT_WORDS_H - renderer.getLineHeight(UI_12_FONT_ID)) / 2,
                             next);
 
-  for (int i = 0; i < controls::PAUSE.count; ++i) paintButton(i);
+  for (int i = 0; i < pauseLayout().count; ++i) paintButton(i);
 
   // The values between their steppers.
   const int rowText = (SETTING_ROW_H - renderer.getLineHeight(UI_12_FONT_ID)) / 2;
@@ -914,24 +1042,24 @@ void RsvpActivity::loopPaused() {
       {
         RenderLock lock;
         focus =
-            e.ev == controls::Ev::PrevShort ? controls::focusPrev(focus) : controls::focusNext(controls::PAUSE, focus);
+            e.ev == controls::Ev::PrevShort ? controls::focusPrev(focus) : controls::focusNext(pauseLayout(), focus);
         moved = focus;
       }
-      LOG_DBG("CTL", "Pause focus=%s", controls::itemName(controls::PAUSE.zones[moved].item));
+      LOG_DBG("CTL", "Pause focus=%s", controls::itemName(pauseLayout().zones[moved].item));
       requestUpdate();
       return;
     }
     case controls::Act::Select:
-      activate(controls::PAUSE.zones[focus].item);
+      activate(pauseLayout().zones[focus].item);
       return;
     case controls::Act::SelectRepeat:
-      if (controls::PAUSE.zones[focus].repeats) activate(controls::PAUSE.zones[focus].item);
+      if (pauseLayout().zones[focus].repeats) activate(pauseLayout().zones[focus].item);
       return;
     case controls::Act::TapItem:
-      if (const controls::Zone* z = controls::hit(controls::PAUSE, e.x, e.y)) {
+      if (const controls::Zone* z = controls::hit(pauseLayout(), e.x, e.y)) {
         {
           RenderLock lock;
-          focus = controls::indexOf(controls::PAUSE, z->item);
+          focus = controls::indexOf(pauseLayout(), z->item);
         }
         activate(z->item);
       }
@@ -981,6 +1109,9 @@ void RsvpActivity::activate(const Item item) {
     case Item::SaveBook:
       saveForBook();
       return;
+    case Item::BackToQuestion:
+      backToQuestion();
+      return;
     case Item::Continue:
     case Item::Stay:
       return;  // banner items (ItemBanner.cpp)
@@ -1002,6 +1133,8 @@ void RsvpActivity::activate(const Item item) {
     case Item::ChoiceRow6:
     case Item::ChoiceRow7:
     case Item::ControlsFinish:
+    case Item::SpeedReadHere:
+    case Item::KeepReading:
       return;  // not on the pause screen
   }
 }
@@ -1014,7 +1147,10 @@ void RsvpActivity::stepSentence(const bool forward) {
     uint32_t to = from;
     const bool moved = forward ? reading::sentenceForward(index.reader(), from, sentenceWindow, to)
                                : reading::sentenceBack(index.reader(), from, sentenceWindow, to);
-    if (moved && to != from) {
+    // During a reread a step stays inside the section (task C4): one that would leave it does not move.
+    const bool stays = !rereadScreen.load() || !entry.session ||
+                       reading::rereadStepStays(entry.session->rereadRange(), to);
+    if (moved && to != from && stays) {
       source.seek(to);
       scheduler.reposition();
       note = Note::None;
@@ -1074,12 +1210,18 @@ void RsvpActivity::saveForBook() {
   requestUpdate();
 }
 
-void RsvpActivity::savePosition(const checkpoint::ReadingMode mode, const char* reason) {
+void RsvpActivity::savePosition(const checkpoint::ReadingMode mode, const char* reason,
+                                const checkpoint::NavSource rereadSource) {
   if (!index.isOpen()) return;
   checkpoint::Place place;
   place.position.chapter = static_cast<uint16_t>(spine);
   place.position.word = source.position();
   place.mode = mode;
+  if (entry.session && entry.session->rereading()) {
+    // Task C4: the reread place (active_checkpoint.reread); `position` keeps the place before the break.
+    entry.session->rereadMoved(place, rereadSource, reason);
+    return;
+  }
   if (positionSaved && place == savedPlace) return;
   const bool ok = reading::editBookState(
       epub->getPath(), identity(),
@@ -1124,7 +1266,8 @@ void RsvpActivity::leave(const rsvpentry::HandOff::Then then) {
     }
     // Exit keeps the book in RSVP for its next opening (S4 row 14); page view and the menu do not.
     savePosition(
-        then == rsvpentry::HandOff::Then::ExitBook ? checkpoint::ReadingMode::Rsvp : checkpoint::ReadingMode::Page, to);
+        then == rsvpentry::HandOff::Then::ExitBook ? checkpoint::ReadingMode::Rsvp : checkpoint::ReadingMode::Page, to,
+        checkpoint::NavSource::ModeSwitch);
   }
   finish();
 }

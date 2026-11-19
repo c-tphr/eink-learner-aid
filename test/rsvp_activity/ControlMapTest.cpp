@@ -215,3 +215,75 @@ TEST(ControlMap, BannerMatchesS4Rows15And16) {
   EXPECT_STREQ(itemName(Item::Continue), "Continue");
   EXPECT_STREQ(itemName(Item::Stay), "Stay");
 }
+
+TEST(ControlMap, RereadPauseScreenAddsBackToTheQuestion) {
+  // Task C4, S4 row 30 and section 2: the pause screen's focus order during a reread is the normal one
+  // with "Back to the question" after Page view; Play stays the default, so the key path is Up x2.
+  ASSERT_EQ(PAUSE_REREAD.count, PAUSE.count + 1);
+  EXPECT_EQ(PAUSE_REREAD.zones[PAUSE_REREAD.defaultIndex].item, Item::Play);
+  int j = 0;
+  for (int i = 0; i < PAUSE_REREAD.count; ++i) {
+    if (PAUSE_REREAD.zones[i].item == Item::BackToQuestion) continue;
+    const Zone& a = PAUSE_REREAD.zones[i];
+    const Zone& b = PAUSE.zones[j++];
+    EXPECT_EQ(a.item, b.item) << i;
+    EXPECT_TRUE(a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h && a.repeats == b.repeats) << itemName(a.item);
+  }
+  const int back = indexOf(PAUSE_REREAD, Item::BackToQuestion);
+  ASSERT_EQ(back, 3);
+  const Zone& z = PAUSE_REREAD.zones[back];
+  EXPECT_EQ(z.x, 16);
+  EXPECT_EQ(z.y, 128);
+  EXPECT_EQ(z.w, 448);
+  EXPECT_EQ(z.h, 64);
+  EXPECT_FALSE(z.repeats);
+  int f = PAUSE_REREAD.defaultIndex;
+  f = focusPrev(f);
+  EXPECT_EQ(PAUSE_REREAD.zones[f].item, Item::SentenceBack);
+  f = focusPrev(f);
+  EXPECT_EQ(PAUSE_REREAD.zones[f].item, Item::BackToQuestion) << "Up x2 from Play";
+  // Page view, Menu and Exit are one more Up away than outside a reread (S4 rows 12-14).
+  EXPECT_EQ(PAUSE_REREAD.zones[focusPrev(f)].item, Item::PageView);
+  for (int a = 0; a < PAUSE_REREAD.count; ++a) {
+    for (int b = a + 1; b < PAUSE_REREAD.count; ++b) {
+      const Zone& p = PAUSE_REREAD.zones[a];
+      const Zone& q = PAUSE_REREAD.zones[b];
+      EXPECT_FALSE(p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h)
+          << itemName(p.item) << " / " << itemName(q.item);
+    }
+  }
+  // The simulator tokens of S4 section 9, row 30.
+  EXPECT_EQ(hit(PAUSE_REREAD, 240, 160)->item, Item::BackToQuestion);
+  EXPECT_EQ(hit(PAUSE_REREAD, 240, 340)->item, Item::Play);
+  EXPECT_STREQ(itemName(Item::BackToQuestion), "BackToQuestion");
+}
+
+TEST(ControlMap, RereadBarAndListMatchS4Row31) {
+  ASSERT_EQ(REREAD_BAR.count, 1);
+  const Zone& bar = REREAD_BAR.zones[0];
+  EXPECT_EQ(bar.item, Item::BackToQuestion);
+  EXPECT_EQ(bar.x, 248);
+  EXPECT_EQ(bar.y, 4);
+  EXPECT_EQ(bar.w, 216);
+  EXPECT_EQ(bar.h, 64);
+  EXPECT_EQ(hit(REREAD_BAR, 356, 36)->item, Item::BackToQuestion) << "S4 section 9, row 31";
+  EXPECT_EQ(hit(REREAD_BAR, 240, 400), nullptr) << "the page itself is not the bar";
+  EXPECT_EQ(hit(REREAD_BAR, 120, 36), nullptr) << "the bar's label is not a target";
+
+  // The list of the side-key hold: "Back to the question" the default, then Speed read and Keep reading,
+  // on the generic list's rows.
+  const Item order[] = {Item::BackToQuestion, Item::SpeedReadHere, Item::KeepReading};
+  ASSERT_EQ(REREAD_CHOICES.count, 3);
+  EXPECT_EQ(REREAD_CHOICES.defaultIndex, 0);
+  for (int i = 0; i < REREAD_CHOICES.count; ++i) {
+    const Zone& z = REREAD_CHOICES.zones[i];
+    EXPECT_EQ(z.item, order[i]);
+    EXPECT_EQ(z.x, CHOICE_ZONES[i].x);
+    EXPECT_EQ(z.y, CHOICE_ZONES[i].y);
+    EXPECT_EQ(z.w, CHOICE_ZONES[i].w);
+    EXPECT_EQ(z.h, CHOICE_ZONES[i].h);
+    EXPECT_FALSE(z.repeats);
+  }
+  EXPECT_STREQ(itemName(Item::SpeedReadHere), "SpeedReadHere");
+  EXPECT_STREQ(itemName(Item::KeepReading), "KeepReading");
+}

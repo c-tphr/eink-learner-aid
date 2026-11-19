@@ -769,6 +769,8 @@ void EpubReaderActivity::loop() {
     showSpeedReadItem();
     return;
   }
+  // RSVP builds: a reread in page view went back to its prompt (it left the section).
+  if (openRereadPrompt()) return;
 
   // The radio stopped for a chapter build: once the render task has let go of the lock, that page
   // is on screen; once the build tick below has finished the chapter, no parser is left alive and
@@ -868,6 +870,9 @@ void EpubReaderActivity::loop() {
     requestUpdate();
     return;
   }
+
+  // RSVP builds: the reread bar's "Back to the question" wins over the page's own taps (S4 row 31).
+  if (readingSession && readingsession::rereadBarTapped(mappedInput, *readingSession) && openRereadPrompt()) return;
 
   int selectionX = 0;
   int selectionY = 0;
@@ -1099,6 +1104,9 @@ void EpubReaderActivity::loop() {
 
   const unsigned long heldMs = (touch.prev || touch.next) ? touch.heldMs : mappedInput.getHeldTime();
   const bool longPress = !fromTilt && heldMs >= ReaderUtils::SKIP_HOLD_MS;
+  // RSVP builds: during a page-view reread a hold opens its list, whatever the hold does otherwise.
+  if (longPress && openRereadChoices()) return;
+
   if (longPress && SETTINGS.longPressButtonBehavior == SETTINGS.CHAPTER_SKIP) {
     const bool succeeded = skipPages(nextTriggered ? 1 : -1);
     notePageTurn(false, succeeded);
@@ -1430,6 +1438,10 @@ void EpubReaderActivity::openSpeedRead(const bool resume, std::shared_ptr<rsvpen
   startActivityForResult(std::move(activity), [this, handOff](const ActivityResult&) {
     using Then = rsvpentry::HandOff::Then;
     if (handOff->then == Then::None) return;
+    if (handOff->then == Then::CheckpointDone) {
+      if (const auto run = readingsession::checkpointRun(*readingSession)) resumeAfterCheckpoint(*run);
+      return;
+    }
     if (handOff->then == Then::ExitBook) {
       handOff->saveReaderProgress(handOff->spineIndex, handOff->visibleTextOffset);
       onGoHome();
@@ -1517,12 +1529,67 @@ bool EpubReaderActivity::openPageCheckpoint() {
     }
     activity = readingsession::nextPageCheckpoint(renderer, mappedInput, *readingSession, page, run);
   }
-  if (!activity) return false;
+  return showCheckpoint(std::move(activity), run);
+}
+
+bool EpubReaderActivity::showCheckpoint(std::unique_ptr<Activity> activity,
+                                        const std::shared_ptr<readingsession::CheckpointRun>& run) {
+  if (!run) return false;
   // Nothing turns by itself after a checkpoint (plan section 7): automatic page turn stops here.
   automaticPageTurnActive = false;
   pendingManualTurn = 0;
+  if (!activity) {
+    resumeAfterCheckpoint(*run);  // the prompt after a reread could not show: it ends as Failed
+    return true;
+  }
   startActivityForResult(std::move(activity), [this, run](const ActivityResult&) { resumeAfterCheckpoint(*run); });
   return true;
+}
+
+bool EpubReaderActivity::openRereadPrompt() {
+  if (!RSVP_FEATURE_ENABLED || !readingSession || !readingsession::promptDue(*readingSession)) return false;
+  std::shared_ptr<readingsession::CheckpointRun> run;
+  std::unique_ptr<Activity> activity;
+  {
+    RenderLock lock;
+    activity = readingsession::rereadPrompt(renderer, mappedInput, *readingSession, run);
+  }
+  return showCheckpoint(std::move(activity), run);
+}
+
+bool EpubReaderActivity::openRereadChoices() {
+  if (!RSVP_FEATURE_ENABLED || !readingSession) return false;
+  auto chosen = std::make_shared<readingsession::RereadChoice>(readingsession::RereadChoice::KeepReading);
+  auto list = readingsession::rereadChoices(renderer, mappedInput, *readingSession, chosen);
+  if (!list) return false;
+  automaticPageTurnActive = false;
+  pendingManualTurn = 0;
+  startActivityForResult(std::move(list), [this, chosen](const ActivityResult&) {
+    switch (readingsession::afterRereadChoice(*readingSession, *chosen)) {
+      case readingsession::RereadChoice::BackToQuestion:
+        if (!openRereadPrompt()) requestUpdate();
+        return;
+      case readingsession::RereadChoice::SpeedRead:
+        openSpeedRead();
+        return;
+      case readingsession::RereadChoice::KeepReading:
+        requestUpdate();
+        return;
+    }
+  });
+  return true;
+}
+
+void EpubReaderActivity::notePageShown() {
+  if (!RSVP_FEATURE_ENABLED || !readingSession || !section) return;
+  readingsession::PageSpan page;
+  page.spine = currentSpineIndex;
+  page.startOffset = currentPageVisibleOffset.value_or(0);
+  if (section->currentPage + 1 < section->pageCount) {
+    page.nextStartOffset = section->getVisibleTextOffsetForPage(static_cast<uint16_t>(section->currentPage + 1))
+                               .value_or(page.nextStartOffset);
+  }
+  readingsession::pageShown(renderer, *readingSession, page);
 }
 
 void EpubReaderActivity::resumeAfterCheckpoint(const readingsession::CheckpointRun& run) {
@@ -1532,6 +1599,10 @@ void EpubReaderActivity::resumeAfterCheckpoint(const readingsession::CheckpointR
     next = readingsession::afterPageCheckpoint(*readingSession, run);
   }
   using Go = readingsession::PageResume::Go;
+  if (next.go == Go::SpeedRead) {
+    openSpeedRead();  // a reread in RSVP, or after the break of a checkpoint that fired in RSVP
+    return;
+  }
   if (next.go == Go::ThisPage) {
     // Trigger rule 7: another section end on this page fires before reading continues.
     if (!openPageCheckpoint()) requestUpdate();
@@ -2191,6 +2262,7 @@ void EpubReaderActivity::renderBook() {
     const auto start = millis();
     renderContents(std::move(p), orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
     LOG_DBG("ERS", "Rendered page in %dms", millis() - start);
+    notePageShown();  // RSVP builds: during a page-view reread, its bar over the page
     lastRenderCompleteMs = millis();
     markPageRendered();
   }

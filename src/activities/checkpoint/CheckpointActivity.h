@@ -41,14 +41,6 @@ class CheckpointActivity final : public Activity {
   bool handleForcedRefresh() override;
 
  private:
-  // The flow and the state it changes: everything a restart needs is in `state.active` (and the
-  // grades), which every transition writes to the state file. One heap block of about 78 KB.
-  struct Session {
-    explicit Session(const checkpoint::CheckpointIndex& index) : flow(state, index) {}
-    checkpoint::BookState state;
-    checkpoint::CheckpointFlow flow;
-  };
-
   // --- Main task. The flow, the index and the screen fields are shared with the render task: every
   // change takes the RenderLock.
   bool start();
@@ -81,7 +73,8 @@ class CheckpointActivity final : public Activity {
 
   displayprofile::DisplayBackend& backend;
   controls::ControlInput controlInput;
-  std::unique_ptr<Session> session;
+  // The flow and the state it changes, shared with reading::ReadingSession (CheckpointLaunch.h).
+  std::shared_ptr<checkpointentry::Progress> progress;
 
   std::atomic<bool> guardRestartPending{false};
   bool startFailed = false;

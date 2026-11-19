@@ -135,6 +135,11 @@ enum class Item : uint8_t {
   RereadRsvp,
   RereadPage,
   ContinueOn,  // "Continue" after Incorrect
+  // Rereading a section (task C4; S4 rows 30-31): the RSVP pause screen's row, the page-view bar's
+  // button and the first row of the list a side-key hold opens there; the list's other two rows.
+  BackToQuestion,
+  SpeedReadHere,
+  KeepReading,
 };
 
 struct Zone {
@@ -168,6 +173,37 @@ inline constexpr Zone PAUSE_ZONES[] = {
     {Item::SaveDefault, 16, 640, 216, 64, false}, {Item::SaveBook, 248, 640, 216, 64, false},
 };
 inline constexpr Screen PAUSE{PAUSE_ZONES, static_cast<uint8_t>(sizeof(PAUSE_ZONES) / sizeof(PAUSE_ZONES[0])), 4};
+
+// The pause screen during a reread (task C4; S4 row 30 and section 2): the row under Exit, Menu and Page
+// view, which shows the next words otherwise, becomes "Back to the question". Play stays the default, so
+// the key path is Up x2 and hold.
+inline constexpr Zone PAUSE_REREAD_ZONES[] = {
+    {Item::Exit, 16, 52, 136, 64, false},           {Item::Menu, 172, 52, 136, 64, false},
+    {Item::PageView, 328, 52, 136, 64, false},      {Item::BackToQuestion, 16, 128, 448, 64, false},
+    {Item::SentenceBack, 16, 204, 448, 64, true},   {Item::Play, 16, 280, 448, 120, false},
+    {Item::SentenceForward, 16, 412, 448, 64, true}, {Item::WpmDown, 16, 488, 96, 64, true},
+    {Item::WpmUp, 368, 488, 96, 64, true},          {Item::WordsDown, 16, 564, 96, 64, true},
+    {Item::WordsUp, 368, 564, 96, 64, true},        {Item::SaveDefault, 16, 640, 216, 64, false},
+    {Item::SaveBook, 248, 640, 216, 64, false},
+};
+inline constexpr Screen PAUSE_REREAD{
+    PAUSE_REREAD_ZONES, static_cast<uint8_t>(sizeof(PAUSE_REREAD_ZONES) / sizeof(PAUSE_REREAD_ZONES[0])), 5};
+
+// Page view during a reread (task C4; S4 row 31): the top bar's one button, drawn over the page. The
+// reader checks a tap against it before its own taps (links, menu, page-turn zones).
+inline constexpr Zone REREAD_BAR_ZONES[] = {{Item::BackToQuestion, 248, 4, 216, 64, false}};
+inline constexpr Screen REREAD_BAR{REREAD_BAR_ZONES, 1, 0};
+
+// The list a side-key hold opens in page view during a reread (S4 row 31 and section 8): rows of
+// 448x72 from y=72 as in the generic list (CHOICE_ZONES), "Back to the question" the default. The hold
+// would enter RSVP outside a reread, so that is the second row.
+inline constexpr Zone REREAD_CHOICE_ZONES[] = {
+    {Item::BackToQuestion, 16, 72, 448, 72, false},
+    {Item::SpeedReadHere, 16, 152, 448, 72, false},
+    {Item::KeepReading, 16, 232, 448, 72, false},
+};
+inline constexpr Screen REREAD_CHOICES{
+    REREAD_CHOICE_ZONES, static_cast<uint8_t>(sizeof(REREAD_CHOICE_ZONES) / sizeof(REREAD_CHOICE_ZONES[0])), 0};
 
 // Device test lists (S4 row 34; task D3a): rows 448x72 from y=72, 8 px apart, in focus order.
 // A ChoiceList (src/activities/devicetest/ChoiceList.h) shows the first `count` of them; which rows

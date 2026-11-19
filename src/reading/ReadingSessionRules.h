@@ -47,8 +47,10 @@ uint8_t sectionEndFlags(const checkpoint::ChapterSections& sections, uint32_t fi
 // RSVP stopped at a checkpoint (STOP_CHECKPOINT): `lastShown` is the last word on screen and `next` the
 // next prose word (the chapter's word count at its end). checkpoint::rsvpStep() on the word on screen;
 // when note words lie between it and `next` (the section's last word is one of them), the same move
-// through checkpoint::evaluateMove() as RSVP playback.
-checkpoint::Step rsvpCheckpointStep(const checkpoint::ChapterSections& sections, uint32_t lastShown, uint32_t next);
+// through checkpoint::evaluateMove() as RSVP playback. During a reread of `rereadSection` nothing fires
+// and that section's end gives RereadEnd (task C4).
+checkpoint::Step rsvpCheckpointStep(const checkpoint::ChapterSections& sections, uint32_t lastShown, uint32_t next,
+                                    uint16_t rereadSection = checkpoint::NO_INDEX);
 
 // No page after this one in the chapter.
 inline constexpr uint32_t NO_NEXT_PAGE = UINT32_MAX;
@@ -87,5 +89,27 @@ PageResume pageResumeFor(uint16_t chapter, uint32_t chapterWords, const PageWord
                          const checkpoint::Position& resume);
 
 const char* pageResumeName(PageResume resume);
+
+// --- Rereading (task C4; README.md, "Rereading").
+
+// `word` moved into the section `range`: its first word when before it, its last word when after it.
+uint32_t intoSection(const checkpoint::SectionRange& range, uint32_t word);
+
+// A page of `chapter` shown in page view during a reread of `range`. The reread goes on while the page
+// shows a word of the section (one whose last character it shows; on a page with no word of its own, an
+// image page, the first word after it); the reread place is then the page's reading word
+// (pageFromWord()) moved into the section, so the section's first page counts from its first word even
+// when the page starts before it. Otherwise the page left the section, and the reread goes back to its
+// prompt (CheckpointFlow::rereadMoved()).
+struct RereadPagePlace {
+  bool inside = false;
+  uint32_t word = 0;  // inside: the reread place; otherwise the page's first word
+};
+RereadPagePlace rereadPagePlace(const PageWords& page, uint16_t chapter, const PageReading& reading,
+                                const checkpoint::SectionRange& range);
+
+// RSVP's sentence step during a reread goes to `to` only when it stays inside the section: a step
+// across the section's start or end does not move (README.md, "Rereading").
+bool rereadStepStays(const checkpoint::SectionRange& range, uint32_t to);
 
 }  // namespace reading
