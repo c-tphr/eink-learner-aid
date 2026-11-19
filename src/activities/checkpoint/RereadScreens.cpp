@@ -175,9 +175,10 @@ void drawRereadBar(GfxRenderer& renderer) {
   renderer.fillRect(0, 0, width, BAR_HEIGHT, false);
   renderer.fillRect(0, BAR_HEIGHT, width, BORDER, true);
   const controls::Zone& button = controls::REREAD_BAR.zones[0];
-  const int lineHeight = renderer.getLineHeight(UI_12_FONT_ID);
-  renderer.drawText(UI_12_FONT_ID, MARGIN, (BAR_HEIGHT - lineHeight) / 2, tr(STR_CP_REREAD_BAR), true,
-                    EpdFontFamily::BOLD);
+  // The label left of the button, on two lines when it does not fit on one.
+  const controls::Zone label{Item::BackToQuestion, MARGIN, button.y, static_cast<int16_t>(button.x - 2 * MARGIN),
+                             button.h, false};
+  drawLabel(renderer, label, tr(STR_CP_REREAD_BAR), false);
   renderer.drawRect(button.x, button.y, button.w, button.h, BORDER, true);
   drawLabel(renderer, button, tr(STR_CP_BACK_TO_QUESTION), false);
   renderer.displayBuffer(HalDisplay::FAST_REFRESH);

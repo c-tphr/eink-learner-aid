@@ -3,9 +3,10 @@
 # C3a used a temporary simulator entry): c0001 (one prompt) by swiping forward off chapter 1's page 3
 # (the end of s0001), then c0002 (three prompts) five times: by swiping on off chapter 2's last page
 # (s0004 ends the chapter), then three times by a swipe back to that page and forward again, and
-# the sixth time in RSVP (Speed read from the toolbar's More panel, Play). Rereads are task C4: E and F
-# resume after the break, as for Finished (E in page view, F on RSVP's pause screen), and the file
-# then holds no checkpoint in progress. Every action of the three screens is done once by a tap:
+# the sixth time in RSVP (Speed read from the toolbar's More panel, Play). E and F start the reread
+# (task C4), go back to the question at once and skip the checkpoint, so reading resumes after the
+# break in the mode it fired in (E in page view, F on RSVP's pause screen) and the file then holds no
+# checkpoint in progress. Every action of the three screens is done once by a tap:
 #
 #   A c0001             Reveal, Correct                                        -> finished
 #   B c0002             p1 Reveal, Incorrect, Continue; p2 Skip question;
@@ -16,9 +17,11 @@
 #   D c0002             p1 Reveal, Incorrect (already recorded: nothing saved),
 #                       Skip question (after Incorrect); p2 Reveal, Incorrect,
 #                       Skip checkpoint (after Incorrect)                      -> skipped
-#   E c0002             p1 Reveal, Incorrect, Reread in RSVP                   -> reread-rsvp
+#   E c0002             p1 Reveal, Incorrect, Reread in RSVP                   -> reread-rsvp,
+#                       Back to the question, Skip checkpoint                  -> skipped
 #   F c0002,rsvp        p1 Reveal, Incorrect: the default is now Reread in RSVP;
-#                       Reread in page view                                    -> reread-page
+#                       Reread in page view                                    -> reread-page,
+#                       the bar's Back to the question, Skip checkpoint        -> skipped
 #
 # Every screen is shot. The fixture's c0002 is section s0004, chapter 2 words 311-607, so reading
 # resumes at chapter 3 word 0. Grades in the file at the end: p1 Incorrect (A's second answer and D's
@@ -201,12 +204,18 @@ steps = [
   { wait_log = "\\[CTL\\] Incorrect armed" },
   { tap = [240, 256], note = "Reread in RSVP" },
   { wait_log = "\\[CTL\\] Incorrect select=RereadRsvp" },
-  { wait_log = "\\[CPT\\] saved after=reread-rsvp prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1" },
+  { wait_log = "\\[CPT\\] saved after=reread-rsvp prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1 reread=2:311:rsvp" },
   { wait_log = "\\[CPT\\] end result=reread-rsvp prompt=0 ch=2 word=311 mode=rsvp saved=1", note = "the section's first word, in RSVP" },
 
-  # The reread is task C4: reading resumes after the break in page view, the mode in use.
-  { wait_log = "\\[CPT\\] reread in rsvp not implemented yet \\(task C4\\): reading resumes after the break" },
-  { wait_log = "\\[CPT\\] resume end=reread-rsvp mode=page ch=3 word=0" },
+  # The reread (task C4): RSVP at the section's first word; Back to the question; Skip checkpoint. It
+  # fired in page view, so page view resumes after the break.
+  { wait_log = "\\[RSVP\\] enter ch=2 page_offset=\\d+ word=311 .* from=reread" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { tap = [240, 160], note = "Back to the question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] resume end=skipped mode=page ch=3 word=0 reread=1" },
   { wait_log = "\\[CPT\\] page resume chapter ch=3 word=0 " },
   { wait_log = "Progress saved: spine=3 offset=0 page=0" },
 
@@ -234,10 +243,18 @@ steps = [
   { wait_log = "\\[CTL\\] Incorrect armed" },
   { tap = [240, 348], note = "Reread in page view" },
   { wait_log = "\\[CTL\\] Incorrect select=RereadPage" },
-  { wait_log = "\\[CPT\\] saved after=reread-page prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1", note = "the reread request is saved (task C4 will act on it): active_checkpoint with reread at the section start, chapter 2 word 311, page" },
+  { wait_log = "\\[CPT\\] saved after=reread-page prompt=- grade=none active=c0002 prompt_index=0 position=none ok=1 reread=2:311:page", note = "active_checkpoint with reread at the section start, chapter 2 word 311, page" },
   { wait_log = "\\[CPT\\] end result=reread-page prompt=0 ch=2 word=311 mode=page saved=1" },
-  { wait_log = "\\[CPT\\] reread in page not implemented yet \\(task C4\\): reading resumes after the break" },
-  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · \\d+ actual\"", note = "RSVP, the mode in use, at chapter 3 word 0" },
+  # The reread (task C4): page view with the bar; its button; Skip checkpoint. It fired in RSVP, so RSVP
+  # opens after the break.
+  { wait_log = "\\[RSVP\\] leave to=reread-page ch=2 word=311 " },
+  { wait_log = "\\[CPT\\] reread bar shown" },
+  { tap = [356, 36], note = "Back to the question" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] resume end=skipped mode=rsvp ch=3 word=0 reread=1" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · -- actual\"", note = "RSVP, the mode the checkpoint fired in, at chapter 3 word 0: a new RSVP session, so no delivered WPM yet" },
   { quit = true },
 
   { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/book_sha256", equals = "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },

@@ -491,8 +491,9 @@ void notePageMove(reading::ReadingSession& session, const PageMove move) {
 }
 
 void pageShown(GfxRenderer& renderer, reading::ReadingSession& session, const PageSpan& page) {
-  if (!session.rereading()) return;
+  // Every page shown takes the source of the move that showed it, so none is left for a later page.
   const checkpoint::NavSource source = session.takePageSource();
+  if (!session.rereading()) return;
   const checkpoint::SectionRange& range = session.rereadRange();
   reading::PageWords words;
   reading::RereadPagePlace place;

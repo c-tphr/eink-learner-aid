@@ -1,0 +1,18 @@
+{
+  "description": "cp_reread_no_other_fire at the end: only c0001-p1 graded (incorrect, its first grade), nothing in progress, the 1000 WPM override kept.",
+  "type": "object",
+  "required": ["version", "book_sha256", "overrides", "position", "grades"],
+  "not": { "required": ["active_checkpoint"] },
+  "properties": {
+    "book_sha256": { "const": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+    "overrides": { "type": "object", "required": ["wpm"], "properties": { "wpm": { "const": 1000 } } },
+    "grades": {
+      "type": "object",
+      "required": ["c0001-p1"],
+      "additionalProperties": false,
+      "properties": {
+        "c0001-p1": { "type": "object", "required": ["first"], "properties": { "first": { "const": "incorrect" } } }
+      }
+    }
+  }
+}
