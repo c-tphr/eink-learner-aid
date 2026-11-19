@@ -1,0 +1,61 @@
+   0.047 [simtest] run 1: CROSSPOINT_SIM_INPUT_SCRIPT=0:WAIT:Progress saved: spine=0 offset=0 page=0;0:SWIPE:400,400,80,400,250;370:WAIT:Progress saved: spine=1 offset=0 page=0;0:TAP:240,400,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:95,752,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:120,604,80;200:WAIT:Progress saved: spine=3 offset=0 page=0;0:TAP:240,400,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:385,752,80;200:WAIT:\[SIM\] SCREEN:.*More\ \|\ 1/3;0:TAP:240,460,80;200:WAIT:Toggle bookmark at spine 3, page 0;0:WAIT:Rendered page in;0:TAP:240,400,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:95,752,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:120,460,80;200:WAIT:Progress saved: spine=1 offset=0 page=0;0:TAP:240,400,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:385,752,80;200:WAIT:\[SIM\] SCREEN:.*More\ \|\ 1/3;0:TAP:240,460,80;200:WAIT:Entering activity: EpubReaderBookmarks;0:WAIT:\[SIM\] SCREEN:.*Bookmarks\ \|\ The\ Keeper's\ Log;0:TAP:240,155,80;200:WAIT:Progress saved: spine=3 offset=0 page=0;0:TAP:240,400,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:95,752,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:120,460,80;200:WAIT:Progress saved: spine=1 offset=0 page=0;0:TAP:240,400,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:385,752,80;200:WAIT:\[SIM\] SCREEN:.*More\ \|\ 1/3;0:SWIPE:240,650,240,450,250;370:WAIT:from clearScreen to displayBuffer;0:TAP:240,532,80;200:WAIT:Entering activity: EpubReaderPercentSelection;0:WAIT:from clearScreen to displayBuffer;0:TAP:368,430,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:300,494,80;200:WAIT:Progress saved: spine=[34] offset=\d+ page=\d+;0:TAP:240,400,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:95,752,80;200:WAIT:from clearScreen to displayBuffer;0:TAP:120,460,80;200:WAIT:Progress saved: spine=1 offset=0 page=0;0:SWIPE:400,400,80,400,250;370:WAIT:\[CPT\] page advance ch=1 first=0 from=0 last=107 step=none;0:SWIPE:400,400,80,400,250;370:WAIT:\[CPT\] page advance ch=1 first=108 from=108 last=183 step=none;0:SWIPE:400,400,80,400,250;370:WAIT:\[CPT\] page advance ch=1 first=184 from=184 last=294 step=fire;0:WAIT:\[CPT\] fire source=next-page checkpoint=c0001 ;0:WAIT:\[CPT\] screen=Prompt question=1/1 prompt=c0001-p1 ;0:WAIT:\[CTL\] Prompt armed;0:TAP:116,712,80;200:WAIT:\[CPT\] page resume this-page ch=1 word=233 ;0:WAIT:Rendered page in;0:UP:80;200:WAIT:Progress saved: spine=1 offset=\d+ page=1;0:DOWN:900;1020:WAIT:\[RSVP\] enter ch=1 ;0:WAIT:\[CTL\] Pause armed;0:UP:80;200:WAIT:\[CTL\] Pause focus=SentenceBack;0:UP:80;200:WAIT:\[CTL\] Pause focus=PageView;0:UP:80;200:WAIT:\[CTL\] Pause focus=Menu;0:UP:900;1020:WAIT:\[RSVP\] leave to=menu ch=1 ;0:WAIT:from clearScreen to displayBuffer;0:DOWN:80;200:WAIT:Progress saved: spine=2 offset=0 page=0;0:DOWN:80;200:WAIT:Progress saved: spine=3 offset=0 page=0;0:UP:80;200:WAIT:Progress saved: spine=2 offset=0 page=0;0:UP:80;200:WAIT:Progress saved: spine=1 offset=0 page=0;0:TAP:240,200,80;200:WAIT:Restored and freed BW buffer chunks;0:DOWN:80;200:WAIT:\[CPT\] page advance ch=1 first=0 from=0 last=107 step=none;0:DOWN:80;200:WAIT:\[CPT\] page advance ch=1 first=108 from=108 last=183 step=none;0:DOWN:80;200:WAIT:\[CPT\] page advance ch=1 first=184 from=184 last=294 step=fire;0:WAIT:\[CPT\] screen=Prompt question=1/1 prompt=c0001-p1 ;0:SHOT:/home/user/eink-learner-aid/.claude/worktrees/agent-a071102a75d60a628/build/simtest-report/cp_toc_jump_no_fire/shots/k_prompt.bmp
+   0.172 [119] [DBG] [ACT] Entering activity: Boot
+   0.227 [174] [DBG] [ACT] Entering activity: EpubReader
+   0.234 [181] [DBG] [CPT] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=made book_bytes=72544 ms=1
+   0.234 [181] [DBG] [CPT] session open checkpoints=1 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c session_bytes=56 layout_bytes=8120
+   0.247 [193] [DBG] [ERS] Progress saved: spine=0 offset=0 page=0
+   0.523 [470] [DBG] [ERS] Progress saved: spine=1 offset=0 page=0
+   1.152 [1099] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+   1.724 [1671] [DBG] [ERS] Toggle bookmark at spine 3, page 0
+   2.369 [2316] [DBG] [ERS] Progress saved: spine=1 offset=0 page=0
+   2.977 [2924] [DBG] [ACT] Entering activity: EpubReaderBookmarks
+   3.198 [3145] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+   3.822 [3768] [DBG] [ERS] Progress saved: spine=1 offset=0 page=0
+   4.804 [4751] [DBG] [ACT] Entering activity: EpubReaderPercentSelection
+   5.235 [5182] [DBG] [ERS] Progress saved: spine=3 offset=1186 page=2
+   5.844 [5791] [DBG] [ERS] Progress saved: spine=1 offset=0 page=0
+   6.203 [6150] [DBG] [CPT] sections ch=1 words=451 sections=2 checkpoints=1 failed=0
+   6.203 [6150] [DBG] [CPT] page advance ch=1 first=0 from=0 last=107 step=none
+   6.224 [6171] [DBG] [ERS] Progress saved: spine=1 offset=558 page=1
+   6.570 [6516] [DBG] [CPT] page advance ch=1 first=108 from=108 last=183 step=none
+   6.587 [6534] [DBG] [ERS] Progress saved: spine=1 offset=956 page=2
+   6.941 [6888] [DBG] [CPT] page advance ch=1 first=184 from=184 last=294 step=fire
+   6.941 [6888] [DBG] [CPT] fire source=next-page checkpoint=c0001 section=s0001 ch=1 last_word=232 resume_ch=1 resume_word=233 crossed=1
+   6.941 [6888] [DBG] [ACT] Entering activity: Checkpoint
+   6.941 [6888] [DBG] [CPT] open checkpoint=c0001 prompts=1 section=s0001 mode=page resume_ch=1 resume_word=233 state=missing grades=0 activity_bytes=4032 session_bytes=78056 accepted=1
+   6.943 [6890] [DBG] [CPT] saved after=start prompt=- grade=none active=c0001 prompt_index=0 position=1:184:page ok=1
+   6.946 [6893] [DBG] [CPT] screen=Prompt question=1/1 prompt=c0001-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   7.266 [7213] [DBG] [CTL] Prompt armed
+   7.368 [7315] [DBG] [CTL] Prompt select=SkipCheckpoint
+   7.368 [7315] [DBG] [CPT] event=skip-checkpoint prompt=c0001-p1 accepted=1 refusal=0 state=finished grade_recorded=0 save=now
+   7.369 [7316] [DBG] [CPT] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=1:233:page ok=1
+   7.369 [7316] [DBG] [CPT] end result=skipped prompt=0 ch=1 word=233 mode=page saved=1
+   7.369 [7316] [DBG] [CPT] resume end=skipped mode=page ch=1 word=233
+   7.369 [7316] [DBG] [CPT] page resume this-page ch=1 word=233 offset=0
+   7.369 [7316] [DBG] [CPT] page advance ch=1 first=184 from=233 last=294 step=none
+   7.578 [7524] [DBG] [CPT] move source=previous-page
+   7.593 [7540] [DBG] [ERS] Progress saved: spine=1 offset=558 page=1
+   8.388 [8335] [DBG] [ACT] Entering activity: Rsvp
+   8.388 [8335] [DBG] [CPT] mode rsvp source=mode-switch
+   8.389 [8336] [DBG] [RSVP] enter ch=1 page_offset=558 word=108 chapter_words=451 activity_bytes=5512 from=page
+   8.707 [8654] [DBG] [CTL] Pause armed
+   8.809 [8755] [DBG] [CTL] Pause focus=SentenceBack
+   9.014 [8961] [DBG] [CTL] Pause focus=PageView
+   9.216 [9163] [DBG] [CTL] Pause focus=Menu
+  10.032 [9979] [DBG] [CTL] Pause select=Menu
+  10.032 [9979] [DBG] [RSVP] leave to=menu ch=1 word=108 offset=559
+  10.035 [9982] [DBG] [CPT] mode page source=mode-switch
+  10.483 [10430] [DBG] [ERS] Progress saved: spine=2 offset=0 page=0
+  10.672 [10619] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+  10.882 [10829] [DBG] [ERS] Progress saved: spine=2 offset=0 page=0
+  11.072 [11019] [DBG] [ERS] Progress saved: spine=1 offset=0 page=0
+  11.475 [11422] [DBG] [CPT] page advance ch=1 first=0 from=0 last=107 step=none
+  11.499 [11446] [DBG] [ERS] Progress saved: spine=1 offset=558 page=1
+  11.684 [11630] [DBG] [CPT] page advance ch=1 first=108 from=108 last=183 step=none
+  11.707 [11654] [DBG] [ERS] Progress saved: spine=1 offset=956 page=2
+  11.893 [11839] [DBG] [CPT] page advance ch=1 first=184 from=184 last=294 step=fire
+  11.893 [11839] [DBG] [CPT] fire source=next-page checkpoint=c0001 section=s0001 ch=1 last_word=232 resume_ch=1 resume_word=233 crossed=1
+  11.893 [11840] [DBG] [ACT] Entering activity: Checkpoint
+  11.893 [11840] [DBG] [CPT] open checkpoint=c0001 prompts=1 section=s0001 mode=page resume_ch=1 resume_word=233 state=read grades=0 activity_bytes=4032 session_bytes=78056 accepted=1
+  11.894 [11841] [DBG] [CPT] saved after=start prompt=- grade=none active=c0001 prompt_index=0 position=1:184:page ok=1
+  11.898 [11845] [DBG] [CPT] screen=Prompt question=1/1 prompt=c0001-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear

@@ -1,0 +1,126 @@
+# Skipping prompts (tasks C2 and C3; PRD criterion 3; docs/PLAN.md section 7, grade rules: "Skipping
+# writes nothing. A skipped prompt stays ungraded until it is graded for the first time"). The prepared
+# fixture's three-prompt c0002, which ends chapter 2: reading resumes at chapter 3, word 0.
+#
+# Pass 1, touch, page view: the Contents jump to chapter 2, page forward; leaving its last page fires
+# c0002. p1 Skip question on the prompt screen; p2 Reveal, Skip question on the answer screen; p3
+# Reveal, Correct. Page view shows chapter 3's first page. File: only p3 is graded.
+# Pass 2, keys, RSVP: Up to chapter 2's last page, Speed read and Play by holds; c0002 fires after
+# "lamp.". p1 Reveal, Incorrect, Skip question after Incorrect (its first grade, Incorrect, is
+# saved); p2 Skip question again (still ungraded); p3 Skip question (its saved Correct survives; the
+# skip on the last prompt finishes the checkpoint). RSVP's pause screen at chapter 3 word 0, "Checkpoint
+# done". File: p1 incorrect, p2 ungraded, p3 correct.
+description = "Skip prompt on every screen, by touch in page view and by keys in RSVP: skipped prompts stay ungraded, saved grades survive, resume after the break"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}}\n", dst = "books/fixture.prepared.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # Pass 1: touch, page view.
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 532], note = "The Fog Season" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0002 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [364, 712], note = "Skip question (prompt screen)" },
+  { wait_log = "\\[CPT\\] event=skip-prompt prompt=c0002-p1 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=2/3 prompt=c0002-p2 " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [364, 712], note = "Skip question (answer screen)" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [240, 476], note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=3/3 prompt=c0002-p3 " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { tap = [120, 620], note = "Correct" },
+  { wait_log = "\\[CPT\\] saved after=correct prompt=c0002-p3 grade=correct active=none prompt_index=0 position=3:0:page ok=1" },
+  { wait_log = "\\[CPT\\] end result=finished prompt=2 ch=3 word=0 mode=page saved=1" },
+  { wait_log = "\\[CPT\\] page resume chapter ch=3 word=0 " },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { screen_has = "The Keeper's Log" },
+  { shot = "t_page_resume" },
+
+  # Pass 2: keys, RSVP.
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=2 page_offset=\\d+ word=490 .* from=page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN", hold_ms = 900, note = "Play" },
+  { wait_log = "\\[CPT\\] fire source=rsvp-playback checkpoint=c0002 " },
+  { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=rsvp resume_ch=3 resume_word=0 state=read grades=1 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal ", note = "p1 was skipped: ungraded" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN", hold_ms = 900, note = "Reveal" },
+  { wait_log = "\\[CPT\\] screen=Answer question=1/3 prompt=c0002-p1 recorded=none " },
+  { wait_log = "\\[CTL\\] Answer armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=Correct" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Answer focus=Incorrect" },
+  { press = "DOWN", hold_ms = 900, note = "Incorrect: p1's first grade" },
+  { wait_log = "\\[CPT\\] saved after=incorrect prompt=c0002-p1 grade=incorrect active=c0002 prompt_index=0 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Incorrect question=1/3 prompt=c0002-p1 recorded=incorrect focus=RereadRsvp " },
+  { wait_log = "\\[CTL\\] Incorrect armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Incorrect focus=RereadPage" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Incorrect focus=Continue" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Incorrect focus=SkipPrompt" },
+  { press = "DOWN", hold_ms = 900, note = "Skip question (after Incorrect)" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal ", note = "p2 was skipped: ungraded" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN", hold_ms = 900, note = "Skip question" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=correct focus=Reveal " },
+  { screen_has = "Recorded earlier: Correct" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN", hold_ms = 900, note = "Skip question on the last prompt: the checkpoint is finished" },
+  { wait_log = "\\[CPT\\] saved after=skip-prompt prompt=- grade=none active=none prompt_index=0 position=3:0:rsvp ok=1" },
+  { wait_log = "\\[CPT\\] end result=finished prompt=2 ch=3 word=0 mode=rsvp saved=1" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · \\d+ actual\"" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "The Keeper's Log · chapter 0% " },
+  { shot = "k_rsvp_resume" },
+  { quit = true },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p1/first", equals = "incorrect" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/grades/c0002-p3/first", equals = "correct", note = "a saved grade survives a later skip" },
+  { expect_schema = "books/fixture.prepared.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_skip_prompt/final.schema.json", note = "p2 was only skipped: no grade" },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "rsvp" } },
+  { compare = "t_page_resume" },
+  { compare = "k_rsvp_resume", mask = [[0, 0, 480, 24]] },
+]

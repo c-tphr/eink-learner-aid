@@ -10,17 +10,17 @@ The project's firmware code sits beside upstream CrossPoint, not inside it (`doc
 | `lib/CheckpointCore/` | CheckpointCore | Checkpoint file parser, trigger rules, checkpoint and reread state machine, grade rules, state file encoding. Portable, host-tested (`test/checkpoint_core`) | C1a, C1b (done) |
 | `lib/WordIndex/` | WordIndex | Per-chapter word stream with anchors and non-prose markers; page-to-word mapping. Portable, host-tested (`test/word_index`) | R3 (done) |
 | `lib/DisplayProfileCore/` | DisplayProfile (portable part) | Profile table and clearing limits, backend interface, statistics (with median and percentiles), the `rsvp::DisplaySink` adapter, the simulator timing model, the device backend's timing and timeout logic, the per-panel record, the trial profiles' tables, allow rule, unlock value and exposure limits, fakes. Portable, host-tested (`test/display_profile`) | E3 (done), D1 (done), D2 (done) |
-| `src/reading/` | ReadingSession | Position, mode, navigation source, checkpoint firing, saved state. Since R4a also the chapter word index on demand and the page/word and sentence helpers; since C3a the checkpoint data loader (`CheckpointBook`: the manifest item, a cached copy of the file, the index) | R4a (#21, index service), R4b (done), C3a (#93, loader), C2 (#26), C4, C5 |
+| `src/reading/` | ReadingSession | Position, mode, navigation source, checkpoint firing, saved state (`ReadingSession`, task C2: the checkpoint triggers in RSVP and page view and the resume after a checkpoint). Since R4a also the chapter word index on demand and the page/word and sentence helpers; since C3a the checkpoint data loader (`CheckpointBook`: the manifest item, a cached copy of the file, the index) | R4a (#21, index service), R4b (done), C3a (done), C2 and C3 (#26, #27), C4, C5 |
 | `src/activities/rsvp/` | RsvpActivity | Word band, pause screen, RSVP settings, touch and keys | R4a (#21), R4b, R5 |
 | `src/controls/` | ControlMap | The single binding table (key roles, timings, event-to-action bindings, touch zones) and the input adapter (`docs/spikes/S4-control-map.md`, section 7) | R4a (#21), C3a (#93, checkpoint screens), C4, D3a |
-| `src/activities/checkpoint/` | CheckpointActivity | Prompt, reveal, grade, reread choice, skip; a temporary simulator-only entry (`CheckpointSimEntry`) until C3 wires the activity to C2's triggers | C3a (#93), C3 (#27), C4 |
+| `src/activities/checkpoint/` | CheckpointActivity | Prompt, reveal, grade, reread choice, skip; opened by ReadingSession when a checkpoint fires | C3a (done), C3 (#27), C4 |
 | `src/display/` | DisplayProfile | Millisecond clock, simulator backend (modelled timing), device backend (the stock and trial profiles' refreshes, timed), a temporary simulator self-test | E3 (done), D1 (done), D2 (done) |
 | `src/activities/devicetest/` | DeviceTestActivity | Device test menu, Controls check, display benchmark sweep and ratings, results files under `/rsvp-bench/` (since D3a; portable parts host-tested in `test/device_test`); the guided acceptance walk-through with its progress file, "Choose a profile" and the Settings row "Speed read display" (since D3b) | D3a (done), D3b |
 | `lib/UpdatePolicy/` | (two-slot build) | Self-update slot policy and the Wi-Fi updater's release source, asset name and version rule. Portable, host-tested (`test/update_policy`) | D4 (done) |
 | `src/update/` | (two-slot build) | Reads the running partition table through ESP-IDF and gates the update menus, the boot recovery picker and every update write; points the Wi-Fi updater at this repository | D4 (done) |
 | `src/RsvpFeature.h` | (all) | The feature flag test, below | F4 |
 
-Each `src/` directory has a README naming its component and task. Until that task lands it holds a one-symbol placeholder `.cpp`. `src/reading/RsvpLinkCheck.cpp` is a temporary start-up check that links every source file of RsvpCore and CheckpointCore, and DisplayProfile's profiles, adapter, statistics and device backend, into the firmware; ReadingSession replaces it.
+Each `src/` directory has a README naming its component and task. Until that task lands it holds a one-symbol placeholder `.cpp`. The temporary start-up link checks of tasks F4 and E3 (`src/reading/RsvpLinkCheck.cpp` and DisplayProfile's) were removed by C2: the reader now reaches every library through ReadingSession, RSVP and the checkpoint screens.
 
 The libraries in `lib/` stay free of Arduino, ESP-IDF, HAL and SDK code, so the host tests keep covering them. They contain no flag test: only `src/` code under the flag includes their headers, so only flagged builds use them.
 
@@ -37,7 +37,7 @@ No other environment defines the flag, so every other CrossPoint device builds a
 
 - Include `RsvpFeature.h` and test `#if CROSSPOINT_RSVP_ENABLED` (or `if constexpr (RSVP_FEATURE_ENABLED)`); never test `CROSSPOINT_RSVP` itself.
 - Every `.cpp` under the directories above wraps its whole body, includes of library headers too, in `#if CROSSPOINT_RSVP_ENABLED`. Without the flag it compiles to an empty object.
-- A header that an upstream file includes (a registration point) gives a do-nothing inline fallback when the flag is off, as `src/reading/RsvpLinkCheck.h` does. Then the upstream file needs no `#if` of its own.
+- A header that an upstream file includes (a registration point) gives a do-nothing inline fallback when the flag is off, as `src/reading/ReadingSession.h` (the `readingsession::` functions) and `src/activities/rsvp/RsvpLaunch.h` do. Then the upstream file needs no `#if` of its own.
 
 PlatformIO's default dependency finder (`lib_ldf_mode = chain`) does not evaluate `#if`, so on the other ESP32 devices it still compiles RsvpCore and CheckpointCore and hands their objects to the linker. Nothing references them there, so `--gc-sections` drops all their code and data: the `x4pro` image is the same as before the flag existed, apart from the hash of the ELF file that the image embeds (task F4's pull request shows the comparison). The libraries must therefore keep compiling for every target CrossPoint builds.
 
@@ -53,13 +53,13 @@ Registration points so far:
 | Upstream file | Edit | Task |
 | --- | --- | --- |
 | `platformio.ini` | `-DCROSSPOINT_RSVP=1` in `[env:picco]`, `[env:picco-gh_release]`, `[env:picco-gh_release_rc]` | F4 |
-| `src/main.cpp` | `#include "reading/RsvpLinkCheck.h"` and the call `runRsvpLinkCheck();` in `setup()` | F4 (temporary; replaced by C2) |
 | `src/main.cpp` | `#include "display/DisplaySelfTest.h"` and the call `runDisplaySelfTestIfRequested(renderer);` in `loop()`, after `activityManager.loop()`: simulator only, and only with `CROSSPOINT_SIM_DISPLAY_SELFTEST` set | E3 (temporary; removed when the RSVP activity covers the timing model) |
 | `test/CMakeLists.txt` | `add_subdirectory(display_profile)` | E3 |
 | `test/CMakeLists.txt` | `add_subdirectory(rsvp_activity)` | R4a |
 | `src/activities/reader/EpubReaderMenuActivity.h/.cpp` | `MenuAction::SPEED_READ`; "Speed read" as the menu's first row (so also the toolbar's More panel) in RSVP builds; one more row of capacity | R4a |
 | `src/activities/reader/EpubReaderActivity.h/.cpp` | `openSpeedRead()` and its result handler; the `SPEED_READ` menu action and long-press branch call it | R4a |
 | `src/activities/reader/EpubReaderActivity.h/.cpp` | `showSpeedReadItem()` and the check in `loop()` that calls it: the non-prose item's page, then the banner (`rsvpentry::createItemBanner()`) | R5 |
+| `src/activities/reader/EpubReaderActivity.h/.cpp` | The `readingSession` member made in `loadBook()` and passed to RSVP; at the top of `pageTurn()` the checkpoint check before a next page (`checkpointBeforeTurn()`, `openPageCheckpoint()`, `resumeAfterCheckpoint()`); one line in `skipPages()` | C2 |
 | `src/CrossPointSettings.h`, `src/SettingsList.cpp` | `LONG_PRESS_BUTTON_BEHAVIOR::SPEED_READ = 3`; its label "Speed Read" offered in RSVP builds | R4a |
 | `lib/hal/HalDisplay.h` | `setCustomLut(bool, const unsigned char*)`, an inline pass-through to the SDK's public `FreeInkDisplay::setCustomLUT()`; called only by the device backend of the trial profiles (RSVP builds); the simulator stub is `scripts/simulator_patches/0004-hal-display-set-custom-lut.patch` | D2 |
 | `src/main.cpp` | `#include "controls/ControlDefaults.h"` and `seedRsvpControlDefaults();` before `SETTINGS.loadFromFile()`: the Speed read long press is the default in RSVP builds | R4a |

@@ -1,0 +1,148 @@
+# Checkpoints fire in RSVP (task C2; docs/PLAN.md section 7: "In RSVP, playback stops with the last word
+# of the section on screen; nothing beyond the break is drawn"; lib/CheckpointCore/README.md trigger
+# rules 3 and 8). The word source flags the last word of a section with a checkpoint
+# (TOKEN_CHECKPOINT), so the scheduler stops once that word has had its slot, and the session makes the
+# Fire step (checkpoint::rsvpStep()). The book's state file sets 1000 WPM so the runs are short.
+#
+# Pass 1, touch: chapter 1 page 3 starts at word 184; Speed read from the toolbar's More panel; Play.
+# The last frame is word 232 "same.", the end of s0001; the pause line counts 49 words (184-232), so
+# nothing after the break was drawn; then c0001's prompt (mode rsvp). Skip checkpoint: RSVP's pause
+# screen at word 233, Play highlighted, status "Checkpoint done"; Play continues at 233 (the audit
+# stays in order across the checkpoint), a touch pauses, Page view shows page 3.
+# Pass 2, keys: on to chapter 2's last page (words 490-607; nothing fires on the way, page view counts
+# from the word RSVP left at), Speed read by a hold, 2 words per update, Play. Every frame is a group of
+# at most 2 words and the last one ends at word 607, the end of s0004 and of the chapter; then c0002's
+# prompt. Skip checkpoint: the pause screen at chapter 3, word 0 (trigger rule 8).
+description = "RSVP: playback stops with a checkpoint's last word on screen, the prompt follows; with 2 words per update no group crosses the end; resume paused after the break"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}}\n", dst = "books/fixture.prepared.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # Pass 1: touch.
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [385, 752], note = "More" },
+  { wait_screen = "More | 1/3" },
+  { tap = [240, 388], note = "Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=184 .* from=page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { tap = [240, 340], note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=184 wpm=1000 words_per_update=1" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=231 last=231 words=1 .* text=\"the\"" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=232 last=232 words=1 .* text=\"same.\"", note = "the section's last word" },
+  { shot = "t_last_word" },
+  { wait_log = "\\[RSVP\\] pause reason=checkpoint ch=1 word=233 target=1000 delivered=\\d+\\.\\d words=49 .* audit=ok drawn=49 segments=1 violations=0 gaps=0 repeats=0 skipped=0 declared=0", note = "words 184-232: nothing after the break was drawn" },
+  { wait_log = "\\[RSVP\\] leave to=checkpoint ch=1 first=232 last=232" },
+  { wait_log = "\\[CPT\\] fire source=rsvp-playback checkpoint=c0001 section=s0001 ch=1 last_word=232 resume_ch=1 resume_word=233 crossed=1" },
+  { wait_log = "\\[CPT\\] open checkpoint=c0001 prompts=1 section=s0001 mode=rsvp resume_ch=1 resume_word=233 state=read " },
+  { wait_log = "\\[CPT\\] saved after=start prompt=- grade=none active=c0001 prompt_index=0 position=1:232:rsvp ok=1", note = "before the break: the frame on screen" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 recorded=none focus=Reveal " },
+  { shot = "t_prompt_after_last_word" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=0 ch=1 word=233 mode=rsvp saved=1" },
+  { wait_log = "\\[CPT\\] resume end=skipped mode=rsvp ch=1 word=233" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · \\d+ actual\"" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "Page view | Winding the Clockwork" },
+  { shot = "t_rsvp_resume" },
+  { tap = [240, 340], note = "Play: on after the break" },
+  { wait_log = "\\[RSVP\\] play ch=1 word=233 wpm=1000 words_per_update=1" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=233 last=233 words=1 .* text=\"Winding\"" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=236 last=236 " },
+  { tap = [240, 600], note = "touch-down pauses" },
+  { wait_log = "\\[RSVP\\] pause reason=pause ch=1 word=\\d+ .* audit=ok .* segments=1 violations=0 gaps=0 repeats=0", note = "one audit segment across the checkpoint" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { tap = [396, 84], note = "Page view" },
+  { wait_log = "\\[RSVP\\] leave to=page-view ch=1 word=(23[7-9]|2[4-9][0-9]) " },
+  { wait_log = "\\[RSVP\\] position saved reason=page-view ch=1 word=\\d+ mode=page ok=1" },
+  { wait_log = "Rendered page in" },
+  { screen_has = "The Lamp Room | 3/5" },
+
+  # Pass 2: keys.
+  { press = "DOWN", note = "page 4: counts from the word RSVP left at, past s0001's end" },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=184 from=2\\d\\d last=294 step=none" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=3" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=4" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=1" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=2" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { press = "DOWN" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=2 page_offset=\\d+ word=490 .* from=page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceForward" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Pause focus=WpmDown" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Pause focus=WpmUp" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Pause focus=WordsDown" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Pause focus=WordsUp" },
+  { press = "DOWN", hold_ms = 900, note = "2 words per update" },
+  { wait_log = "\\[RSVP\\] values wpm=1000 words_per_update=2 changed=1" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=WordsDown" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=WpmUp" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=WpmDown" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceForward" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=Play" },
+  { press = "DOWN", hold_ms = 900, note = "Play" },
+  { wait_log = "\\[RSVP\\] play ch=2 word=490 wpm=1000 words_per_update=2" },
+  { wait_log = "\\[RSVP\\] frame ch=2 first=60[67] last=607 words=[12] .* text=\"(\\S+ )?lamp\\.\"", note = "the last group ends at the section's last word" },
+  { shot = "k_last_group" },
+  { wait_log = "\\[RSVP\\] pause reason=checkpoint ch=2 word=608 target=1000 .* audit=ok drawn=118 ", note = "words 490-607 and nothing after" },
+  { wait_log = "\\[CPT\\] fire source=rsvp-playback checkpoint=c0002 section=s0004 ch=2 last_word=607 resume_ch=3 resume_word=0 crossed=1" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal " },
+  { shot = "k_prompt_after_last_group" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipPrompt" },
+  { press = "DOWN" },
+  { wait_log = "\\[CTL\\] Prompt focus=SkipCheckpoint" },
+  { press = "DOWN", hold_ms = 900, note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=0 ch=3 word=0 mode=rsvp saved=1" },
+  { wait_log = "\\[RSVP\\] chapter ch=3 word=0 chapter_words=321" },
+  { wait_log = "\\[RSVP\\] pause screen focus=Play refresh=clear status=\"Checkpoint done · 1000 WPM target · \\d+ actual\"" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { screen_has = "The Keeper's Log · chapter 0% " },
+  { shot = "k_rsvp_resume_chapter" },
+  { quit = true },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/position", equals = { chapter = 3, word = 0, mode = "rsvp" } },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/overrides", equals = { wpm = 1000 } },
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/book_sha256", equals = "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+  { compare = "t_prompt_after_last_word" },
+  { compare = "t_rsvp_resume", mask = [[0, 0, 480, 24]] },
+  { compare = "k_prompt_after_last_group" },
+  { compare = "k_rsvp_resume_chapter", mask = [[0, 0, 480, 24]] },
+]

@@ -16,6 +16,7 @@
 #include "activities/reader/ReaderUtils.h"
 #include "fontIds.h"
 #include "reading/BookStateFile.h"
+#include "reading/ReadingSession.h"
 #include "reading/RsvpPosition.h"
 
 namespace {
@@ -205,7 +206,7 @@ void ItemBanner::stay(const int8_t pageTurn) {
   place.position.word = handOff->item.nextWord;
   place.mode = checkpoint::ReadingMode::Page;
   const bool ok = reading::editBookState(
-      epub->getPath(), reading::NO_BOOK_SHA256,
+      epub->getPath(), handOff->session ? handOff->session->identity() : reading::BookIdentity{},
       [](checkpoint::BookState& state, const void* context) {
         state.hasPosition = true;
         state.position = *static_cast<const checkpoint::Place*>(context);

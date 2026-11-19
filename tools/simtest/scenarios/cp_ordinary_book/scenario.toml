@@ -1,0 +1,87 @@
+# A book without checkpoint data behaves as before (task C2; docs/PLAN.md section 1: "Checkpoints
+# appear only when the file carries them"). fixtures/books/fixture.epub is the same book as the
+# prepared fixture without rsvp/checkpoints.json and without anchors. The places where the prepared
+# copy fires (leaving chapter 1 page 3, leaving chapter 2's last page, RSVP after word 232) fire
+# nothing here: the session has no checkpoint data, so no section is loaded and RSVP's word source
+# carries no section ends; no state file member names a book hash.
+#
+# Pass 1, touch: page forward from chapter 1 page 1 to chapter 3 page 1.
+# Pass 2, keys: back to chapter 1 page 3, Speed read and Play by holds: "same." (232) is followed by
+# "Winding" (233) without a stop; Down pauses.
+description = "No checkpoint data: page view and RSVP cross the prepared copy's section ends without firing, as before"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.epub", dst = "books/fixture.epub" },
+  { json = { openEpubPath = "/books/fixture.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+  { text = "{\"version\": 1, \"overrides\": {\"wpm\": 1000}}\n", dst = "books/fixture.epub.rsvp-state.json" },
+]
+
+steps = [
+  { wait_log = "\\[CPT\\] session open checkpoints=0 sha=none " },
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # Pass 1: touch.
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400], note = "the prepared copy fires here" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=3" },
+  { screen_lacks = "Reveal answer" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=4" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=1" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=2" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { swipe = [400, 400, 80, 400], note = "the prepared copy fires here (end of chapter 2)" },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { screen_lacks = "Reveal answer" },
+  { shot = "t_chapter3" },
+
+  # Pass 2: keys.
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=4" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=3" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=2" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=\\d+ page=1" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=4" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=3" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=2" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=1 page_offset=\\d+ word=184 .* from=page" },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "DOWN", hold_ms = 900, note = "Play" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=232 last=232 words=1 .* text=\"same.\"" },
+  { wait_log = "\\[RSVP\\] frame ch=1 first=233 last=233 words=1 .* text=\"Winding\"", note = "no stop at the prepared copy's section end" },
+  { press = "DOWN", note = "pause" },
+  { wait_log = "\\[RSVP\\] pause reason=pause ch=1 .* audit=ok " },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { quit = true },
+
+  { expect_schema = "books/fixture.epub.rsvp-state.json", schema = "tools/simtest/scenarios/cp_ordinary_book/state.schema.json" },
+  { expect_json = "books/fixture.epub.rsvp-state.json", pointer = "/position/mode", equals = "rsvp" },
+  { compare = "t_chapter3" },
+]

@@ -8,7 +8,7 @@ model). This directory holds what needs Arduino and the renderer.
 
 | File | What it holds | Built for |
 | --- | --- | --- |
-| `DisplayProfile.h/.cpp` | The calling contract, `MillisClock`, `firmwareBackend()`, `logStats()`, the log lines, a temporary link check | RSVP flag |
+| `DisplayProfile.h/.cpp` | The calling contract, `MillisClock`, `firmwareBackend()`, `logStats()`, the log lines | RSVP flag |
 | `SimulatorDisplayBackend.h/.cpp` | The real draw through `renderer.displayBuffer()`, then a sleep for the rest of the modelled time; reads the compiled-in timings file and `CROSSPOINT_SIM_UPDATE_MS` / `CROSSPOINT_SIM_CLEAR_MS` | RSVP flag and `SIMULATOR` |
 | `DeviceDisplayBackend.h/.cpp` | The stock and trial profiles on the panel (tasks D1, D2): the hardware calls of `TimedBackend`'s `RefreshPort` (`lib/DisplayProfileCore`) over `HalDisplay` and the renderer, and its log lines | RSVP flag, not `SIMULATOR` |
 | `DisplaySelfTest.h/.cpp` | **Temporary:** with `CROSSPOINT_SIM_DISPLAY_SELFTEST=<n>`, draws a counter band n times through `update()` and runs one `clear()` once Home is up | RSVP flag and `SIMULATOR` |

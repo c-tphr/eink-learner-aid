@@ -2,6 +2,8 @@
 
 #if CROSSPOINT_RSVP_ENABLED
 
+#include <StateRestore.h>
+
 #include <cstring>
 
 #include "BookStateRules.h"
@@ -24,7 +26,8 @@ const char* stateSourceName(const StateSource source) {
   return "?";
 }
 
-StateLoad decodeForUse(const uint8_t* data, const size_t size, const char* bookSha256, checkpoint::BookState& out) {
+StateLoad decodeForUse(const uint8_t* data, const size_t size, const char* bookSha256,
+                       const checkpoint::CheckpointIndex* index, checkpoint::BookState& out) {
   StateLoad load;
   const checkpoint::DecodeResult result = checkpoint::decodeState(data, size, bookSha256, out);
   load.status = result.status;
@@ -34,6 +37,11 @@ StateLoad decodeForUse(const uint8_t* data, const size_t size, const char* bookS
     return load;
   }
   load.source = StateSource::Read;
+  if (index != nullptr && index->isOpen()) {
+    // lib/CheckpointCore/README.md, "Opening a book", step 2.
+    load.shaMismatch = checkpoint::applyBookChangeRule(out, index).shaMismatch;
+    return load;
+  }
   if (result.shaMismatch) {
     load.shaMismatch = true;
     std::memcpy(out.bookSha256, bookSha256, checkpoint::SHA256_HEX_CHARS);

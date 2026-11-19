@@ -7,8 +7,9 @@ and never decides a flow rule itself. Layouts and controls follow `docs/spikes/S
 (section 2 and rows 17-29) through the binding table in `src/controls/`.
 
 Built by task C3a (#93) as a self-contained activity: a caller pushes it with "this checkpoint of
-this book" and reads how it ended. C2 (#26) decides when a checkpoint fires; C3 (#27) connects the
-two and removes the temporary simulator entry below; C4 (#28) does the reread itself.
+this book" and reads how it ended. C2 (#26) decides when a checkpoint fires and C3 (#27) connects the
+two (`reading::ReadingSession::startCheckpoint()`, from RSVP and from the reader's next-page action;
+`src/reading/README.md`, "ReadingSession"); C4 (#28) does the reread itself.
 
 Everything here is compiled only with the RSVP feature flag (`docs/ARCHITECTURE-RSVP.md`).
 
@@ -18,7 +19,6 @@ Everything here is compiled only with the RSVP feature flag (`docs/ARCHITECTURE-
 | `CheckpointActivity.h/.cpp` | The activity: input, flow events, state file writes, drawing | no (simulator scenarios) |
 | `CheckpointScreens.h/.cpp` | Pure: flow state to screen, items and default highlight per screen, item to flow event, answer paging, how a checkpoint ended | yes |
 | `CheckpointSave.h/.cpp` | Pure: what a transition writes to the state file, the grade time | yes |
-| `CheckpointSimEntry.h/.cpp` | TEMPORARY simulator-only entry (below) | |
 
 Host tests: `test/checkpoint_activity` (`CheckpointScreensTest`, `CheckpointSaveTest`).
 
@@ -89,7 +89,8 @@ highlight move or an answer part.
 Every transition the flow marks `Save::Now` is written through `reading::editBookState()` before the
 next screen is drawn (`CheckpointSave.h`):
 
-- start: `active_checkpoint` (id, `prompt_index` 0, `resume`); `book_sha256` when the file has none;
+- start: `active_checkpoint` (id, `prompt_index` 0, `resume`); `position`, the place before the break
+  (`Request::before`, task C2); `book_sha256` when the file has none;
 - Correct or Incorrect that stored the prompt's first grade: that grade, recorded only if the file
   has none for the prompt (a grade the file already holds is never overwritten);
 - Skip question, Continue, the next prompt: `prompt_index`; skips write no grade;
@@ -105,8 +106,9 @@ device whose clock was never set, the grade is written without `at`, as the code
 simulator's clock is the host's, so its scenarios check the format of `at`, not its value.
 
 **What a restart sees.** The state file always holds the checkpoint in progress at its current
-prompt (or its reread). Restoring it on reopening is task C5: until then a reopened book reads as
-usual and the next run of the checkpoint starts again at its first prompt.
+prompt (or its reread), and `position` before the break. Restoring it on reopening is task C5: until
+then a reopened book opens before the break (the reader's page, or RSVP at the frame that was on
+screen), and reading on fires the checkpoint again from its first prompt (`cp_skip_grades`).
 
 ## Log lines
 
@@ -122,7 +124,6 @@ DBG lines, tag `CPT` unless noted; stable for the scenarios. Numbers are decimal
 | `end result=<finished\|skipped\|reread-rsvp\|reread-page\|failed> prompt=<i> ch=<c> word=<w> mode=<rsvp\|page> saved=<0\|1>` | The activity finishes; the place is `resume` or `reread` |
 | `left checkpoint=<n> prompt=<i> state=<flow state> (saved)` | Left without an ending (Home gesture, sleep) |
 | `[CTL] <Screen> armed`, `[CTL] <Screen> focus=<Item>`, `[CTL] <Screen> select=<Item>` | The input guard released; highlight moved; item activated |
-| `sim entry checkpoint=<id> mode=<m> ch=<spine> start=<w> end=<w>` | The temporary entry pushes the activity |
 
 ## Memory
 
@@ -136,15 +137,14 @@ DBG lines, tag `CPT` unless noted; stable for the scenarios. Numbers are decimal
 
 Nothing is allocated per frame or per key press besides the paint's line vector.
 
-## TEMPORARY: the simulator entry
+## Opened by the triggers
 
-`CheckpointSimEntry.h`: with `CROSSPOINT_SIM_CHECKPOINT=<checkpoint id>[,rsvp|page]` (several
-separated by `;`), once an EPUB with a page laid out is in front, the simulator opens the book's
-checkpoint data, resolves the checkpoint's section through the chapter's word index, makes the Fire
-step that reading past the section's last word makes (`checkpoint::rsvpStep()`), and pushes the
-activity over the reader. Several entries open one after another, each once the reader is back in
-front, because the scenario harness sets one value per scenario. It exists only in simulator builds
-with the RSVP flag (an empty inline function everywhere else) and has one call in `src/main.cpp`,
-after the display self-test's. **Task C3 (#27) removes it and that call** when it wires the activity
-to C2's triggers. Scenarios: `cp_screens_touch`, `cp_screens_keys`, `cp_long_answer`,
-`cp_skip_grades`.
+`ReadingSession::startCheckpoint()` makes the activity when ordinary forward reading fires a checkpoint
+(RSVP pushes it over itself; page view over the reader), with `Request::before`, the reading position
+before the break, which the start's write saves as `position` together with the checkpoint in progress.
+A book closed while the checkpoint shows therefore reopens before the break, where reading on fires it
+again (restoring the prompt itself is task C5). C3a's temporary simulator entry
+(`CheckpointSimEntry`, `CROSSPOINT_SIM_CHECKPOINT`) is gone; its scenarios `cp_screens_touch`,
+`cp_screens_keys`, `cp_long_answer` and `cp_skip_grades` reach their checkpoints by reading. Every
+read and write of the state file uses the book's identity (`book_sha256` and the open index), so the
+rule for another edition (`checkpoint::applyBookChangeRule()`) applies as the file is read.

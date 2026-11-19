@@ -1,0 +1,138 @@
+# Jumps never fire checkpoints (task C2; docs/PLAN.md section 7: "Table-of-contents jumps, go-to-
+# percent, bookmarks, progress sync and sentence stepping carry a navigation source that never fires
+# checkpoints, even when they pass several"; lib/CheckpointCore/README.md trigger rules 2 and 5). Only
+# the reader's next-page action and RSVP playback ask the trigger rules; every jump below passes the
+# ends of s0001 (chapter 1) and s0004 (chapter 2), which carry checkpoints, and no prompt appears.
+# Entering a section again by a jump re-arms it: reading forward from inside it fires.
+#
+# Pass 1, touch: the toolbar's Contents jumps to chapter 3; Toggle Bookmark there; Contents back to
+# chapter 1; the bookmark list jumps to chapter 3; Contents back to chapter 1; Go to % jumps to about
+# 90%; Contents back to chapter 1; three next-page swipes: the third leaves page 3 and fires c0001.
+# Pass 2, keys: RSVP's Menu (hold Down, Up x3, hold) opens the reader's toolbar, where Down and Up
+# jump chapters (the toolbar's chapter scrub, a table-of-contents move): two chapters forward over
+# s0004's end, two back. The toolbar has no key that closes it; a tap on the page does, the only touch
+# in this pass (upstream's toolbar; S4 section 8). Then Down x3 from chapter 1's first page: the third
+# fires c0001.
+description = "Contents, bookmark, go-to-percent and the toolbar's chapter scrub jump over section ends without firing; reading forward from inside the section then fires"
+
+env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
+
+sd = [
+  { src = "fixtures/books/fixture.prepared.epub", dst = "books/fixture.prepared.epub" },
+  { json = { openEpubPath = "/books/fixture.prepared.epub", lastSleepFromReader = true }, dst = ".crosspoint/state.json" },
+]
+
+steps = [
+  { wait_log = "Progress saved: spine=0 offset=0 page=0", note = "booted into the book's title page" },
+
+  # Pass 1: touch.
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 604], note = "The Keeper's Log: over the ends of s0001 and s0004" },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { screen_lacks = "Reveal answer" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [385, 752], note = "More" },
+  { wait_screen = "More | 1/3" },
+  { tap = [240, 460], note = "Toggle Bookmark" },
+  { wait_log = "Toggle bookmark at spine 3, page 0" },
+  { wait_log = "Rendered page in" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 460], note = "The Lamp Room" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [385, 752], note = "More" },
+  { wait_screen = "More | 1/3" },
+  { tap = [240, 460], note = "Bookmarks" },
+  { wait_log = "Entering activity: EpubReaderBookmarks" },
+  { wait_screen = "Bookmarks | The Keeper's Log" },
+  { tap = [240, 155], note = "the bookmark: chapter 3, over both section ends" },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { screen_lacks = "Reveal answer" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 460], note = "The Lamp Room" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [385, 752], note = "More" },
+  { wait_screen = "More | 1/3" },
+  { swipe = [240, 650, 240, 450], note = "the More list's next page" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [240, 532], note = "Go to %" },
+  { wait_log = "Entering activity: EpubReaderPercentSelection" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [368, 430], note = "the slider, near its end" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [300, 494], note = "Confirm" },
+  { wait_log = "Progress saved: spine=[34] offset=\\d+ page=\\d+", note = "over both section ends" },
+  { screen_lacks = "Reveal answer" },
+  { tap = [240, 400], note = "centre tap: the toolbar" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [95, 752], note = "Contents" },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { tap = [120, 460], note = "The Lamp Room: back inside s0001" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=0 from=0 last=107 step=none" },
+  { swipe = [400, 400, 80, 400] },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=108 from=108 last=183 step=none" },
+  { swipe = [400, 400, 80, 400], note = "reading forward inside the section fires" },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=184 from=184 last=294 step=fire" },
+  { wait_log = "\\[CPT\\] fire source=next-page checkpoint=c0001 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] page resume this-page ch=1 word=233 " },
+  { wait_log = "Rendered page in" },
+
+  # Pass 2: keys (and one tap to close upstream's toolbar).
+  { press = "UP", note = "page 2" },
+  { wait_log = "Progress saved: spine=1 offset=\\d+ page=1" },
+  { press = "DOWN", hold_ms = 900, note = "hold: Speed read" },
+  { wait_log = "\\[RSVP\\] enter ch=1 " },
+  { wait_log = "\\[CTL\\] Pause armed" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=SentenceBack" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=PageView" },
+  { press = "UP" },
+  { wait_log = "\\[CTL\\] Pause focus=Menu" },
+  { press = "UP", hold_ms = 900, note = "Menu: the reader's toolbar" },
+  { wait_log = "\\[RSVP\\] leave to=menu ch=1 " },
+  { wait_log = "from clearScreen to displayBuffer" },
+  { press = "DOWN", note = "toolbar: next chapter" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { press = "DOWN", note = "toolbar: next chapter, over s0004's end" },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { screen_lacks = "Reveal answer" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=2 offset=0 page=0" },
+  { press = "UP" },
+  { wait_log = "Progress saved: spine=1 offset=0 page=0" },
+  { tap = [240, 200], note = "a tap on the page closes the toolbar" },
+  { wait_log = "Restored and freed BW buffer chunks" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=0 from=0 last=107 step=none" },
+  { press = "DOWN" },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=108 from=108 last=183 step=none" },
+  { press = "DOWN", note = "reading forward inside the section fires" },
+  { wait_log = "\\[CPT\\] page advance ch=1 first=184 from=184 last=294 step=fire" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=1/1 prompt=c0001-p1 " },
+  { shot = "k_prompt" },
+  { quit = true },
+
+  { expect_json = "books/fixture.prepared.epub.rsvp-state.json", pointer = "/active_checkpoint/id", equals = "c0001" },
+  { compare = "k_prompt" },
+]
