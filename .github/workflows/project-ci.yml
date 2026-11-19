@@ -3,6 +3,10 @@
 #
 # Rules kept here: read-only token, no secrets, no pull_request_target, no
 # PlatformIO upload target anywhere (every pio call is a plain `pio run -e <env>`).
+#
+# Linux jobs run on ubuntu-24.04, the system of the cloud sessions where work is
+# done and validated (docs/PLAN.md section 11), not on ubuntu-latest, which moves
+# (it is Ubuntu 26.04 with GCC 15 at the time of writing; docs/CI.md).
 name: Project CI
 
 on:
@@ -28,7 +32,7 @@ env:
 jobs:
   format:
     name: format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
@@ -44,7 +48,7 @@ jobs:
 
   host-tests:
     name: host-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -85,7 +89,7 @@ jobs:
 
   prep-tests:
     name: prep-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
@@ -112,7 +116,7 @@ jobs:
 
   device-tool-tests:
     name: device-tool-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -168,7 +172,7 @@ jobs:
           Import-Module PSScriptAnalyzer -RequiredVersion $want
           $base = (Get-Module PSScriptAnalyzer).ModuleBase
           $profiles = Get-ChildItem (Join-Path $base 'compatibility_profiles') -Filter 'win-*.json' |
-            Where-Object { $_.BaseName -match '_5\.1\..*_framework$' -or $_.BaseName -match '_7\.0\..*_core$' } |
+            Where-Object { $_.BaseName -match '_10\.0\.17763\.0_(5\.1\..*_framework|7\.0\..*_core)$' } |
             ForEach-Object BaseName
           Write-Host "PSScriptAnalyzer $want; compatibility profiles:"; $profiles | ForEach-Object { Write-Host "  $_" }
           $settings = @{ Rules = @{
@@ -185,10 +189,14 @@ jobs:
           $findings | Format-Table RuleName, Severity, Line, Message -AutoSize -Wrap | Out-String -Width 220 | Write-Host
           Write-Host "analyzer findings on session.ps1: $($findings.Count)"
           if ($findings.Count -gt 0) { exit 1 }
-      - uses: actions/setup-python@v6
+      # The steps below run even when the parse or analyzer step failed, so one
+      # run records everything session.ps1 does on this shell.
+      - if: ${{ !cancelled() }}
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - name: Owner-style session folder with synthetic kit and work folder
+        if: ${{ !cancelled() }}
         id: fixture
         run: |
           python -m pip install -r tools/device/requirements-test.txt
@@ -196,6 +204,7 @@ jobs:
           python .github/scripts/device_session_fixture.py (Join-Path $env:RUNNER_TEMP 'picco session')
           if ($LASTEXITCODE -ne 0) { exit 1 }
       - name: session.ps1 setup, plan, flash -DryRun, restore -DryRun, identify -DryRun, summary, ports
+        if: ${{ !cancelled() && steps.fixture.outcome == 'success' }}
         env:
           BACKUP: ${{ steps.fixture.outputs.backup }}
         run: |
@@ -249,7 +258,7 @@ jobs:
 
   firmware-picco:
     name: firmware-picco
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
@@ -299,7 +308,7 @@ jobs:
     # "CI (build)" matrix is disabled in this fork). x4pro: ESP32-S3, no
     # custom_sdkconfig, same packages as picco.
     name: firmware-other-device (x4pro)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
@@ -335,7 +344,7 @@ jobs:
 
   simulator:
     name: simulator
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -391,7 +400,7 @@ jobs:
     # Turns itself on when task E2 adds the scenario harness tools/simtest/.
     name: scenarios
     needs: simulator
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -442,7 +451,7 @@ jobs:
   firmware-2slot:
     # Turns itself on when task D4 defines [env:picco_2slot].
     name: firmware-2slot
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
@@ -522,7 +531,7 @@ jobs:
       - simulator
       - scenarios
       - firmware-2slot
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Every required job succeeded
