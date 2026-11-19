@@ -19,24 +19,45 @@ The owner runs one script, `session.ps1`. Everything that decides what may be wr
 
 ## Commands
 
+From the folder that holds `session.ps1`, always in this form (the one-off bypass works on a PC that blocks scripts, "running scripts is disabled on this system", or on a file marked as downloaded, and changes no setting on the PC):
+
 ```
-.\session.ps1 setup                       # prepare the private Python only
-.\session.ps1 identify                    # read-only
-.\session.ps1 backup                      # read-only
-.\session.ps1 plan                        # show and verify kit\flash-plan.json (no device)
-.\session.ps1 flash [-DryRun]             # the only destructive command besides restore
-.\session.ps1 monitor [-Reset]            # serial log until Ctrl+C
-.\session.ps1 restore <backup.bin> [-DryRun]
-.\session.ps1 ports                       # list serial ports
-.\session.ps1 summary                     # one text file, safe to post publicly (no device contact)
+powershell -ExecutionPolicy Bypass -File .\session.ps1 <command> [options]
+
+setup                       # prepare the private Python only
+identify                    # read-only
+backup                      # read-only
+plan                        # show and verify kit\flash-plan.json (no device)
+flash [-DryRun]             # the only destructive command besides restore
+monitor [-Reset]            # serial log until Ctrl+C
+restore <backup.bin> [-DryRun]
+ports                       # list serial ports
+summary                     # one text file, safe to post publicly (no device contact)
 common options: -Port COMn  -DryRun  -Plan <kit folder or flash-plan.json>  -WorkDir <folder>
 ```
 
-If Windows refuses to run the script ("running scripts is disabled on this system", or the file is marked as downloaded), run it through PowerShell with a one-off bypass. This changes no setting on the PC:
+### Commands the tool prints for the owner
 
-```
-powershell -ExecutionPolicy Bypass -File .\session.ps1 identify
-```
+Whenever the tool tells the owner to run something, it prints the whole command line on a line of its own, indented by four spaces, in the form above, so the owner can type exactly what they see. One function writes that text, `common.session_command` (paths are quoted for PowerShell: in double quotes, or in single quotes when the path holds `$`, a backtick or a double quote); `session.ps1` holds the same launcher text in `$Launcher`, and a test keeps the two equal. The places:
+
+| Where | When | Command printed |
+| --- | --- | --- |
+| `identify.print_summary` | `RESULT: PASS` | `backup` |
+| `identify.print_summary` | `RESULT: ALREADY CONVERTED` (also names Settings > System > SD Card Firmware Update) | `restore "<backup file>"` |
+| `identify.print_summary` | `RESULT: STOP` | `summary` |
+| `backup.run` | no passing identify in the work folder | `identify` |
+| `backup.run` | the connection failed during the backup | `backup` |
+| `backup._backup` | the connected Picco has no passing identify | `identify` |
+| `backup._backup` | `STOP: THE TWO READS DIFFER`; the kept file no longer hashes correctly | `backup` |
+| `flash._preconditions` (`[STOP]` lines, and the dry run's reasons) | no verified backup; no passing identify for the backup's MAC | `identify`, `backup` |
+| `flash.write_all` | `DONE` | `monitor -Reset` |
+| `common.restore_instructions` | `FLASHING DID NOT COMPLETE` | `restore "<full path of the backup>"` |
+| `restore._failed` | `RESTORE DID NOT COMPLETE` | `restore "<full path of the backup>"` |
+| `summary.run` | no work folder | `identify` |
+| `esptool_device` | esptool missing or the wrong version | `setup` |
+| `session.ps1` | `restore` without a file; the help shown when no command is given | `restore "work\picco-backup-<...>.bin"`; every command |
+
+`tests/test_hints.py` reaches each of these through the command line and the fake device, from a work folder whose path has a space, an apostrophe and a `$`, and fails if any output names `session.ps1` in another form; it also checks that the printed restore command gives back the backup's exact path when PowerShell reads it. The `device-tool-windows` CI job types the printed commands (with `-DryRun`) in Windows PowerShell 5.1 and PowerShell 7.
 
 The same commands exist as `python -m piccoflash <command>` with `--dry-run`, `--port`, `--work-dir`, `--plan`, plus `make-plan` for whoever builds the kit. Exit codes:
 
@@ -151,7 +172,7 @@ Erase granularity: esptool erases every 4 KiB sector a write touches (documented
 
 **restore**: needs the backup's `.json` record (verified, same file name) and a file of exactly 16 MiB with the recorded SHA-256. It does not need identify to pass. After the phrase it checks: ESP32-S3, 16MB, no flash encryption, no secure download mode, and the MAC (a different MAC needs a second phrase). Writes at 0x0 with `keep`, reads all 16 MB back, compares SHA-256, resets.
 
-**summary** (no device contact): writes `work\early-check-summary-<time>.txt` from the work folder's records and logs: chip and revision, MAC with the last three bytes masked, flash id and size, security flags, identify's checks, bootloader header fields, partition table rows, otadata records, SHA-256 (never contents) of identify's blobs and of the backup, backup status, every command run with its exit code, and the last 40 lines of the latest identify and backup logs with user names removed from paths. A test checks that it contains no run of 31 or more bytes of the backup, or of 23 or more bytes of the blobs, raw or as hex. The owner's early-check sheet is `docs/DEVICE_EARLY_CHECK.md`.
+**summary** (no device contact): writes `work\session-summary-<time>.txt` (earlier kits named it `early-check-summary-<time>.txt`) from the work folder's records and logs: chip and revision, MAC with the last three bytes masked, flash id and size, security flags, identify's checks, bootloader header fields, partition table rows, otadata records, SHA-256 (never contents) of identify's blobs and of the backup, backup status, every command run with its exit code; for each `flash-result-<time>.json`, the four images in the order written, each "written and verified" (with the first 16 characters of the read-back SHA-256), "STOPPED HERE" or "not written", the reason and what the tool then told the owner; for each restore that was run (from its log), whether the whole flash was read back and verified, did not complete, or wrote nothing; and the last 40 lines of the latest identify, backup, flash and restore logs, with user names removed from paths. It says at the top that every line is safe to post. It works with whatever the folder holds (for example only identify and backup). A test checks that it contains no run of 31 or more bytes of the backup, or of 23 or more bytes of the blobs, raw or as hex. The owner's sheets are `docs/DEVICE_EARLY_CHECK.md` and `docs/DEVICE_SESSION.md`.
 
 **monitor**: opens the port with DTR and RTS off (so opening it does not reset the chip), copies everything to `work\serial-<time>.log` and the console until Ctrl+C, and waits for the port to come back when it disappears (USB-Serial/JTAG re-enumerates on every chip reset). It never sends data; `-Reset` pulses the RTS line once.
 
@@ -201,17 +222,17 @@ PowerShell checks that did run here: PowerShell 7.4.6 (Linux build from the Powe
 
 ## Hand-off to the checklist (task D6)
 
-Everything the owner sees that needs an action or a decision:
+Everything the owner sees that needs an action or a decision (each command is typed as `powershell -ExecutionPolicy Bypass -File .\session.ps1 <command>`):
 
 | Step | Command | Prompt or phrase | Good outcome | Stop outcome |
 | --- | --- | --- | --- | --- |
-| Setup (any time before) | `session.ps1 setup` | none | `[session] Private Python ready.` then `piccoflash 1.0.0` | exit 10/11/12 with `[session] STOPPED: ...` |
-| Identify | `session.ps1 identify` | none | `RESULT: PASS. This is a stock Picco ...` exit 0 | `RESULT: STOP` and a list (exit 1); `RESULT: ALREADY CONVERTED` (exit 3); `COULD NOT REACH THE PICCO'S CHIP` (exit 4) |
-| Backup | `session.ps1 backup` | `When the copy is done, type the LAST 8 characters of the SHA-256 above:` (3 tries) | `BACKUP VERIFIED: both reads are identical.` then `Thank you. The backup is confirmed.` exit 0 | `STOP: THE TWO READS DIFFER` (exit 1: retry with another cable or port); `REFUSED: there is no passing 'identify'` (exit 1) |
-| Rehearse | `session.ps1 flash -DryRun` | none | `DRY RUN RESULT: READY` exit 0 | `DRY RUN RESULT: NOT READY` and reasons (exit 1) |
-| Flash | `session.ps1 flash` | (the backup confirmation again if it was not given) then `To replace Onyx on this Picco, type exactly:  REPLACE ONYX` | `[1/4] app ... verified` through `[4/4] bootloader ... verified`, `DONE: all four images written and verified.` exit 0 | `Cancelled: the phrase did not match. Nothing was written.` (exit 1); `REFUSED: ...` (exit 1); `FLASHING DID NOT COMPLETE` box with the exact restore command (exit 5) |
-| First boot | `session.ps1 monitor` (or `-Reset`) | Ctrl+C to stop | serial lines appear; `Serial log saved: ...` | nothing appears: check the port; the log still records the attempt |
-| Restore | `session.ps1 restore "<work\picco-backup-...bin>"` | `type exactly:  RESTORE BACKUP`; if the MAC differs also `RESTORE TO A DIFFERENT DEVICE` | `VERIFIED: the whole flash now equals the backup`, `DONE.` exit 0 | `RESTORE DID NOT COMPLETE` (exit 6: run it again, try another cable or port); `REFUSED` (exit 1) |
+| Setup (any time before) | `setup` | none | `[session] Private Python ready.` then `piccoflash 1.0.0` | exit 10/11/12 with `[session] STOPPED: ...` |
+| Identify | `identify` | none | `RESULT: PASS. This is a stock Picco ...` exit 0 | `RESULT: STOP` and a list (exit 1); `RESULT: ALREADY CONVERTED` (exit 3); `COULD NOT REACH THE PICCO'S CHIP` (exit 4) |
+| Backup | `backup` | `When the copy is done, type the LAST 8 characters of the SHA-256 above:` (3 tries) | `BACKUP VERIFIED: both reads are identical.` then `Thank you. The backup is confirmed.` exit 0 | `STOP: THE TWO READS DIFFER` (exit 1: retry with another cable or port); `REFUSED: there is no passing 'identify'` (exit 1) |
+| Rehearse | `flash -DryRun` | none | `DRY RUN RESULT: READY` exit 0 | `DRY RUN RESULT: NOT READY` and reasons (exit 1) |
+| Flash | `flash` | (the backup confirmation again if it was not given) then `To replace Onyx on this Picco, type exactly:  REPLACE ONYX` | `[1/4] app ... verified` through `[4/4] bootloader ... verified`, `DONE: all four images written and verified.` exit 0 | `Cancelled: the phrase did not match. Nothing was written.` (exit 1); `REFUSED: ...` (exit 1); `FLASHING DID NOT COMPLETE` box with the exact restore command (exit 5); after `DONE`, the `monitor -Reset` command |
+| First boot | `monitor -Reset` (or without `-Reset`) | Ctrl+C to stop | serial lines appear; `Serial log saved: ...` | nothing appears: check the port; the log still records the attempt |
+| Restore | `restore "<work\picco-backup-...bin>"` | `type exactly:  RESTORE BACKUP`; if the MAC differs also `RESTORE TO A DIFFERENT DEVICE` | `VERIFIED: the whole flash now equals the backup`, `DONE.` exit 0 | `RESTORE DID NOT COMPLETE` (exit 6: run it again, try another cable or port); `REFUSED` (exit 1) |
 
 Other things the checklist should say:
 
@@ -219,7 +240,7 @@ Other things the checklist should say:
 * identify and backup reset the chip into download mode and back; the Picco's screen may freeze or the Picco may restart while they run. If it stays frozen afterwards, restart it with the power button.
 * `backup` takes two full reads; the duration over USB is unknown until the session. Keep the cable still.
 * Copy the backup `.bin` and its `.json` together to a second place the owner controls (USB stick or another disk) before flashing. Never upload it anywhere: the repository is public, and the backup holds the device's settings area (possibly Wi-Fi details) and Onyx's firmware.
-* Where the files are: `work\identify-*.json` and blobs, `work\picco-backup-*.bin/.json`, `work\*-MISMATCH.json`, `work\flash-result-*.json`, `work\serial-*.log`, `work\logs\<command>-*.log` (everything shown and typed, plus esptool's output and every esptool call). Never attach `work\` or any `.bin` from it to an issue (the backup and identify's blobs hold the device's own data). Attach only the file written by `summary`, which holds parsed fields and SHA-256 hashes, with the MAC partly masked and user names removed from paths.
+* Where the files are: `work\identify-*.json` and blobs, `work\picco-backup-*.bin/.json`, `work\*-MISMATCH.json`, `work\flash-result-*.json`, `work\serial-*.log`, `work\logs\<command>-*.log` (everything shown and typed, plus esptool's output and every esptool call). Never attach `work\` or any `.bin` from it to an issue (the backup and identify's blobs hold the device's own data). Attach only the file written by `summary`, which holds parsed fields, SHA-256 hashes and the tool's own messages, with the MAC partly masked and user names removed from paths.
 * If more than one Espressif device is connected, or none is found, the tool lists the ports and asks for `-Port COMn`; it never guesses.
 * Run from a plain folder (for example `C:\picco`), not a OneDrive-synced one, with about 100 MB free.
 
@@ -240,6 +261,9 @@ Other things the checklist should say:
 * Phrases: `REPLACE ONYX`, `RESTORE BACKUP`, `RESTORE TO A DIFFERENT DEVICE` (exact, case-sensitive, one attempt).
 * `make-plan --expect-offset ROLE=0x...` lets the build cross-check its own offsets (for example from `pio run -e picco_2slot -t envdump`); it can only cause a refusal.
 * `flash-plan.json` stores offsets as upper-case hex strings and sizes as integers.
+* Every command the tool prints for the owner is the full `powershell -ExecutionPolicy Bypass -File .\session.ps1 ...` line (task D7). The hidden `--launcher` option that session.ps1 used to pass is gone: the owner always uses session.ps1, so the hints do not depend on how the tool was started (run as `python -m piccoflash`, it prints the same PowerShell lines). Hints do not repeat `-Port` or `-WorkDir`: the checklist runs from the kit folder with the default work folder, and the COM number can change after a reset.
+* The summary file is `session-summary-<time>.txt` (task D7), since it now covers the flash and the restore; nothing reads summary files, so the old name needs no support beyond the sheets mentioning it.
+* restore writes no result file; the summary reads each restore's outcome from its log (`logs\restore-<time>.log`: the exit line, the `VERIFIED:` and `RESTORE DID NOT COMPLETE:` lines). Adding a result file would change restore.py beyond its messages, which task D7 does not do.
 
 ## For whoever builds the kit (D4, A1)
 
