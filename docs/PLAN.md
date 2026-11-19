@@ -29,6 +29,10 @@ Nov 16, 2026 · @Christopher
 
 - Section 7, "State file": the placeholder said "hash of the prepared file's source", which reads as if the device hashed a file. It is the checkpoint file's `book.source_sha256`, copied, and a book without checkpoint data has none. The wording now says so.
 
+**2026-11-19.** Two menu names in the device session (task D6, pull request #104). Section 1 is unchanged.
+
+- Section 10, step 7: the plan named the two settings "Side button layout" and "Short power button". The screens say Settings > Controls > Side buttons > Layout and Settings > Controls > Power button > Short click. The step now uses the screens' words, as `docs/DEVICE_SESSION.md` does.
+
 ## 1. Summary and confirmed decisions
 
 The reader is built as a public fork of mainline CrossPoint: RSVP works on any EPUB, and checkpoints come from prepared EPUBs that carry their own prompt data. This plan turns the v1 PRD into work that a Fable 5.2 orchestrator can split into GitHub issues for Opus 5.5 implementers. Everything is developed and verified in a simulator, then proven on the physical Picco in one final hands-on session.
@@ -451,7 +455,7 @@ The orchestrator publishes a GitHub release containing everything the session ne
 4. **Confirm.** The script prints the flash plan and asks the owner to type a confirmation phrase. This is the point of no return for Onyx's bootloader.
 5. **Flash.** `session.ps1 flash` writes only the offsets in the plan, verifies each, and refuses any image whose hash differs from the plan.
 6. **First boot.** `session.ps1 monitor` starts logging serial output to a file. The owner confirms the home screen appears and copies the `sd-card/` files across by Wi-Fi transfer or card reader.
-7. **Controls check.** From the Device test menu, press each key and the power button once and hold each side key; the screen logs the raw input and the logical button. If the side keys feel reversed, set Settings > Controls > Side button layout to Next/Prev (this fixes page view and the RSVP and checkpoint screens at once); if GPIO5 does nothing, set Short power button to Confirm if wanted. Record the result in the results issue.
+7. **Controls check.** From the Device test menu, press each key and the power button once and hold each side key; the screen logs the raw input and the logical button. If the side keys feel reversed, set Settings > Controls > Side buttons > Layout to Next/Prev (this fixes page view and the RSVP and checkpoint screens at once); if GPIO5 does nothing, set Settings > Controls > Power button > Short click to Confirm if wanted. Record the result in the results issue.
 8. **Prove the update path (optional).** With the cable still attached, install `update.bin` from the SD card through Settings and confirm the device reboots into it (it now runs from the second slot). Record the serial log.
 9. **Display benchmark.** From the Device test menu, run the sweep (below) for the stock profile and each trial profile, rating each when asked.
 10. **Guided acceptance.** Run the on-device walk-through of the PRD criteria, tapping pass or fail at each step.
