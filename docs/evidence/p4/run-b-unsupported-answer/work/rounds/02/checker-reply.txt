@@ -1,0 +1,130 @@
+{
+  "format": "rsvp-check",
+  "version": 1,
+  "prepared_sha256": "b38765ad3bbf62a4f154204acf8e3d132caca47b5bb3a429247f965df214f810",
+  "original_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "instructions_version": "1.0",
+  "checker": { "model": "claude-fable-5-2", "date": "2026-11-19" },
+  "round": 2,
+  "prompts": [
+    {
+      "id": "c0001-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d02-p006"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (each light has its own pattern and sailors count the flashes): d02-p006, 'every light on the coast had its own pattern, and that sailors counted the flashes'. Idea 2 (Gannet Rock's own pattern, unique on the coast): d02-p006, 'Gannet Rock gave one white flash every ten seconds; no other light on the coast did the same'. The prompt names neither the pattern nor the counting."
+    },
+    {
+      "id": "c0002-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p009"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (he steered by the horn alone, following its pattern): d03-p009, 'He had steered by the sound of the horn alone— two blasts, then silence, then two blasts again'. Idea 2 (until the boat grounded below the tower): d03-p009, 'until his boat grounded on the shingle below the tower'. The prompt does not mention the horn or sound."
+    },
+    {
+      "id": "c0002-p2",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p010", "d03-p011"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (phosphorescence, light from tiny living creatures when the water is disturbed): d03-p010, 'phosphorescence, the light made by tiny living creatures when the water is disturbed'. Idea 2 (not dangerous; a sign of plankton and therefore fish): d03-p011, 'It was not, said Dr. Vane, but it was a sign that the water was full of plankton, and where there was plankton there would be fish'. The answer uses only the body text, not endnote d05-n002 (single-celled plankton), so nothing depends on the footnote."
+    },
+    {
+      "id": "c0002-p3",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p013"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Single idea (always carry oars in November, however good the engine): d03-p013, 'never put to sea in November without oars, however good the engine'. The answer follows the text's wording closely but is one short plain idea a reader can match in their own words; it adds nothing from endnote d05-n003. The prompt does not mention oars or the engine."
+    },
+    {
+      "id": "c0003-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d02-p008", "d02-p009"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (a sinking iron weight drives clockwork gears that turn the lens): d02-p008, 'a clockwork drive, worked by a heavy iron weight that hung on a cable down the hollow centre of the tower. As the weight sank, the gears turned the lens'. Idea 2 (at the bottom the lens stops, and a still light could be mistaken for another): d02-p008, 'a still light was worse than no light at all, because a ship might mistake it for another'. Idea 3 (rewound every four hours): d02-p009, 'the weight had to be wound back up every four hours, all night long'. The prompt says the lens was rewound but names neither the weight nor the reason."
+    },
+    {
+      "id": "c0004-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p002", "d03-p003"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (fog swallowed the beam a few yards from the glass, making the light almost useless): d03-p002, 'the beam of the lamp was swallowed a few yards from the glass. On those nights the light was almost useless'. Idea 2 (a ship could run onto the rocks without seeing it): d03-p003, 'a ship might run onto the rocks without ever seeing it'. The prompt gives the reliance on sound but not the reason."
+    },
+    {
+      "id": "c0004-p2",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p007"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (the engine burned coal, delivered only monthly): d03-p007, 'the engine burned coal, and coal came out on the supply boat only once a month'. Idea 2 (a long fog forced a choice between warmth and safety, and they chose safety): d03-p007, 'If the fog lasted a week, they would have to choose between warmth and safety. They always chose safety.' The prompt does not mention coal or the supply boat."
+    },
+    {
+      "id": "c0005-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d04-p005"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (more than four thousand hours of horn in nineteen years, nearly half in November and December): d04-p005, 'Over nineteen years the horn had sounded for more than four thousand hours, and nearly half of those hours fell in November and December'. Idea 2 (nobody noticed because a keeper sees one night at a time): d04-p005, 'Ione said that a keeper only ever sees one night at a time'. The result is stated in prose, so the code block d04-p004 is not needed."
+    },
+    {
+      "id": "c0005-p2",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d04-p007"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (she sent the figures to the lighthouse board asking for a second engine and a larger coal store): d04-p007, 'sent her figures to the lighthouse board with a request for a second engine and a larger coal store'. Idea 2 (the board agreed in June; the engine was due before the next fog season): d04-p007, 'The reply came in June: the board agreed, and the new engine would arrive before the next fog season'."
+    }
+  ],
+  "sections": [
+    {
+      "id": "s0001",
+      "natural_boundary": true,
+      "evidence": "Starts at the chapter heading d02-p001 'The Lamp Room' and ends after d02-p006, where the arrival and lamp-room scene closes with the explanation of flash patterns; the next block d02-p007 is the h2 heading 'Winding the Clockwork', which opens a separate topic. The chapter is short (427 words), but the instructions allow a split where a chapter has two clearly separate topics, and the break falls just before a heading."
+    },
+    {
+      "id": "s0002",
+      "natural_boundary": true,
+      "evidence": "Starts at the h2 heading d02-p007 'Winding the Clockwork' and includes it; ends at d02-p010, the end of chapter 1, after the first night's watch is complete. It covers one self-contained topic, the clockwork drive and its rewinding."
+    },
+    {
+      "id": "s0003",
+      "natural_boundary": true,
+      "evidence": "Starts at the chapter heading d03-p001 'The Fog Season' and ends after d03-p007, which completes the explanation of the fog signal and its coal limit; the next block d03-p008 is the h2 heading 'The Visitor from the Mainland', a new episode. The chapter has two clearly separate topics, so the split is permitted despite parts of about 300 words."
+    },
+    {
+      "id": "s0004",
+      "natural_boundary": true,
+      "evidence": "Starts at the h2 heading d03-p008 'The Visitor from the Mainland' and includes it; ends at d03-p013, the end of chapter 2, when the fisherman leaves at dawn and Ione puts out the lamp. It is one complete episode."
+    },
+    {
+      "id": "s0005",
+      "natural_boundary": true,
+      "evidence": "Covers the whole of chapter 3, d04-p001 to d04-p008 (321 words); a chapter shorter than 600 words is one section under the instructions. The only excluded range, d01-p001 to d01-p003, is the title page, which is front matter and correctly excluded."
+    }
+  ],
+  "issues": [],
+  "verdict": "pass"
+}
