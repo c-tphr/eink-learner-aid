@@ -84,8 +84,8 @@ template <typename F>
 std::string capturedFailures(F call) {
   testing::TestPartResultArray results;
   {
-    testing::ScopedFakeTestPartResultReporter reporter(
-        testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD, &results);
+    testing::ScopedFakeTestPartResultReporter reporter(testing::ScopedFakeTestPartResultReporter::INTERCEPT_ONLY_CURRENT_THREAD,
+                                                       &results);
     call();
   }
   std::string out;
@@ -164,8 +164,7 @@ TEST(FixtureBook, TokensFollowTheExpectedFile) {
     for (size_t i = 0; i < sections.size(); ++i) {
       if (rsvptest::requireString(sections[i], "chapter_href", "section") != href) continue;
       const long end = rsvptest::requireIndex(sections[i], "end", "section");
-      sectionEnds[static_cast<size_t>(end - 1)] =
-          withCheckpoint.count(rsvptest::requireString(sections[i], "id", "section"));
+      sectionEnds[static_cast<size_t>(end - 1)] = withCheckpoint.count(rsvptest::requireString(sections[i], "id", "section"));
     }
     for (const auto& t : tokens) {
       const auto it = sectionEnds.find(t.wordIndex);
@@ -270,8 +269,7 @@ TEST(FixtureBook, SpecificTokenDetails) {
   const CaseWord dr = caseWord(rsvptest::fixtureTokenCase("Abbreviation with a full stop"));
   ASSERT_LT(dr.position + 1, dr.tokens.size());
   EXPECT_EQ(dr.tokens[dr.position + 1].text, "Vane");
-  EXPECT_FALSE(
-      rsvp::classifyWord(dr.tokens[dr.position].text, dr.tokens[dr.position].flags, nextText(dr)).isBoundary());
+  EXPECT_FALSE(rsvp::classifyWord(dr.tokens[dr.position].text, dr.tokens[dr.position].flags, nextText(dr)).isBoundary());
   // '"The' focuses on 'h', after the quote.
   const CaseWord quote =
       caseWord(rsvptest::fixtureTokenCase("Quoted sentence: opening ASCII double quote attached to the first word"));

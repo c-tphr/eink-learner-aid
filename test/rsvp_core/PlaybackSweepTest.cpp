@@ -1,8 +1,8 @@
 // Acceptance sweep for the scheduler and the delivered-WPM meter (issue #19, PRD criterion 5 under a
 // fake clock). One stream: the committed prose sample (5,793 words) as one chapter, then the
 // fixture book's four documents as FixtureBook.h hands them to RsvpCore (their prose words, with an
-// image, a table and a code block as non-prose stops, footnote bodies skipped, and two checkpoints). Played for every
-// refresh delay, target WPM and words per update below, resolving each stop after 30 s, it checks:
+// image, a table and a code block as non-prose stops, footnote bodies skipped, and two checkpoints). Played for every refresh delay, target WPM and words per update below, resolving
+// each stop after 30 s, it checks:
 //   - every word handed out is drawn exactly once and in order, by the scheduler's audit and by the
 //     fake display's own log (indexes and texts against the source tokens); the indexes passed over
 //     are exactly the table's and the code block's words, right after their non-prose stops;

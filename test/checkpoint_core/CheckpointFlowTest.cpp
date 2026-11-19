@@ -301,11 +301,11 @@ TEST(CheckpointFlow, RereadMovesOutOfTheSectionReturnToThePrompt) {
   FixtureBook book;
   const SectionRange s4 = book.range("s0004");
   const Case cases[] = {
-      {{3, s4.end + 10}, NavSource::NextPage, false},      // forward past the end (old fixture: 600 for end 550)
-      {{4, 0}, NavSource::RsvpPlayback, false},            // forward into the next chapter
+      {{3, s4.end + 10}, NavSource::NextPage, false},  // forward past the end (old fixture: 600 for end 550)
+      {{4, 0}, NavSource::RsvpPlayback, false},        // forward into the next chapter
       {{3, s4.start - 1}, NavSource::PreviousPage, true},  // back before the start
       {{2, 10}, NavSource::TableOfContents, true},         // another chapter
-      {{3, s4.end}, NavSource::GoToPercent, true},         // a jump past the end does not count as reaching it
+      {{3, s4.end}, NavSource::GoToPercent, true},  // a jump past the end does not count as reaching it
   };
   for (const Case& c : cases) {
     Fixture f;

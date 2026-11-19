@@ -11,12 +11,13 @@
 #include <CheckpointTrigger.h>
 #include <StateCodec.h>
 #include <StateRestore.h>
-#include <gtest/gtest.h>
 
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <gtest/gtest.h>
 
 #include "CheckpointTestSupport.h"
 
@@ -84,8 +85,7 @@ inline const JsonValue* requireJson(const JsonValue* object, const char* key, Js
 inline bool requireJsonIndex(const JsonValue* object, const char* key, const std::string& where, uint32_t& out) {
   const JsonValue* value = requireJson(object, key, JsonValue::Type::Number, where);
   if (value == nullptr) return false;
-  if (value->number < 0 || value->number > 4294967295.0 ||
-      value->number != static_cast<double>(static_cast<uint32_t>(value->number))) {
+  if (value->number < 0 || value->number > 4294967295.0 || value->number != static_cast<double>(static_cast<uint32_t>(value->number))) {
     ADD_FAILURE() << where << "." << key << " is not a non-negative integer";
     return false;
   }
@@ -109,9 +109,9 @@ struct FixtureBook {
   std::unique_ptr<MemoryCheckpointSource> source;
   std::unique_ptr<CheckpointIndex> index = std::make_unique<CheckpointIndex>();
   FakeLayout layout;
-  std::map<std::string, uint16_t> chapterOfHref;    // href -> spine index
+  std::map<std::string, uint16_t> chapterOfHref;  // href -> spine index
   std::map<std::string, SectionRange> sectionById;  // from fixture.expected.json
-  std::string epubSha256;                           // fixture.expected.json's epub_sha256
+  std::string epubSha256;                         // fixture.expected.json's epub_sha256
   bool ok = false;
 
   FixtureBook() {

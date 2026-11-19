@@ -43,7 +43,7 @@ TEST(CheckpointScenario, FixtureBookMatchesTheAcceptanceSetup) {
   const SectionRange s1 = book.layout.sections[book.section("s0001")];
   const SectionRange s4 = book.layout.sections[book.section("s0004")];
   EXPECT_EQ(s1.chapter, 2);
-  EXPECT_EQ(s1.start, 0u);                                         // the chapter's first section
+  EXPECT_EQ(s1.start, 0u);  // the chapter's first section
   EXPECT_LT(s1.end, static_cast<uint32_t>(book.layout.words[2]));  // ends mid-chapter
   EXPECT_EQ(s4.chapter, 3);
   EXPECT_EQ(s4.end, static_cast<uint32_t>(book.layout.words[3]));  // ends its chapter

@@ -88,7 +88,8 @@ inline const testjson::Value& requireArray(const testjson::Value& object, std::s
   return requireMember(object, key, testjson::Value::Kind::ARRAY, where);
 }
 
-inline const std::string& requireString(const testjson::Value& object, std::string_view key, std::string_view where) {
+inline const std::string& requireString(const testjson::Value& object, std::string_view key,
+                                        std::string_view where) {
   return requireMember(object, key, testjson::Value::Kind::STRING, where).string;
 }
 

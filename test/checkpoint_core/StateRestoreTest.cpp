@@ -113,8 +113,8 @@ TEST(StateRestore, UnrestorableCheckpointsFallBackSafelyAndSaySo) {
       {"reread in another chapter", [](BookState& st, FixtureBook&) { st.active.reread.position.chapter = 2; },
        OpenView::Prompt, NOTE_REREAD_OUTSIDE_SECTION},
       {"reread at the section end",
-       [](BookState& st, FixtureBook& b) { st.active.reread.position.word = b.range("s0004").end; }, OpenView::Prompt,
-       NOTE_REREAD_OUTSIDE_SECTION},
+       [](BookState& st, FixtureBook& b) { st.active.reread.position.word = b.range("s0004").end; },
+       OpenView::Prompt, NOTE_REREAD_OUTSIDE_SECTION},
   };
   for (const Case& c : cases) {
     FixtureBook fresh;
