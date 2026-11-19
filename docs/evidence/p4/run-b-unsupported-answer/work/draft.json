@@ -60,9 +60,8 @@
         {
           "id": "c0001-p1",
           "prompt": "How could sailors tell the Gannet Rock light apart from the other lights on the coast?",
-          "answer": "Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash every ten seconds, made by a lens with four bright panels that turned once every forty seconds; no other light on the coast did the same.",
+          "answer": "Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash every ten seconds; no other light on the coast did the same.",
           "supporting_paragraphs": [
-            "d02-p005",
             "d02-p006"
           ]
         }
@@ -98,6 +97,92 @@
           ]
         }
       ]
+    },
+    {
+      "id": "c0003",
+      "section": "s0002",
+      "prompts": [
+        {
+          "id": "c0003-p1",
+          "prompt": "What turned the lens, and why did it have to be rewound all through the night?",
+          "answer": "A heavy iron weight sinking down the tower drove clockwork gears that turned the lens. When the weight reached the bottom the lens stopped, and a still light was worse than none because a ship might mistake it for another, so the weight was wound back up every four hours.",
+          "supporting_paragraphs": [
+            "d02-p008",
+            "d02-p009"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c0004",
+      "section": "s0003",
+      "prompts": [
+        {
+          "id": "c0004-p1",
+          "prompt": "Why did the keepers have to rely on sound on foggy nights?",
+          "answer": "Fog swallowed the lamp's beam within a few yards of the glass, so the light was almost useless and a ship could run onto the rocks without ever seeing it.",
+          "supporting_paragraphs": [
+            "d03-p002",
+            "d03-p003"
+          ]
+        },
+        {
+          "id": "c0004-p2",
+          "prompt": "Why was the fog horn not simply sounded all the time?",
+          "answer": "Its engine burned coal, and coal came out on the supply boat only once a month. In a long fog the keepers would have to choose between warmth and safety, and they always chose safety.",
+          "supporting_paragraphs": [
+            "d03-p007"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c0005",
+      "section": "s0005",
+      "prompts": [
+        {
+          "id": "c0005-p1",
+          "prompt": "What did Dr. Vane's count of the old logbooks show about the fog signal, and why had nobody noticed it before?",
+          "answer": "Over nineteen years the horn had sounded for more than four thousand hours, and nearly half of those hours fell in November and December. Nobody had noticed because, as Ione said, a keeper only ever sees one night at a time.",
+          "supporting_paragraphs": [
+            "d04-p005"
+          ]
+        },
+        {
+          "id": "c0005-p2",
+          "prompt": "What did Dr. Vane do with her figures, and what came of it?",
+          "answer": "She sent them to the lighthouse board with a request for a second engine and a larger coal store. In June the board agreed, and the new engine was to arrive before the next fog season.",
+          "supporting_paragraphs": [
+            "d04-p007"
+          ]
+        }
+      ]
+    }
+  ],
+  "x_drafter": {
+    "model": "claude-opus-5-5",
+    "date": "2026-11-19"
+  },
+  "x_changes": [
+    {
+      "round": 1,
+      "issue": "R1-I1",
+      "change": "Removed the unsupported clause about the lens's four panels and forty-second turn from the c0001-p1 answer; cited d02-p006 only."
+    },
+    {
+      "round": 1,
+      "issue": "R1-I2",
+      "change": "Added checkpoint c0003 on s0002 with prompt c0003-p1 on what turned the lens and why it was rewound through the night."
+    },
+    {
+      "round": 1,
+      "issue": "R1-I3",
+      "change": "Added checkpoint c0004 on s0003 with prompts c0004-p1 (why rely on sound in fog) and c0004-p2 (why the horn was not sounded all the time)."
+    },
+    {
+      "round": 1,
+      "issue": "R1-I4",
+      "change": "Added checkpoint c0005 on s0005 with prompts c0005-p1 (what the log count showed) and c0005-p2 (what came of the figures)."
     }
   ]
 }

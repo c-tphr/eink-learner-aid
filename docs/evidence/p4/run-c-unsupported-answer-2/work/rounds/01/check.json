@@ -1,0 +1,113 @@
+{
+  "format": "rsvp-check",
+  "version": 1,
+  "prepared_sha256": "658d6c24a463e214024855c7ce4fc63c2f0e2b9543c251c93db32de53e07ab76",
+  "original_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "instructions_version": "1.0",
+  "checker": { "model": "claude-fable-5-2", "date": "2026-11-19" },
+  "round": 1,
+  "prompts": [
+    {
+      "id": "c0001-p1",
+      "verdict": "fail",
+      "supported_by_section": false,
+      "citations": ["d02-p005", "d02-p006"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Fails supported_by_section. Supported ideas: each light has its own pattern and sailors count the flashes (d02-p006, 'every light on the coast had its own pattern, and that sailors counted the flashes'); Gannet Rock's pattern is unique (d02-p006, 'one white flash every ten seconds; no other light on the coast did the same'). Unsupported claim: 'made by a lens with four bright panels that turned once every forty seconds'. No paragraph of this section states it; d02-p005 describes the lens only as 'built from rings of cut glass' bending the flame 'into one narrow beam'. The panels and the forty-second turn are in d02-p008, section s0002 ('the gears turned the lens once every forty seconds, and its four bright panels gave four flashes on each turn'). The prompt itself is answerable from d02-p006 and does not telegraph the answer."
+    },
+    {
+      "id": "c0002-p1",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p009"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (he steered by the sound of the horn alone, following its pattern): d03-p009, 'He had steered by the sound of the horn alone— two blasts, then silence, then two blasts again'. Idea 2 (until the boat grounded below the tower): d03-p009, 'until his boat grounded on the shingle below the tower'. The answer calls it the 'fog horn'; the section says 'the horn' on 'the ninth night of fog', so this follows directly. The prompt does not mention sound or the horn."
+    },
+    {
+      "id": "c0002-p2",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p010", "d03-p011"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Idea 1 (the cause is phosphorescence, light from tiny living creatures when the water is disturbed): d03-p010, 'phosphorescence, the light made by tiny living creatures when the water is disturbed'. Idea 2 (not dangerous): d03-p011, 'It was not, said Dr. Vane'. Idea 3 (a sign of plankton, hence fish): d03-p011, 'a sign that the water was full of plankton, and where there was plankton there would be fish'. Nothing is taken from the endnote d05-n002. The prompt names only the green light, which is the thing to be explained, and asks two closely linked parts."
+    },
+    {
+      "id": "c0002-p3",
+      "verdict": "pass",
+      "supported_by_section": true,
+      "citations": ["d03-p013"],
+      "accepts_paraphrase": true,
+      "answerable_from_section": true,
+      "does_not_give_away_answer": true,
+      "evidence": "Single idea (never go to sea in November without oars, however good the engine): d03-p013, 'she gave him one piece of advice: never put to sea in November without oars, however good the engine'. The answer adds nothing from the endnote d05-n003. It is close to the text's wording but short and plain enough that a reader recalling 'always carry oars, even with a good engine' can mark themselves Correct. The prompt does not mention oars or the engine."
+    }
+  ],
+  "sections": [
+    {
+      "id": "s0001",
+      "natural_boundary": true,
+      "evidence": "Starts at the chapter heading d02-p001 'The Lamp Room'; ends after d02-p006, where Ione's explanation of flash patterns is complete, immediately before the h2 heading d02-p007 'Winding the Clockwork' opens a separate topic (the drive mechanism and its winding). At 233 words it is below the 600-word target, and chapter 1 is only 451 words, but the instructions allow a split where a chapter has two clearly separate topics, and the heading marks one."
+    },
+    {
+      "id": "s0002",
+      "natural_boundary": true,
+      "evidence": "Starts at the h2 heading d02-p007 'Winding the Clockwork' and includes it; ends at d02-p010, the end of chapter 1, after the first night's watch closes the episode. 194 words, short but a complete topic under its own heading. It has no checkpoint (see minor issue)."
+    },
+    {
+      "id": "s0003",
+      "natural_boundary": true,
+      "evidence": "Starts at the chapter heading d03-p001 'The Fog Season'; ends after d03-p007, where the explanation of why the horn is not sounded continuously is complete ('They always chose safety'), immediately before the h2 heading d03-p008 'The Visitor from the Mainland' starts a new episode. 311 words; the chapter (608 words) has two clearly separate parts, exposition on fog signals and the fisherman's visit. It has no checkpoint (see minor issue)."
+    },
+    {
+      "id": "s0004",
+      "natural_boundary": true,
+      "evidence": "Starts at the h2 heading d03-p008 'The Visitor from the Mainland' and includes it; ends at d03-p013, the end of chapter 2, when the fog lifts, Peter leaves and Ione goes up to put out the lamp. One complete episode of 297 words."
+    },
+    {
+      "id": "s0005",
+      "natural_boundary": true,
+      "evidence": "Covers the whole of chapter 3, d04-p001 to d04-p008, 321 words. A chapter shorter than 600 words is one section under the instructions. It has no checkpoint (see minor issue)."
+    }
+  ],
+  "issues": [
+    {
+      "id": "R1-I1",
+      "severity": "blocking",
+      "target": "c0001-p1",
+      "description": "The reference answer contains a claim that section s0001 does not state: 'made by a lens with four bright panels that turned once every forty seconds'. In s0001 the lens is described only in d02-p005 (rings of cut glass bending one oil flame into a narrow beam) and the pattern only in d02-p006 (one white flash every ten seconds). The four panels and the forty-second rotation appear in d02-p008, which belongs to section s0002.",
+      "suggested_fix": "Remove the clause 'made by a lens with four bright panels that turned once every forty seconds' from the answer, leaving: 'Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash every ten seconds; no other light on the coast did the same.' Cite d02-p006 only.",
+      "status": "open"
+    },
+    {
+      "id": "R1-I2",
+      "severity": "minor",
+      "target": "s0003",
+      "description": "Section s0003 (d03-p001 to d03-p007, 311 words) has no checkpoint. It is a body section over 200 words, mostly prose, with ideas worth recalling: fog makes the light useless so keepers rely on sound (d03-p002, d03-p003), how the fog signal works and when it is started (d03-p004), and why the horn is not sounded all the time (d03-p007). None of the instructions' exceptions applies.",
+      "suggested_fix": "Add a checkpoint for s0003 with one or two prompts, for example on why keepers rely on sound in fog, or why the horn cannot be sounded continuously, citing only prose paragraphs and not the table d03-p005.",
+      "status": "open"
+    },
+    {
+      "id": "R1-I3",
+      "severity": "minor",
+      "target": "s0005",
+      "description": "Section s0005 (d04-p001 to d04-p008, 321 words) has no checkpoint. It is a whole chapter of prose with ideas worth recalling: what the count of fog hours showed and why nobody had noticed (d04-p005), what Ione did when the clockwork stopped (d04-p006), and the request to the lighthouse board and its outcome (d04-p007). None of the instructions' exceptions applies.",
+      "suggested_fix": "Add a checkpoint for s0005 with one or two prompts drawn from d04-p005 to d04-p007, without relying on the code block d04-p004.",
+      "status": "open"
+    },
+    {
+      "id": "R1-I4",
+      "severity": "minor",
+      "target": "s0002",
+      "description": "Section s0002 (d02-p007 to d02-p010, 194 words) has no checkpoint. It is just under 200 words, but it is not a mere bridge between two sections: it carries its own idea, how the clockwork turns the lens and why the weight must be rewound through the night (d02-p008, d02-p009).",
+      "suggested_fix": "Add a checkpoint for s0002 with one prompt, for example on why the weight had to be wound up every four hours and what happened if the lens stopped, citing d02-p008 and d02-p009.",
+      "status": "open"
+    }
+  ],
+  "verdict": "fail"
+}

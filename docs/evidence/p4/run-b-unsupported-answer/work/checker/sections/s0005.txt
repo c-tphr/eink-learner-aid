@@ -28,6 +28,16 @@ Dr. Vane sent her figures to the lighthouse board with a request for a second en
 [d04-p008] paragraph, 40 words, id c3-p008
 On her last evening on the rock, the doctor climbed the steps once more and watched Ione light the lamp. The beam swept out across the strait, one white flash every ten seconds, exactly as it had for nineteen years.
 
-## No checkpoint
+## Checkpoint c0005 (shown when the reader reaches the end of this section; 2 prompts, in this order)
 
-The drafter gave this section no checkpoint.
+### Prompt c0005-p1
+What did Dr. Vane's count of the old logbooks show about the fog signal, and why had nobody noticed it before?
+
+### Reference answer c0005-p1
+Over nineteen years the horn had sounded for more than four thousand hours, and nearly half of those hours fell in November and December. Nobody had noticed because, as Ione said, a keeper only ever sees one night at a time.
+
+### Prompt c0005-p2
+What did Dr. Vane do with her figures, and what came of it?
+
+### Reference answer c0005-p2
+She sent them to the lighthouse board with a request for a second engine and a larger coal store. In June the board agreed, and the new engine was to arrive before the next fog season.

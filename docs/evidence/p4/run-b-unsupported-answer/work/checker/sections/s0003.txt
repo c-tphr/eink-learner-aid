@@ -25,6 +25,16 @@ Ione kept a printed list of every light and fog signal on the coast pinned besid
 [d03-p007] paragraph, 51 words, id c2-p007
 Dr. Vane asked why the horn was not simply sounded all the time. Ione explained that the engine burned coal, and coal came out on the supply boat only once a month. If the fog lasted a week, they would have to choose between warmth and safety. They always chose safety.
 
-## No checkpoint
+## Checkpoint c0004 (shown when the reader reaches the end of this section; 2 prompts, in this order)
 
-The drafter gave this section no checkpoint.
+### Prompt c0004-p1
+Why did the keepers have to rely on sound on foggy nights?
+
+### Reference answer c0004-p1
+Fog swallowed the lamp's beam within a few yards of the glass, so the light was almost useless and a ship could run onto the rocks without ever seeing it.
+
+### Prompt c0004-p2
+Why was the fog horn not simply sounded all the time?
+
+### Reference answer c0004-p2
+Its engine burned coal, and coal came out on the supply boat only once a month. In a long fog the keepers would have to choose between warmth and safety, and they always chose safety.

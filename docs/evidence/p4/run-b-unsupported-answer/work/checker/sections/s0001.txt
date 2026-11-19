@@ -28,4 +28,4 @@ She asked how ships could tell one light from another in the dark. Ione explaine
 How could sailors tell the Gannet Rock light apart from the other lights on the coast?
 
 ### Reference answer c0001-p1
-Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash every ten seconds, made by a lens with four bright panels that turned once every forty seconds; no other light on the coast did the same.
+Every light had its own pattern of flashes, and sailors counted them. Gannet Rock gave one white flash every ten seconds; no other light on the coast did the same.

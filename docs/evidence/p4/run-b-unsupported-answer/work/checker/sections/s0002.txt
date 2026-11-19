@@ -16,6 +16,10 @@ So the weight had to be wound back up every four hours, all night long. Ione sho
 [d02-p010] paragraph, 56 words, id c1-p010
 That first night they sat in the watch room below the lamp and took turns to sleep. Every hour Ione wrote the time, the weather and the state of the light in the log. Nothing happened at all, and Dr. Vane decided that this was exactly what a good night at a lighthouse should look like.
 
-## No checkpoint
+## Checkpoint c0003 (shown when the reader reaches the end of this section; 1 prompt, in this order)
 
-The drafter gave this section no checkpoint.
+### Prompt c0003-p1
+What turned the lens, and why did it have to be rewound all through the night?
+
+### Reference answer c0003-p1
+A heavy iron weight sinking down the tower drove clockwork gears that turned the lens. When the weight reached the bottom the lens stopped, and a still light was worse than none because a ship might mistake it for another, so the weight was wound back up every four hours.
