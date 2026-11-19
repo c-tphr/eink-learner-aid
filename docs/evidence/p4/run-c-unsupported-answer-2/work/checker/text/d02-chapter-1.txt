@@ -1,0 +1,42 @@
+# d02 text/chapter-1.xhtml
+# Spine position 2 of 5 (linear). Title: The Lamp Room.
+# 10 blocks (d02-p001 to d02-p010), 451 words; 1 footnote block.
+# Each block: [reference] kind, word count, source id; then its text. A draft cites these references.
+# [^N] is a footnote mark (not a word). [Image: ...], [Table: ...], [Code: ...] stand for non-prose blocks;
+# their caption, cell and code words count in the word stream (RSVP pauses at them).
+
+[d02-p001] heading h1, 3 words, id c1-p001
+The Lamp Room
+
+[d02-p002] paragraph, 58 words, id c1-p002
+The supply boat reached Gannet Rock a little after noon. It had crossed the strait at 3.5 knots, which was as fast as old Tobin would ever push it. Dr. Vane stepped onto the landing stage with a leather bag in each hand and looked up at the tower. Was this really where she would spend the winter?
+
+[d02-p003] paragraph, 47 words, id c1-p003
+Ione Hartwell, the keeper, met her at the foot of the stairs. She had kept the light for nineteen years, and she did not waste words. "The lamp is lit at sunset and put out at sunrise, whatever the weather." Then she turned and began to climb.
+
+[d02-p004] image, 10 words, id c1-p004
+[Image: <figure>; alt "Line drawing of a striped lighthouse tower on a rock, with rays of light on both sides."; caption "Figure 1. Gannet Rock light, seen from the landing stage."]
+
+[d02-p005] paragraph, 66 words, id c1-p005
+There were one hundred and twelve steps. At the top, the lamp room was round and bright, with glass on every side. In the middle stood the great lens, taller than a man, built from rings of cut glass that bent the light of a single oil flame into one narrow beam. Dr. Vane had read about such lenses, but she had never stood beside one.[^1]
+
+[d02-p006] paragraph, 49 words, id c1-p006
+She asked how ships could tell one light from another in the dark. Ione explained that every light on the coast had its own pattern, and that sailors counted the flashes. Gannet Rock gave one white flash every ten seconds; no other light on the coast did the same.
+
+[d02-p007] heading h2, 3 words, id c1-p007
+Winding the Clockwork
+
+[d02-p008] paragraph, 83 words, id c1-p008
+The lens did not turn by magic. Beneath it sat a clockwork drive, worked by a heavy iron weight that hung on a cable down the hollow centre of the tower. As the weight sank, the gears turned the lens once every forty seconds, and its four bright panels gave four flashes on each turn. When the weight reached the bottom, the lens stopped, and a still light was worse than no light at all, because a ship might mistake it for another.
+
+[d02-p009] paragraph, 52 words, id c1-p009
+So the weight had to be wound back up every four hours, all night long. Ione showed Dr. Vane the crank and the brass counter beside it. Forty turns of the crank lifted the weight to the top. Forty turns! By the tenth, the doctor's arms were burning, and Ione only smiled.
+
+[d02-p010] paragraph, 56 words, id c1-p010
+That first night they sat in the watch room below the lamp and took turns to sleep. Every hour Ione wrote the time, the weather and the state of the light in the log. Nothing happened at all, and Dr. Vane decided that this was exactly what a good night at a lighthouse should look like.
+
+# Footnote bodies: their words are in the word stream (RSVP passes over them), but they cannot be
+# cited in ranges or as support.
+
+[d02-n001] footnote, 24 words, note fn1, id c1-n001
+Lenses of this kind were first built in the 1820s. They are made in rings so that the glass can stay thin and light.

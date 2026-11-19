@@ -1,0 +1,18 @@
+# d05 text/endnotes.xhtml
+# Spine position 5 of 5 (linear). Title: Notes.
+# No reading-stream blocks; 3 footnote blocks.
+# Each block: [reference] kind, word count, source id; then its text. A draft cites these references.
+# [^N] is a footnote mark (not a word). [Image: ...], [Table: ...], [Code: ...] stand for non-prose blocks;
+# their caption, cell and code words count in the word stream (RSVP pauses at them).
+
+# Footnote bodies: their words are in the word stream (RSVP passes over them), but they cannot be
+# cited in ranges or as support.
+
+[d05-n001] footnote, 1 word, note endnotes, id en-n001
+Notes
+
+[d05-n002] footnote, 14 words, note fn2, id en-n002
+Most of this light comes from single-celled plankton that glow when they are shaken.
+
+[d05-n003] footnote, 19 words, note fn3, id en-n003
+Oars weigh little and never run out of fuel, so many small boats carried a pair as a spare.

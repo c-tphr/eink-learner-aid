@@ -1,0 +1,43 @@
+# Section s0004: The visitor from the mainland
+# Document text/chapter-2.xhtml (whole text: text/d03-chapter-2.txt).
+# Paragraphs d03-p008 to d03-p013 (6 blocks), 297 words.
+# Just before it: d03-p007 (section s0003). Just after it: end of text/chapter-2.xhtml.
+# Cite only the paragraph references below; they are this section's whole text.
+
+[d03-p008] heading h2, 5 words, id c2-p008
+The Visitor from the Mainland
+
+[d03-p009] paragraph, 78 words, id c2-p009
+On the ninth night of fog, someone knocked at the door. Ione opened it to find a young fisherman, half-frozen and shaking, who had rowed across from the mainland after his engine failed. He had steered by the sound of the horn alone— two blasts, then silence, then two blasts again— until his boat grounded on the shingle below the tower. His name was Peter Lund, and he ran a small café on the harbour at Skerry Point.
+
+[d03-p010] paragraph, 61 words, id c2-p010
+They gave him dry clothes and hot tea. While he warmed his hands, he told them something strange. Out on the water, every stroke of his oars had left a trail of green light, as if the sea itself were glowing. Dr. Vane knew the word for it: phosphorescence, the light made by tiny living creatures when the water is disturbed.[^2]
+
+[d03-p011] paragraph, 43 words, id c2-p011
+Peter asked whether the glow was dangerous. It was not, said Dr. Vane, but it was a sign that the water was full of plankton, and where there was plankton there would be fish. The fisherman grinned for the first time that night.
+
+[d03-p012] paragraph, 50 words, id c2-p012
+Ione made up a bed for him in the watch room, but he did not sleep. He sat by the window and listened to the horn, counting the blasts under his breath as if he were still out on the water, until at last the sky began to grow pale.
+
+[d03-p013] paragraph, 60 words, id c2-p013
+At dawn the fog lifted at last. Ione rowed Peter back to his boat, and together they pulled it off the shingle. Before he left, she gave him one piece of advice: never put to sea in November without oars, however good the engine.[^3] Then she went back up the one hundred and twelve steps to put out the lamp.
+
+## Checkpoint c0002 (shown when the reader reaches the end of this section; 3 prompts, in this order)
+
+### Prompt c0002-p1
+How did the fisherman find his way to the lighthouse in the fog?
+
+### Reference answer c0002-p1
+He steered by the sound of the fog horn alone, following its pattern of two blasts and silence until his boat grounded on the shingle below the tower.
+
+### Prompt c0002-p2
+What caused the green light on the water, and what did it tell Dr. Vane?
+
+### Reference answer c0002-p2
+Phosphorescence: light made by tiny living creatures when the water is disturbed. It was not dangerous, but it showed the water was full of plankton, so there would be fish.
+
+### Prompt c0002-p3
+What advice did Ione give the fisherman before he left?
+
+### Reference answer c0002-p3
+Never put to sea in November without oars, however good the engine.

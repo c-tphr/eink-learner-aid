@@ -1,0 +1,131 @@
+{
+  "format": "rsvp-checker-input",
+  "version": 1,
+  "note": "Written by 'python3 -m tools.prep checker-input'. Copy round, date, prepared_sha256, original_sha256 and instructions_version into check.json unchanged.",
+  "round": 1,
+  "date": "2026-11-19",
+  "prepared_file": "fixture.prepared.epub",
+  "prepared_sha256": "5ce896509473045e9ccd44409bd707c1cee08d8982ff7b6c2fe7e67f66cb9d49",
+  "original_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "instructions_version": "1.0",
+  "title": "The Lighthouse Keeper's Almanac",
+  "language": "en",
+  "issue_id_prefix": "R1-",
+  "text_files": [
+    "text/d01-title.txt",
+    "text/d02-chapter-1.txt",
+    "text/d03-chapter-2.txt",
+    "text/d04-chapter-3.txt",
+    "text/d05-endnotes.txt"
+  ],
+  "excluded": [
+    {
+      "chapter_href": "text/title.xhtml",
+      "text_file": "text/d01-title.txt",
+      "first_paragraph": "d01-p001",
+      "last_paragraph": "d01-p003",
+      "reason": "Front matter: title page."
+    }
+  ],
+  "sections": [
+    {
+      "id": "s0001",
+      "label": "Arrival at Gannet Rock",
+      "chapter_href": "text/chapter-1.xhtml",
+      "text_file": "text/d02-chapter-1.txt",
+      "first_paragraph": "d02-p001",
+      "last_paragraph": "d02-p006",
+      "paragraphs": 6,
+      "word_count": 233,
+      "ends_document": false,
+      "before": "start of text/chapter-1.xhtml",
+      "after": "d02-p007 (section s0002)",
+      "checkpoint": "c0001",
+      "prompt_ids": [
+        "c0001-p1"
+      ],
+      "section_file": "sections/s0001.txt"
+    },
+    {
+      "id": "s0002",
+      "label": "Winding the clockwork",
+      "chapter_href": "text/chapter-1.xhtml",
+      "text_file": "text/d02-chapter-1.txt",
+      "first_paragraph": "d02-p007",
+      "last_paragraph": "d02-p010",
+      "paragraphs": 4,
+      "word_count": 194,
+      "ends_document": true,
+      "before": "d02-p006 (section s0001)",
+      "after": "end of text/chapter-1.xhtml",
+      "checkpoint": null,
+      "prompt_ids": [],
+      "section_file": "sections/s0002.txt"
+    },
+    {
+      "id": "s0003",
+      "label": "Fog signals",
+      "chapter_href": "text/chapter-2.xhtml",
+      "text_file": "text/d03-chapter-2.txt",
+      "first_paragraph": "d03-p001",
+      "last_paragraph": "d03-p007",
+      "paragraphs": 7,
+      "word_count": 311,
+      "ends_document": false,
+      "before": "start of text/chapter-2.xhtml",
+      "after": "d03-p008 (section s0004)",
+      "checkpoint": null,
+      "prompt_ids": [],
+      "section_file": "sections/s0003.txt"
+    },
+    {
+      "id": "s0004",
+      "label": "The visitor from the mainland",
+      "chapter_href": "text/chapter-2.xhtml",
+      "text_file": "text/d03-chapter-2.txt",
+      "first_paragraph": "d03-p008",
+      "last_paragraph": "d03-p013",
+      "paragraphs": 6,
+      "word_count": 297,
+      "ends_document": true,
+      "before": "d03-p007 (section s0003)",
+      "after": "end of text/chapter-2.xhtml",
+      "checkpoint": "c0002",
+      "prompt_ids": [
+        "c0002-p1",
+        "c0002-p2",
+        "c0002-p3"
+      ],
+      "section_file": "sections/s0004.txt"
+    },
+    {
+      "id": "s0005",
+      "label": "The keeper's log",
+      "chapter_href": "text/chapter-3.xhtml",
+      "text_file": "text/d04-chapter-3.txt",
+      "first_paragraph": "d04-p001",
+      "last_paragraph": "d04-p008",
+      "paragraphs": 8,
+      "word_count": 321,
+      "ends_document": true,
+      "before": "start of text/chapter-3.xhtml",
+      "after": "end of text/chapter-3.xhtml",
+      "checkpoint": null,
+      "prompt_ids": [],
+      "section_file": "sections/s0005.txt"
+    }
+  ],
+  "prompt_ids": [
+    "c0001-p1",
+    "c0002-p1",
+    "c0002-p2",
+    "c0002-p3"
+  ],
+  "section_ids": [
+    "s0001",
+    "s0002",
+    "s0003",
+    "s0004",
+    "s0005"
+  ]
+}

@@ -6,10 +6,14 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 from tools.prep import version
+from tools.prep.loop import instructions_version
+from tools.prep.verify_check import CRITERIA
 from tools.prep.build import build_file
 from tools.prep.fixture import prepared as gen
-from tools.prep.tests.prepkit import BOOKS, DRAFT, MANIFEST, ORIGINAL, PREPARED_BYTES, REPO
+from tools.prep.tests.prepkit import BOOKS, DRAFT, MANIFEST, NEGATIVE, ORIGINAL, PREPARED_BYTES, REPO
 
 GENERATOR = REPO / "tools" / "prep" / "fixture" / "prepared.py"
 
@@ -51,6 +55,33 @@ def test_manifest_shape():
         assert set(entry) == {"file", "prepared", "codes", "reason"}
     for entry in MANIFEST["prepared"]:
         assert set(entry) == {"file", "failing_checks", "codes", "reason"}
+    assert {e["file"] for e in MANIFEST["checker"]} == {"unsupported-answer.prepared.epub",
+                                                        "answer-given-away.prepared.epub"}
+    for entry in MANIFEST["checker"]:
+        assert set(entry) == {"draft", "file", "prompt", "criterion", "reason"}
+        assert entry["criterion"] in CRITERIA and entry["reason"].strip()
+
+
+@pytest.mark.parametrize("entry", MANIFEST["checker"], ids=lambda e: e["file"])
+def test_checker_fixture_plants_exactly_one_fault(entry, tmp_path):
+    base = json.loads(DRAFT.read_text(encoding="utf-8"))
+    draft = json.loads((NEGATIVE / entry["draft"]).read_text(encoding="utf-8"))
+    assert draft["book"]["instructions_version"] == instructions_version()
+    base["book"]["instructions_version"] = draft["book"]["instructions_version"]
+    prompts = {p["id"]: p for c in draft["checkpoints"] for p in c["prompts"]}
+    base_prompts = {p["id"]: p for c in base["checkpoints"] for p in c["prompts"]}
+    changed = [pid for pid in base_prompts if prompts[pid] != base_prompts[pid]]
+    assert changed == [entry["prompt"]]
+    for pid in base_prompts:
+        prompts[pid].update(base_prompts[pid])
+    assert draft == base  # nothing else differs
+    which = {"supported_by_section": "answer", "does_not_give_away_answer": "prompt"}[entry["criterion"]]
+    old, new = base_prompts[entry["prompt"]], json.loads((NEGATIVE / entry["draft"]).read_text(encoding="utf-8"))
+    new_prompt = next(p for c in new["checkpoints"] for p in c["prompts"] if p["id"] == entry["prompt"])
+    assert new_prompt[which] != old[which]
+    out = tmp_path / "x.prepared.epub"
+    build_file(ORIGINAL, NEGATIVE / entry["draft"], out)
+    assert out.read_bytes() == (NEGATIVE / entry["file"]).read_bytes()
 
 
 def test_readme_lists_the_new_files():
