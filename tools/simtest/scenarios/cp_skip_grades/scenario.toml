@@ -1,20 +1,22 @@
 # Grades across skips, restarts and later passes (task C3a; docs/PLAN.md section 7, grade rules and
 # "every transition saves state first"). The prepared fixture's three-prompt checkpoint c0002 fires on
 # leaving chapter 2's last page (task C3; C3a opened it through a temporary simulator entry). Run 1
-# reaches that page through the toolbar's Contents and five swipes; a kill leaves the reader's progress
-# on that page, so each later run reopens the book there and one swipe fires c0002 again (restoring
-# the prompt itself on reopening is task C5). Each run ends with SIGKILL (no shutdown code runs) right
-# after a screen has appeared, so the state file read after the kill is what was written before that
-# screen showed.
+# reaches that page through the toolbar's Contents and five swipes. Since task C5 reopening the book
+# restores the prompt in progress (answer hidden); a later pass is reached by Skip checkpoint, one
+# swipe back to chapter 2's last page and one swipe on, which fires c0002 again from its first prompt.
+# Each run ends with SIGKILL (no shutdown code runs) right after a screen has appeared, so the state
+# file read after the kill is what was written before that screen showed.
 #
 # Run 1: p1 Incorrect, Continue; p2 Skip question; the p3 prompt appears; kill.
 #        File: p1 incorrect, p2 ungraded, the checkpoint in progress at prompt 3 (index 2).
-# Run 2: the checkpoint opens again at p1, shown as "Recorded earlier: Incorrect". Correct this time;
-#        the p2 prompt appears; kill. File: p1 still incorrect (the first grade survives).
-# Run 3: p1 Skip question; p2 Correct (a prompt skipped before takes its first grade); the p3 prompt
-#        appears; kill. File: p2 correct.
-# Run 4: p1 and p2 Skip question; p3 Skip checkpoint. File: p3 never graded, nothing in progress, the
-#        reading position after the section's break (chapter 3, word 0).
+# Run 2: reopening shows p3 (question 3 of 3); Skip checkpoint; back and on again: c0002 fires from p1,
+#        shown as "Recorded earlier: Incorrect". Correct this time; the p2 prompt appears; kill.
+#        File: p1 still incorrect (the first grade survives), in progress at prompt 2 (index 1).
+# Run 3: reopening shows p2 (skipped in run 1, ungraded); Correct (a prompt skipped before takes its
+#        first grade); the p3 prompt appears; kill. File: p2 correct.
+# Run 4: reopening shows p3; Skip checkpoint; back and on: p1 and p2 Skip question ("Recorded earlier:
+#        Correct" on p2); p3 Skip checkpoint. File: p3 never graded, nothing in progress, the reading
+#        position after the section's break (chapter 3, word 0).
 description = "Skipped prompts stay ungraded, the first grade survives a later different answer, every grade is in the file before the next screen"
 
 env = { vars = { CROSSPOINT_SIM_UPDATE_MS = "0", CROSSPOINT_SIM_CLEAR_MS = "0" } }
@@ -71,10 +73,17 @@ steps = [
   # Run 2.
   { start = true },
   { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
-  { press = "ENTER", note = "reopen the book: the reader's progress is chapter 2's last page" },
+  { press = "ENTER", note = "reopen the book" },
   { wait_log = "\\[CPT\\] checkpoint data OEBPS/rsvp/checkpoints.json: .* copy=cached" },
+  { wait_log = "\\[CPT\\] restore view=prompt checkpoint=c0002 prompt=3/3 place=3:0:page resume=3:0:page notes=none " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal ", note = "the prompt in progress, answer hidden" },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=2 ch=3 word=0 mode=page saved=1" },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { swipe = [80, 400, 400, 400], note = "previous page: chapter 2's last page" },
   { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
-  { swipe = [400, 400, 80, 400], note = "c0002 fires again" },
+  { swipe = [400, 400, 80, 400], note = "c0002 fires again: a later pass" },
   { wait_log = "\\[CPT\\] open checkpoint=c0002 prompts=3 section=s0004 mode=page .* state=read grades=1 " },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
   { screen_has = "Recorded earlier: Incorrect" },
@@ -94,13 +103,9 @@ steps = [
   # Run 3.
   { start = true },
   { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
-  { press = "ENTER", note = "reopen the book: the reader's progress is chapter 2's last page" },
-  { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
-  { swipe = [400, 400, 80, 400], note = "c0002 fires again" },
-  { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },
-  { wait_log = "\\[CTL\\] Prompt armed" },
-  { tap = [364, 712], note = "Skip question" },
-  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { press = "ENTER", note = "reopen the book" },
+  { wait_log = "\\[CPT\\] restore view=prompt checkpoint=c0002 prompt=2/3 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal ", note = "skipped in run 1: still ungraded" },
   { wait_log = "\\[CTL\\] Prompt armed" },
   { tap = [240, 476], note = "Reveal" },
   { wait_log = "\\[CTL\\] Answer armed" },
@@ -114,8 +119,15 @@ steps = [
 
   # Run 4.
   { start = true },
-  { wait_log = "No known cover image for thumbnail", note = "after a kill the firmware boots to Home; the book's card is selected" },
-  { press = "ENTER", note = "reopen the book: the reader's progress is chapter 2's last page" },
+  { wait_screen = "Mara Ellery Quill | Browse Files", note = "after a kill the firmware boots to Home; the book's card is selected. Run 3 drew no page of the book (it opened at the restored prompt), so the reader did not add the book to the recent list again with its cover path, and Home, which found no cover in run 3, draws once without looking for one" },
+  { press = "ENTER", note = "reopen the book" },
+  { wait_log = "\\[CPT\\] restore view=prompt checkpoint=c0002 prompt=3/3 " },
+  { wait_log = "\\[CPT\\] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
+  { tap = [116, 712], note = "Skip checkpoint" },
+  { wait_log = "\\[CPT\\] end result=skipped prompt=2 ch=3 word=0 mode=page saved=1" },
+  { wait_log = "Progress saved: spine=3 offset=0 page=0" },
+  { swipe = [80, 400, 400, 400], note = "previous page: chapter 2's last page" },
   { wait_log = "Progress saved: spine=2 offset=\\d+ page=5" },
   { swipe = [400, 400, 80, 400], note = "c0002 fires again" },
   { wait_log = "\\[CPT\\] screen=Prompt question=1/3 prompt=c0002-p1 recorded=incorrect focus=Reveal " },

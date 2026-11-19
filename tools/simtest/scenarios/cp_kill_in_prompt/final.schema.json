@@ -1,0 +1,19 @@
+{
+  "description": "cp_kill_in_prompt at the end: the three first grades of pass 1 and its restore, nothing in progress.",
+  "type": "object",
+  "required": ["version", "book_sha256", "overrides", "position", "grades"],
+  "not": { "required": ["active_checkpoint"] },
+  "properties": {
+    "book_sha256": { "const": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c" },
+    "grades": {
+      "type": "object",
+      "required": ["c0002-p1", "c0002-p2", "c0002-p3"],
+      "additionalProperties": false,
+      "properties": {
+        "c0002-p1": { "type": "object", "required": ["first"], "properties": { "first": { "const": "correct" } } },
+        "c0002-p2": { "type": "object", "required": ["first"], "properties": { "first": { "const": "correct" } } },
+        "c0002-p3": { "type": "object", "required": ["first"], "properties": { "first": { "const": "correct" } } }
+      }
+    }
+  }
+}
