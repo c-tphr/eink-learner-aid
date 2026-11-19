@@ -14,15 +14,28 @@ There is no flashing here. If anything on screen asks you to type `REPLACE ONYX`
 
 ## 1. Get the files
 
+There are two ways to get the tool. Both give the same `session.ps1`. Use the kit if the team has told you that a kit is ready; otherwise use the repository ZIP.
+
+**With the device kit** (the files you will also use in the real session):
+
+1. Sign in to github.com and open <https://github.com/c-tphr/eink-learner-aid/releases>. The kit is in a release marked **Draft**, which you see only when you are signed in.
+2. Under **Assets**, download `picco-2slot-<version>.zip` (`<version>` is the release's version).
+3. Right-click the ZIP and choose **Extract All…**. Extract it to a short, plain folder such as `C:\picco\picco-2slot-<version>`. Avoid Documents, Desktop and OneDrive folders: they can interfere with large files.
+4. In File Explorer, open that folder (the kit folder: it holds `session.ps1`). Click the address bar, type `powershell` and press Enter. A blue or black PowerShell window opens in that folder. Type every command below into that window. Where this sheet says `tools\device`, read "the kit folder".
+
+**With the repository ZIP** (works without a release):
+
 1. Open <https://github.com/c-tphr/eink-learner-aid>. Click the green **Code** button, then **Download ZIP**.
 2. Right-click the downloaded ZIP and choose **Extract All…**. Extract it to a short, plain folder such as `C:\picco`. Avoid Documents, Desktop and OneDrive folders: they can interfere with large files.
 3. In File Explorer, open `C:\picco\eink-learner-aid-main\tools\device`. Click the address bar, type `powershell` and press Enter. A blue or black PowerShell window opens in that folder. Type every command below into that window.
 
+If you use the repository ZIP now and get the kit later, the session checklist (`DEVICE_SESSION.md`, "If you already did the early check") says how to bring this check's `work` folder into the kit folder.
+
 ## 2. Setup (once; needs the internet)
 
-Type:
+Type the command in the grey box (only the text in the box, not the word "Command:"):
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 setup`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 setup`
 
 The `-ExecutionPolicy Bypass` part lets Windows run the script this one time. It changes no setting on your PC.
 
@@ -45,7 +58,7 @@ The first time, the tool downloads its own copy of Python (from nuget.org, publi
 2. Plug the cable straight into the PC, not through a hub or a monitor.
 3. Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 identify`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 identify`
 
 While the tool is connected, the Picco's screen may freeze or the Picco may restart. That is normal: the tool restarts the chip into its built-in read mode and back. If the screen stays frozen afterwards, restart the Picco with its power button.
 
@@ -65,13 +78,13 @@ Other results:
 
 Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 backup`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 backup`
 
 The tool reads the Picco's whole 16 MB memory twice, showing <!--q-->`Read 1 of 2: all 16 MB (this may take several minutes)...` and then read 2. It keeps the backup only if both reads are identical. Keep the cable still. The time is an estimate: nobody has yet measured how fast this Picco can be read over USB.
 
 **It worked if** you see <!--q-->`BACKUP VERIFIED: both reads are identical.` The tool then shows where the backup file is and its SHA-256, a 64-character fingerprint. It asks you to copy the file (see "Keep the backup safe" below) and then asks:
 
-<!--q-->`When the copy is done, type the LAST 8 characters of the SHA-256 above:`
+The question: <!--q-->`When the copy is done, type the LAST 8 characters of the SHA-256 above:`
 
 Type the last 8 characters of the fingerprint and press Enter. The answer is <!--q-->`Thank you. The backup is confirmed.` If it does not match three times, you see <!--q-->`The backup is verified but not yet confirmed.` That is fine; you will be asked again in the real session.
 
@@ -96,7 +109,7 @@ The backup is two files in the `work` folder, `picco-backup-….bin` and `picco-
 
 Type:
 
-<!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`
+Command: <!--cmd-->`powershell -ExecutionPolicy Bypass -File .\session.ps1 summary`
 
 It prints <!--q-->`Summary written:` followed by a file name, `work\early-check-summary-….txt`. This one text file is safe to share. It contains what the tools found (chip, memory, security settings, layout), fingerprints of the files rather than the files themselves, the commands you ran, and the last lines of their logs. The Picco's MAC address is partly hidden, and your Windows user name is removed from file paths. The summary does not contact the Picco.
 
@@ -125,7 +138,7 @@ If nothing appears with two cables, stop there and report it (step 6, with the s
 | 3 | already converted |
 | 4 | the Picco could not be reached; nothing was written |
 
-Everything the tools produce is in `tools\device\work`:
+Everything the tools produce is in the `work` folder beside `session.ps1` (`tools\device\work`, or `work` in the kit folder):
 
 * `identify-….json` and three `.bin` files (keep private);
 * the backup `.bin` and `.json` (keep private, keep a copy);

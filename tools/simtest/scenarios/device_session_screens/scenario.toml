@@ -1,0 +1,47 @@
+# The upstream screens the device session checklist shows (task D6, docs/DEVICE_SESSION.md):
+# Home > File Transfer (copying the books by Wi-Fi, session step 6), Settings with the firmware
+# version at the top right (first boot, step 6), Settings > Controls and its Side buttons and
+# Power button pages (the two settings the Controls check may change, step 7), and Settings >
+# System (where the SD-card update appears on the device, step 8; the simulator has no partition
+# table, so it shows no update entry). The references are copied, unchanged, to docs/device-session/;
+# tools/device/tests/test_session_doc.py checks that the two copies are equal.
+description = "Screens of the device session checklist: File Transfer, Settings, Controls, Side buttons, Power button, System"
+
+steps = [
+  { wait_screen = "Browse Files | Library | File Transfer | Settings" },
+  { tap = [240, 490], note = "File Transfer on Home" },
+  { wait_screen = "File Transfer | Join a Network" },
+  { shot = "file_transfer" },
+  { screen_has = "Create Hotspot | Create a Wi-Fi network others can join" },
+  { swipe = [2, 500, 300, 500], note = "left-edge Back swipe" },
+  { wait_screen = "Browse Files | Library | File Transfer | Settings" },
+  { tap = [240, 562], note = "Settings on Home" },
+  { wait_screen = "Settings | dev-simulator | System | Display | Reader | Controls | Library | Connectivity" },
+  { shot = "settings_root", note = "the version string is at the top right" },
+  { tap = [240, 370], note = "Controls" },
+  { wait_screen = "Controls | Power button | Side buttons | Taps and gestures" },
+  { shot = "controls" },
+  { tap = [240, 200], note = "Side buttons" },
+  { wait_screen = "Side buttons | Layout (reader only) | Prev/Next" },
+  { shot = "side_buttons" },
+  { swipe = [2, 500, 300, 500] },
+  { wait_screen = "Controls | Power button | Side buttons | Taps and gestures" },
+  { tap = [240, 138], note = "Power button" },
+  { wait_screen = "Power button | Short click | Ignore" },
+  { shot = "power_button" },
+  { swipe = [2, 500, 300, 500] },
+  { wait_screen = "Controls | Power button | Side buttons | Taps and gestures" },
+  { swipe = [2, 500, 300, 500] },
+  { wait_screen = "Settings | dev-simulator | System | Display" },
+  { tap = [240, 145], note = "System" },
+  { wait_screen = "System | Language" },
+  { shot = "system" },
+  { screen_has = "Display Refresh | About" },
+  { quit = true },
+  { compare = "file_transfer" },
+  { compare = "settings_root" },
+  { compare = "controls" },
+  { compare = "side_buttons" },
+  { compare = "power_button" },
+  { compare = "system" },
+]

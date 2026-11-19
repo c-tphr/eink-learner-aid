@@ -24,8 +24,9 @@ Steps, each of which stops the script with "RELEASE KIT NOT MADE: <reason>":
    scripts/release_naming_cli.cpp) must parse the tag v<version> and the built string to the same
    numbers, and must name the Wi-Fi asset exactly as this script does.
 3. The kit tree (<out>/kit): the device tool byte-identical to tools/device, kit/ with the plan
-   and four images, sd-card/ with books and update.bin, docs/, KIT-README.txt, LICENSES.txt,
-   kit-info.json and MANIFEST.sha256. Every path is checked: Windows-safe names, under 180
+   and four images, sd-card/ with books and update.bin, docs/ (with every picture the documents
+   link to, at the same relative path; a link to anything else outside the kit refuses the kit),
+   KIT-README.txt, LICENSES.txt, kit-info.json and MANIFEST.sha256. Every path is checked: Windows-safe names, under 180
    characters, no .bin other than the four images and update.bin, no merged or factory image,
    no work/, runtime/, backup or build folder.
 4. The zip (<out>/dist/picco-2slot-<version>.zip): entries sorted, stored (no compression), all
@@ -76,6 +77,12 @@ DOCS = [("docs/DEVICE_EARLY_CHECK.md", "docs/DEVICE_EARLY_CHECK.md"),
         ("fixtures/books/paine-essays.validation-report.md", "docs/paine-essays.validation-report.md"),
         ("fixtures/books/paine-essays.LICENSE.md", "docs/paine-essays.LICENSE.md")]
 SESSION_DOC = ("docs/DEVICE_SESSION.md", "docs/DEVICE_SESSION.md")
+# Files a kit document may link to besides another kit document: its pictures. They are copied
+# into the kit at the same path relative to the document, so the kit's copy is complete offline.
+DOC_ASSET_EXTENSIONS = (".png", ".jpg", ".jpeg")
+DOC_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)\)|<img\s[^>]*?src=\"([^\"]+)\"")
+CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
+URL_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 IMAGES = ("bootloader.bin", "partitions.bin", "boot_app0.bin", "firmware.bin")
 PLAN_FILE = "flash-plan.json"
 SD_UPDATE = "sd-card/update.bin"
@@ -343,6 +350,48 @@ def tool_entries():
             continue
         entries.append(("%s/%s" % (src_dir, p), "%s/%s" % (dst_dir, p)))
     return entries
+
+
+def doc_link_targets(text):
+    """Relative link and image targets in a Markdown text (Markdown links and HTML <img> tags),
+    without their #anchor (URLs, in-page anchors and anything inside code spans are left out)."""
+    out = []
+    for link, img in DOC_LINK_RE.findall(CODE_SPAN_RE.sub("", text)):
+        target = link or img
+        path = target.split("#", 1)[0]
+        if URL_RE.match(target) or not path or path in out:
+            continue
+        out.append(path)
+    return out
+
+
+def doc_assets(doc_entries):
+    """(source, kit path) of every picture the kit documents link to, at the same relative path.
+
+    A link to another kit document is fine. Anything else must be a picture under the kit's docs/
+    folder that exists in the repository; otherwise the kit's copy of the document would be
+    incomplete, and the kit is refused."""
+    kit_docs = set(dst for _, dst in doc_entries)
+    assets = []
+    for src, dst in doc_entries:
+        src_path = os.path.join(REPO, src)
+        with open(src_path, encoding="utf-8") as fp:
+            targets = doc_link_targets(fp.read())
+        for target in targets:
+            kit_path = os.path.normpath(os.path.join(os.path.dirname(dst), target)).replace(os.sep, "/")
+            if kit_path in kit_docs:
+                continue
+            source = os.path.normpath(os.path.join(os.path.dirname(src_path), target))
+            if not kit_path.startswith("docs/") or "\\" in target:
+                die("%s links to %s, which would lie outside the kit's docs folder" % (dst, target))
+            if not kit_path.lower().endswith(DOC_ASSET_EXTENSIONS):
+                die("%s links to %s, which is not in the kit (only kit documents and pictures can be linked)"
+                    % (dst, target))
+            if not os.path.isfile(source):
+                die("%s links to %s, which does not exist" % (dst, target))
+            if all(kit_path != have for _, have in assets):
+                assets.append((source, kit_path))
+    return sorted(assets, key=lambda a: a[1])
 
 
 def session_python_version():
@@ -632,7 +681,10 @@ def main(argv=None):
     has_session_doc = os.path.isfile(session_src)
     if args.kind == "final" and not has_session_doc:
         die("a final kit needs %s, which does not exist yet; make a preview kit or add the checklist" % SESSION_DOC[0])
-    entries = tool_entries() + BOOKS + DOCS + ([SESSION_DOC] if has_session_doc else [])
+    docs = DOCS + ([SESSION_DOC] if has_session_doc else [])
+    assets = doc_assets(docs)
+    say("%d pictures linked from the kit's documents: %s" % (len(assets), ", ".join(dst for _, dst in assets) or "none"))
+    entries = tool_entries() + BOOKS + docs + assets
     tree = os.path.join(out, "kit")
     for src, dst in entries:
         copy_exact(os.path.join(REPO, src), os.path.join(tree, dst))

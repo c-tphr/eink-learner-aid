@@ -11,6 +11,7 @@ unpack-and-rehearse step against the fake device). Run with the device tool's te
 import configparser
 import hashlib
 import os
+import re
 import shutil
 import zipfile
 from collections import namedtuple
@@ -101,15 +102,37 @@ def tool_files():
     return sorted("piccoflash/" + f for f in os.listdir(pkg) if f.endswith(".py"))
 
 
+def doc_targets(text):
+    """Link targets of Markdown links and <img> tags outside code spans, without #anchors."""
+    text = re.sub(r"`[^`\n]*`", "", text)
+    found = re.findall(r"!?\[[^\]]*\]\(([^)\s]+)\)", text) + re.findall(r"<img [^>]*src=\"([^\"]+)\"", text)
+    return [t.split("#")[0] for t in found if not re.match(r"^[a-z]+:", t) and not t.startswith("#")]
+
+
+def linked_pictures(doc):
+    """Kit paths of the pictures a repository document links to (an independent reading of the links)."""
+    found = set()
+    for target in doc_targets(open(os.path.join(mrk.REPO, doc), encoding="utf-8").read()):
+        if not re.match(r"^[a-z]+:", target) and target.lower().endswith((".png", ".jpg", ".jpeg")):
+            found.add(os.path.normpath(os.path.join("docs", target)).replace(os.sep, "/"))
+    return sorted(found)
+
+
+SESSION_DOC_EXISTS = os.path.isfile(os.path.join(mrk.REPO, "docs", "DEVICE_SESSION.md"))
+
+
 def test_layout_is_exactly_the_kit(made):
-    expected = sorted(tool_files() + [
+    pictures = linked_pictures("docs/DEVICE_EARLY_CHECK.md")
+    if SESSION_DOC_EXISTS:
+        pictures = sorted(set(pictures + linked_pictures("docs/DEVICE_SESSION.md")))
+    expected = sorted(tool_files() + pictures + [
         "KIT-README.txt", "LICENSES.txt", "MANIFEST.sha256", "kit-info.json",
         "session.ps1", "requirements.txt", "requirements-build.txt",
         "kit/flash-plan.json", "kit/bootloader.bin", "kit/partitions.bin", "kit/boot_app0.bin", "kit/firmware.bin",
         "sd-card/update.bin", "sd-card/books/fixture.epub", "sd-card/books/fixture.prepared.epub",
         "sd-card/books/paine-essays.epub", "sd-card/books/paine-essays.prepared.epub",
         "docs/DEVICE_EARLY_CHECK.md", "docs/paine-essays.validation-report.md", "docs/paine-essays.LICENSE.md",
-    ] + (["docs/DEVICE_SESSION.md"] if os.path.isfile(os.path.join(mrk.REPO, "docs", "DEVICE_SESSION.md")) else []))
+    ] + (["docs/DEVICE_SESSION.md"] if SESSION_DOC_EXISTS else []))
     assert made["names"] == expected
     assert sorted(os.listdir(str(made["dist"]))) == sorted([
         "picco-2slot-2.0.1.zip", "picco-2slot-2.0.1.zip.sha256", "eink-learner-aid-v2.0.1-picco2.bin",
@@ -349,6 +372,57 @@ def test_final_kit_needs_the_session_checklist(build, tmp_path, monkeypatch):
     with zipfile.ZipFile(str(tmp_path / "out2" / "dist" / "picco-2slot-2.0.1.zip")) as zf:
         assert zf.read("docs/DEVICE_SESSION.md") == b"# checklist\n"
         assert "Open first: docs\\DEVICE_SESSION.md" in zf.read("KIT-README.txt").decode()
+
+
+def test_final_kit_holds_the_session_checklist_and_everything_it_links_to(build, tmp_path):
+    code, log = run_kit(tmp_path / "out", build, kind="final")
+    assert code == 0, log
+    with zipfile.ZipFile(str(tmp_path / "out" / "dist" / "picco-2slot-2.0.1.zip")) as zf:
+        names = set(zf.namelist())
+        doc = zf.read("docs/DEVICE_SESSION.md")
+        assert doc == open(os.path.join(mrk.REPO, "docs", "DEVICE_SESSION.md"), "rb").read()
+        assert "Open first: docs\\DEVICE_SESSION.md" in zf.read("KIT-README.txt").decode("ascii")
+        targets = doc_targets(doc.decode("utf-8"))
+        assert len(targets) >= 25, "the checklist links to too few pictures: %s" % targets
+        for target in targets:
+            kit_path = os.path.normpath(os.path.join("docs", target)).replace(os.sep, "/")
+            assert kit_path in names, "the kit lacks %s, linked from DEVICE_SESSION.md" % kit_path
+            with open(os.path.join(mrk.REPO, "docs", target), "rb") as fp:
+                assert zf.read(kit_path) == fp.read(), kit_path
+        assert mrk.tree_problems(sorted(names)) == []
+
+
+def write_doc(tmp_path, text):
+    doc = tmp_path / "docs" / "DEVICE_SESSION.md"
+    doc.parent.mkdir(parents=True, exist_ok=True)
+    doc.write_text(text, encoding="utf-8")
+    return str(doc)
+
+
+@pytest.mark.parametrize("text, why", [
+    ("![x](pictures/missing.png)\n", "links to pictures/missing.png, which does not exist"),
+    ("![x](../tools/x.png)\n", "which would lie outside the kit's docs folder"),
+    ("[the plan](PLAN.md)\n", "which is not in the kit"),
+])
+def test_refuses_a_checklist_that_links_outside_the_kit(build, tmp_path, monkeypatch, text, why):
+    monkeypatch.setattr(mrk, "SESSION_DOC", (write_doc(tmp_path, text), "docs/DEVICE_SESSION.md"))
+    code, log = run_kit(tmp_path / "out", build, kind="final")
+    assert code == 1 and why in log, log
+
+
+def test_copies_linked_pictures_and_accepts_links_to_kit_documents(build, tmp_path, monkeypatch):
+    doc = write_doc(tmp_path, "[sheet](DEVICE_EARLY_CHECK.md#3-identify) [web](https://example.org/a.png) "
+                              "[here](#top) `![code](not/a/link.png)`\n![a](pics/a.png) ![a again](pics/a.png)\n"
+                              '<img src="pics/b.png" alt="b" width="240">\n')
+    write(str(tmp_path / "docs" / "pics" / "a.png"), b"\x89PNG picture")
+    write(str(tmp_path / "docs" / "pics" / "b.png"), b"\x89PNG second")
+    monkeypatch.setattr(mrk, "SESSION_DOC", (doc, "docs/DEVICE_SESSION.md"))
+    code, log = run_kit(tmp_path / "out", build, kind="final")
+    assert code == 0, log
+    with zipfile.ZipFile(str(tmp_path / "out" / "dist" / "picco-2slot-2.0.1.zip")) as zf:
+        assert zf.read("docs/pics/a.png") == b"\x89PNG picture"
+        assert zf.read("docs/pics/b.png") == b"\x89PNG second"
+        assert not [n for n in zf.namelist() if "not/a/link" in n]
 
 
 def test_refuses_a_modified_checkout(build, tmp_path, monkeypatch):
