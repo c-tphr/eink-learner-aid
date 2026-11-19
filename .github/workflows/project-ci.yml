@@ -1,0 +1,537 @@
+# Project CI for eink-learner-aid. What each job proves, how to run it locally
+# and how the two self-activating jobs turn on: docs/CI.md.
+#
+# Rules kept here: read-only token, no secrets, no pull_request_target, no
+# PlatformIO upload target anywhere (every pio call is a plain `pio run -e <env>`).
+name: Project CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-ci-${{ github.ref }}
+  # Superseded pull-request runs are cancelled; every push to main is kept.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  # Stock picco two-slot budget (docs/PLAN.md section 11; spike S3): the app
+  # image must not exceed this many bytes.
+  APP_SLOT_BUDGET_BYTES: "7431782"
+
+jobs:
+  format:
+    name: format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install clang-format 21
+        # Same major version upstream's formatting job installs (apt.llvm.org
+        # clang-format-21); the PyPI wheel pins the exact release.
+        run: python -m pip install clang-format==21.1.8
+      - name: clang-format (project files) and Python syntax
+        run: .github/scripts/check-format.sh
+
+  host-tests:
+    name: host-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 1500M
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      # CMake (>= 3.17) reads these from the environment, so the documented
+      # command below runs unchanged and still goes through ccache.
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - name: Install ccache
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ccache
+      - name: Restore compiler cache
+        uses: actions/cache@v5
+        with:
+          path: .ccache
+          key: host-ccache-v1-${{ hashFiles('test/**', 'lib/**', 'src/**', 'freeink-sdk') }}
+          restore-keys: host-ccache-v1-
+      - name: Build and run the host test suite
+        run: |
+          ccache -z
+          cmake -S test -B build/test && cmake --build build/test -j$(nproc) && ctest --test-dir build/test --output-on-failure -j$(nproc)
+      - name: Test count and cache statistics
+        if: always()
+        run: |
+          ctest --test-dir build/test -N | tail -1 || true
+          ccache -s || true
+      - name: Upload the test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: host-tests-log
+          path: build/test/Testing/Temporary/
+          if-no-files-found: ignore
+
+  prep-tests:
+    name: prep-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Cache EPUBCheck (pinned release, verified by tools/prep/epubcheck.py)
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/eink-learner-aid
+          key: epubcheck-${{ hashFiles('tools/prep/epubcheck.py') }}
+      - name: Install test requirements
+        run: python -m pip install -r tools/prep/requirements.txt
+      - name: pytest tools/prep (a skipped test fails the job)
+        run: |
+          python -m pytest tools/prep -q -rs --junitxml=build/prep-junit.xml
+          python .github/scripts/no_skips.py build/prep-junit.xml
+      - name: Fixture files are current
+        run: python tools/prep/fixture/generate.py --check
+
+  device-tool-tests:
+    name: device-tool-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Virtualenv from tools/device/requirements-test.txt
+        run: |
+          python -m venv build/venv-device
+          build/venv-device/bin/python -m pip install -r tools/device/requirements-test.txt
+      - name: pytest tools/device (a skipped test fails the job)
+        run: |
+          build/venv-device/bin/python -m pytest tools/device -q -rs --junitxml=build/device-junit.xml
+          python .github/scripts/no_skips.py build/device-junit.xml
+
+  device-tool-windows:
+    # First run of tools/device/session.ps1 on Windows: parse and lint it under
+    # both shells the owner may use, then run its offline commands from an
+    # owner-style folder (with a space in its path) on synthetic images.
+    name: device-tool-windows (${{ matrix.shell }})
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shell: powershell   # Windows PowerShell 5.1
+            exe: powershell.exe
+          - shell: pwsh         # PowerShell 7
+            exe: pwsh.exe
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    env:
+      MATRIX_EXE: ${{ matrix.exe }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Shell version
+        run: $PSVersionTable | Format-Table -AutoSize | Out-String -Width 200
+      - name: Parse session.ps1
+        run: |
+          $tokens = $null; $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path tools/device/session.ps1).Path, [ref]$tokens, [ref]$errors) | Out-Null
+          Write-Host "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition)): parse errors: $($errors.Count)"
+          $errors | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+          if ($errors.Count -gt 0) { exit 1 }
+      - name: PSScriptAnalyzer (default rules + 5.1/7.0 compatibility rules)
+        run: |
+          $want = [version]'1.23.0'
+          if (-not (Get-Module -ListAvailable PSScriptAnalyzer | Where-Object Version -eq $want)) {
+            Install-Module PSScriptAnalyzer -RequiredVersion $want -Scope CurrentUser -Force -SkipPublisherCheck
+          }
+          Import-Module PSScriptAnalyzer -RequiredVersion $want
+          $base = (Get-Module PSScriptAnalyzer).ModuleBase
+          $profiles = Get-ChildItem (Join-Path $base 'compatibility_profiles') -Filter 'win-*.json' |
+            Where-Object { $_.BaseName -match '_5\.1\..*_framework$' -or $_.BaseName -match '_7\.0\..*_core$' } |
+            ForEach-Object BaseName
+          Write-Host "PSScriptAnalyzer $want; compatibility profiles:"; $profiles | ForEach-Object { Write-Host "  $_" }
+          $settings = @{ Rules = @{
+            PSUseCompatibleSyntax   = @{ Enable = $true; TargetVersions = @('5.1', '7.0') }
+            PSUseCompatibleCommands = @{ Enable = $true; TargetProfiles = @($profiles) }
+            PSUseCompatibleTypes    = @{ Enable = $true; TargetProfiles = @($profiles) } } }
+          # Self-test: the compatibility rules must flag a 7.x-only cmdlet in a scratch copy.
+          $canary = Join-Path $env:RUNNER_TEMP 'canary.ps1'
+          (Get-Content tools/device/session.ps1 -Raw) + "`nGet-Error`n" | Set-Content $canary
+          $c = @(Invoke-ScriptAnalyzer -Path $canary -Settings $settings | Where-Object RuleName -eq 'PSUseCompatibleCommands')
+          Write-Host "self-test: PSUseCompatibleCommands flags Get-Error $($c.Count) time(s)"
+          if ($c.Count -eq 0) { Write-Host '::error::compatibility rules are not active'; exit 1 }
+          $findings = @(Invoke-ScriptAnalyzer -Path tools/device/session.ps1) + @(Invoke-ScriptAnalyzer -Path tools/device/session.ps1 -Settings $settings)
+          $findings | Format-Table RuleName, Severity, Line, Message -AutoSize -Wrap | Out-String -Width 220 | Write-Host
+          Write-Host "analyzer findings on session.ps1: $($findings.Count)"
+          if ($findings.Count -gt 0) { exit 1 }
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Owner-style session folder with synthetic kit and work folder
+        id: fixture
+        run: |
+          python -m pip install -r tools/device/requirements-test.txt
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          python .github/scripts/device_session_fixture.py (Join-Path $env:RUNNER_TEMP 'picco session')
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: session.ps1 setup, plan, flash -DryRun, restore -DryRun, identify -DryRun, summary, ports
+        env:
+          BACKUP: ${{ steps.fixture.outputs.backup }}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $sessionDir = Join-Path $env:RUNNER_TEMP 'picco session'
+          $logDir = Join-Path $env:RUNNER_TEMP 'session-logs'
+          New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+          $script = Join-Path $sessionDir 'session.ps1'
+          # The shell's own executable runs the script, as the owner would
+          # (tools/device/README.md: "powershell -ExecutionPolicy Bypass -File .\session.ps1 ...").
+          # name, arguments, expected exit code (tools/device/README.md)
+          $steps = @(
+            @('setup',            @('setup'),                          0),
+            @('setup-again',      @('setup'),                          0),
+            @('plan',             @('plan'),                           0),
+            @('flash-dryrun',     @('flash', '-DryRun'),               0),
+            @('restore-dryrun',   @('restore', $env:BACKUP, '-DryRun'), 0),
+            @('identify-dryrun',  @('identify', '-DryRun'),            0),
+            @('summary',          @('summary'),                        0),
+            @('ports',            @('ports'),                          0)
+          )
+          $results = @()
+          Push-Location $sessionDir
+          foreach ($s in $steps) {
+            $name, $cmdArgs, $expect = $s
+            $log = Join-Path $logDir "$name.log"
+            Write-Host "::group::$name ($env:MATRIX_EXE -File session.ps1 $($cmdArgs -join ' '))"
+            $out = & $env:MATRIX_EXE -NoProfile -ExecutionPolicy Bypass -File $script @cmdArgs 2>&1 | ForEach-Object { "$_" }
+            $code = $LASTEXITCODE
+            $out | Set-Content -LiteralPath $log -Encoding UTF8
+            $out | ForEach-Object { Write-Host $_ }
+            Write-Host "::endgroup::"
+            $ok = ($code -eq $expect)
+            $results += [pscustomobject]@{ Command = "session.ps1 $($cmdArgs -join ' ')"; Exit = $code; Expected = $expect; OK = $ok }
+          }
+          Pop-Location
+          $results | Format-Table -AutoSize | Out-String -Width 220 | Tee-Object -FilePath (Join-Path $logDir 'results.txt') | Write-Host
+          if ($results | Where-Object { -not $_.OK }) { Write-Host '::error::a session.ps1 command did not exit as documented'; exit 1 }
+          exit 0
+      - name: Upload session logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-session-${{ matrix.shell }}
+          path: |
+            ${{ runner.temp }}\session-logs
+            ${{ runner.temp }}\picco session\work\logs
+            ${{ runner.temp }}\picco session\work\*.txt
+            ${{ runner.temp }}\picco session\runtime\py313\piccoflash-runtime.txt
+          if-no-files-found: warn
+
+  firmware-picco:
+    name: firmware-picco
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - id: keys
+        name: Cache keys
+        run: echo "sdk=$(git rev-parse HEAD:freeink-sdk)" >> "$GITHUB_OUTPUT"
+      - name: Restore PlatformIO packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: pio-packages-v1-${{ runner.os }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
+          restore-keys: pio-packages-v1-${{ runner.os }}-
+      - name: Restore PlatformIO build cache
+        uses: actions/cache@v5
+        with:
+          path: .cache
+          key: pio-build-v1-picco-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
+          restore-keys: |
+            pio-build-v1-picco-${{ steps.keys.outputs.sdk }}-
+            pio-build-v1-picco-
+      - name: scripts/cloud-setup.sh
+        run: ./scripts/cloud-setup.sh
+      - name: pio run -e picco
+        run: |
+          set -o pipefail
+          mkdir -p build
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -e picco 2>&1 | tee build/pio-picco.log
+      - name: Size
+        run: .github/scripts/firmware-size.sh picco build/pio-picco.log | tee build/size-picco.txt
+      - name: Upload firmware
+        uses: actions/upload-artifact@v6
+        with:
+          name: firmware-picco
+          path: |
+            .pio/build/picco/firmware.bin
+            .pio/build/picco/bootloader.bin
+            .pio/build/picco/partitions.bin
+            .pio/build/picco/firmware.map
+            build/size-picco.txt
+          if-no-files-found: error
+
+  firmware-other-device:
+    # One cheap guard that a non-Picco device still compiles (upstream's
+    # "CI (build)" matrix is disabled in this fork). x4pro: ESP32-S3, no
+    # custom_sdkconfig, same packages as picco.
+    name: firmware-other-device (x4pro)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - id: keys
+        name: Cache keys
+        run: echo "sdk=$(git rev-parse HEAD:freeink-sdk)" >> "$GITHUB_OUTPUT"
+      - name: Restore PlatformIO packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: pio-packages-v1-${{ runner.os }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
+          restore-keys: pio-packages-v1-${{ runner.os }}-
+      - name: Restore PlatformIO build cache
+        uses: actions/cache@v5
+        with:
+          path: .cache
+          key: pio-build-v1-x4pro-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
+          restore-keys: |
+            pio-build-v1-x4pro-${{ steps.keys.outputs.sdk }}-
+            pio-build-v1-x4pro-
+      - name: scripts/cloud-setup.sh
+        run: ./scripts/cloud-setup.sh
+      - name: pio run -e x4pro
+        run: |
+          set -o pipefail
+          mkdir -p build
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -e x4pro 2>&1 | tee build/pio-x4pro.log
+      - name: Size
+        run: .github/scripts/firmware-size.sh x4pro build/pio-x4pro.log
+
+  simulator:
+    name: simulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - id: keys
+        name: Cache keys
+        run: echo "sdk=$(git rev-parse HEAD:freeink-sdk)" >> "$GITHUB_OUTPUT"
+      - name: Restore PlatformIO packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: pio-packages-v1-${{ runner.os }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
+          restore-keys: pio-packages-v1-${{ runner.os }}-
+      - name: Restore PlatformIO build cache
+        uses: actions/cache@v5
+        with:
+          path: .cache
+          key: pio-build-v1-simulator_picco-${{ steps.keys.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**', 'scripts/simulator_patches/**') }}
+          restore-keys: |
+            pio-build-v1-simulator_picco-${{ steps.keys.outputs.sdk }}-
+            pio-build-v1-simulator_picco-
+      - name: scripts/cloud-setup.sh (installs SDL2, OpenSSL, Xvfb)
+        run: ./scripts/cloud-setup.sh
+      - name: pio run -e simulator_picco
+        run: |
+          set -o pipefail
+          mkdir -p build
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -e simulator_picco 2>&1 | tee build/pio-simulator_picco.log
+          ls -l .pio/build/simulator_picco/program
+      - name: Headless smoke run (xvfb-run, scripted screenshot, QUIT)
+        run: |
+          python3 -m pip install --user pillow
+          .github/scripts/sim-smoke.sh .pio/build/simulator_picco/program build/sim-smoke
+      - name: Upload simulator binary
+        uses: actions/upload-artifact@v6
+        with:
+          name: simulator-picco
+          path: .pio/build/simulator_picco/program
+          if-no-files-found: error
+      - name: Upload smoke screenshot and log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simulator-smoke
+          path: |
+            build/sim-smoke/home.png
+            build/sim-smoke/simulator.log
+          if-no-files-found: warn
+
+  scenarios:
+    # Turns itself on when task E2 adds the scenario harness tools/simtest/.
+    name: scenarios
+    needs: simulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - id: detect
+        name: Is there a scenario harness?
+        run: |
+          if [[ -f tools/simtest/__main__.py ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "tools/simtest/__main__.py found: running the scenario suite"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "no scenario harness yet (tools/simtest/__main__.py does not exist); this job succeeds by design"
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - if: steps.detect.outputs.present == 'true'
+        name: Simulator binary from the simulator job
+        uses: actions/download-artifact@v6
+        with:
+          name: simulator-picco
+          path: .pio/build/simulator_picco
+      - if: steps.detect.outputs.present == 'true'
+        name: Runtime packages and harness requirements
+        run: |
+          chmod +x .pio/build/simulator_picco/program
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libsdl2-2.0-0 libssl3t64 xvfb xauth
+          if [[ -f tools/simtest/requirements.txt ]]; then python -m pip install -r tools/simtest/requirements.txt; fi
+          python -m pip install pytest
+      - if: steps.detect.outputs.present == 'true'
+        name: pytest tools/simtest
+        run: xvfb-run -a python -m pytest tools/simtest -q
+      - if: steps.detect.outputs.present == 'true'
+        name: python -m tools.simtest run --all
+        env:
+          SIMTEST_REPORT_DIR: build/simtest
+        run: xvfb-run -a python -m tools.simtest run --all
+      - if: always() && steps.detect.outputs.present == 'true'
+        name: Upload scenario report
+        uses: actions/upload-artifact@v6
+        with:
+          name: scenario-report
+          path: build/simtest
+          if-no-files-found: warn
+
+  firmware-2slot:
+    # Turns itself on when task D4 defines [env:picco_2slot].
+    name: firmware-2slot
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - id: detect
+        name: Is there a picco_2slot environment?
+        run: |
+          if grep -qE '^\[env:picco_2slot\]' platformio.ini platformio.project.ini; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "[env:picco_2slot] found: building it and running the size gate"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "no picco_2slot environment yet ([env:picco_2slot] is not in platformio.ini or platformio.project.ini); this job succeeds by design"
+          fi
+          echo "sdk=$(git rev-parse HEAD:freeink-sdk)" >> "$GITHUB_OUTPUT"
+      - if: steps.detect.outputs.present == 'true'
+        name: Restore PlatformIO packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: pio-packages-v1-${{ runner.os }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'scripts/cloud-setup.sh', 'scripts/pio_prefetch.py') }}
+          restore-keys: pio-packages-v1-${{ runner.os }}-
+      - if: steps.detect.outputs.present == 'true'
+        name: Restore PlatformIO build cache
+        uses: actions/cache@v5
+        with:
+          path: .cache
+          key: pio-build-v1-picco_2slot-${{ steps.detect.outputs.sdk }}-${{ hashFiles('platformio.ini', 'platformio.project.ini', 'src/**', 'lib/**') }}
+          restore-keys: |
+            pio-build-v1-picco_2slot-${{ steps.detect.outputs.sdk }}-
+            pio-build-v1-picco_2slot-
+      - if: steps.detect.outputs.present == 'true'
+        name: scripts/cloud-setup.sh
+        run: ./scripts/cloud-setup.sh
+      - if: steps.detect.outputs.present == 'true'
+        name: pio run -e picco_2slot
+        run: |
+          set -o pipefail
+          mkdir -p build
+          export PATH="$HOME/.local/bin:$PATH"
+          pio run -e picco_2slot 2>&1 | tee build/pio-picco_2slot.log
+      - if: steps.detect.outputs.present == 'true'
+        name: Size gate
+        run: |
+          .github/scripts/firmware-size.sh picco_2slot build/pio-picco_2slot.log --gate | tee build/size-picco_2slot.txt
+          if [[ -f scripts/size_gate.py ]]; then
+            echo "scripts/size_gate.py found: running it as well"
+            python3 scripts/size_gate.py .pio/build/picco_2slot/firmware.bin
+          fi
+      - if: steps.detect.outputs.present == 'true'
+        name: Upload firmware
+        uses: actions/upload-artifact@v6
+        with:
+          name: firmware-picco_2slot
+          path: |
+            .pio/build/picco_2slot/firmware.bin
+            .pio/build/picco_2slot/bootloader.bin
+            .pio/build/picco_2slot/partitions.bin
+            .pio/build/picco_2slot/firmware.map
+            build/size-picco_2slot.txt
+          if-no-files-found: warn
+
+  ci-ok:
+    # The one check branch protection needs: green only when every job above
+    # succeeded (the self-activating jobs succeed when they have nothing to do).
+    name: ci-ok
+    if: always()
+    needs:
+      - format
+      - host-tests
+      - prep-tests
+      - device-tool-tests
+      - device-tool-windows
+      - firmware-picco
+      - firmware-other-device
+      - simulator
+      - scenarios
+      - firmware-2slot
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every required job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          bad="$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result != "success") | .key] | join(", ")')"
+          if [[ -n "$bad" ]]; then
+            echo "::error::not successful: $bad"
+            exit 1
+          fi

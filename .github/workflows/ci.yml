@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   clang-format:
+    # eink-learner-aid: upstream-only (docs/BASE.md, "What differs from the pinned commit").
+    if: github.repository == 'crosspoint-reader/crosspoint-reader'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -34,6 +36,8 @@ jobs:
           git diff --exit-code || (echo "Please run 'bin/clang-format-fix' to fix formatting issues" && exit 1)
 
   cppcheck:
+    # eink-learner-aid: upstream-only (docs/BASE.md, "What differs from the pinned commit").
+    if: github.repository == 'crosspoint-reader/crosspoint-reader'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -88,6 +92,8 @@ jobs:
 
   build:
     name: Build ${{ matrix.env }}
+    # eink-learner-aid: upstream-only (docs/BASE.md, "What differs from the pinned commit").
+    if: github.repository == 'crosspoint-reader/crosspoint-reader'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -199,6 +205,8 @@ jobs:
           if-no-files-found: error
 
   unit-tests:
+    # eink-learner-aid: upstream-only (docs/BASE.md, "What differs from the pinned commit").
+    if: github.repository == 'crosspoint-reader/crosspoint-reader'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -239,7 +247,8 @@ jobs:
       - clang-format
       - cppcheck
       - unit-tests
-    if: always()
+    # eink-learner-aid: upstream-only (docs/BASE.md, "What differs from the pinned commit").
+    if: always() && github.repository == 'crosspoint-reader/crosspoint-reader'
     runs-on: ubuntu-latest
     steps:
       - name: Fail because needed jobs failed
