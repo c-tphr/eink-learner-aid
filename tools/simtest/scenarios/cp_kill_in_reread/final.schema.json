@@ -1,5 +1,5 @@
 {
-  "description": "cp_reread_restart at the end: run 1's two first grades kept through a kill and a sleep, p3 never graded, nothing in progress.",
+  "description": "cp_kill_in_reread at the end: p1 correct and p2 incorrect from pass 1, kept through two kills and two Corrects on retries; p3 never graded; nothing in progress.",
   "type": "object",
   "required": ["version", "book_sha256", "overrides", "position", "grades"],
   "not": { "required": ["active_checkpoint"] },

@@ -71,6 +71,7 @@ BookIdentity ReadingSession::identity() const {
 const std::string& ReadingSession::bookPath() const { return epub->getPath(); }
 
 void ReadingSession::setMode(const checkpoint::ReadingMode mode) {
+  if (mode == checkpoint::ReadingMode::Rsvp) pageUnderRsvp = false;
   if (mode == currentMode) return;
   currentMode = mode;
   LOG_DBG("CPT", "mode %s source=%s", modeName(mode), checkpoint::navSourceName(checkpoint::NavSource::ModeSwitch));
@@ -508,6 +509,8 @@ readingsession::OpenRestore ReadingSession::restoreActive(std::shared_ptr<checkp
     if (!wordOffset(action.at.position.chapter, action.at.position.word, open.offset)) open.offset = 0;
     if (action.at.mode == checkpoint::ReadingMode::Page) {
       setPageReading(action.at.position.chapter, action.at.position.word);
+    } else if (action.show == OpenAction::Show::Reread) {
+      setPageUnderRsvp();
     }
   }
   LOG_DBG("CPT", "restore open show=%s speed_read=%d jump=%d ch=%d offset=%lu", showName(action.show),
@@ -600,7 +603,11 @@ PageResume afterPageCheckpoint(reading::ReadingSession& session, const Checkpoin
     // drawn first when no page of the book was shown yet (a prompt restored on opening, task C5).
     next.go = start.mode == checkpoint::ReadingMode::Rsvp ? PageResume::Go::SpeedRead : PageResume::Go::Offset;
     if (!session.wordOffset(start.position.chapter, start.position.word, next.offset)) next.offset = 0;
-    if (start.mode == checkpoint::ReadingMode::Page) session.setPageReading(start.position.chapter, start.position.word);
+    if (start.mode == checkpoint::ReadingMode::Page) {
+      session.setPageReading(start.position.chapter, start.position.word);
+    } else {
+      session.setPageUnderRsvp();
+    }
     LOG_DBG("CPT", "page resume reread-%s ch=%u word=%lu offset=%lu",
             start.mode == checkpoint::ReadingMode::Rsvp ? "rsvp" : "page", start.position.chapter,
             static_cast<unsigned long>(start.position.word), static_cast<unsigned long>(next.offset));
@@ -678,7 +685,12 @@ void pageShowing(reading::ReadingSession& session, const PageSpan& page) {
   // Every page shown takes the source of the move that showed it, so none is left for a later page.
   const checkpoint::NavSource source = session.takePageSource();
   session.setRereadBarDue(false);
+  const bool underRsvp = session.takePageUnderRsvp();
   if (!session.rereading()) return;
+  if (underRsvp) {
+    LOG_DBG("CPT", "reread page ch=%d under rsvp: not the reread place", page.spine);
+    return;
+  }
   const checkpoint::SectionRange& range = session.rereadRange();
   reading::PageWords words;
   reading::RereadPagePlace place;

@@ -312,6 +312,15 @@ class ReadingSession {
   void setRereadButton(const controls::Zone& button) { rereadButton = button; }
   // pageShowing() kept the reread on: pageShown() draws its bar.
   void setRereadBarDue(bool due) { rereadBarDue = due; }
+  // The next page the reader draws only lies under RSVP, which opens over it at the reread place
+  // (task C5: a reread in RSVP restored, or started, before the reader showed a page): it is not the
+  // reread's place. Cleared by that page or by RSVP opening (setMode()).
+  void setPageUnderRsvp() { pageUnderRsvp = true; }
+  bool takePageUnderRsvp() {
+    const bool under = pageUnderRsvp;
+    pageUnderRsvp = false;
+    return under;
+  }
   bool rereadBarWanted() const { return rereadBarDue && rereading(); }
   const controls::Zone& rereadButtonZone() const { return rereadButton; }
   checkpoint::NavSource takePageSource();
@@ -362,6 +371,7 @@ class ReadingSession {
   uint16_t rsvpResumeFrom = 0;
   controls::Zone rereadButton{controls::Item::BackToQuestion, 0, 0, 0, 0, false};
   bool rereadBarDue = false;
+  bool pageUnderRsvp = false;
   // While restoreOnOpen() runs: the renderer for "Preparing..." when a word index must be built.
   GfxRenderer* restoreRenderer = nullptr;
 };
