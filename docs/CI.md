@@ -18,7 +18,7 @@ Durations are wall time of the job on a GitHub-hosted runner (4 vCPU Linux, `win
 | `firmware-picco` | `scripts/cloud-setup.sh` works on a plain runner (it detects that there is no intercepting proxy and runs the same pre-fetch), and `pio run -e picco` builds. Prints the RAM/Flash lines, image sizes and the headroom against the two-slot budget (informational here). | DUR | DUR |
 | `firmware-other-device (x4pro)` | One non-Picco device still compiles (`x4pro`: ESP32-S3, no `custom_sdkconfig`). Upstream's eight-device matrix is disabled in this fork (`docs/BASE.md`). | DUR | DUR |
 | `simulator` | `pio run -e simulator_picco` builds with this project's simulator patches, and the binary starts headless under `xvfb-run`, reaches the Home screen (the firmware logs `Entering activity: Home`), saves a screenshot and quits with exit status 0. | DUR | DUR |
-| `scenarios` | Self-activating (below). Today: prints `no scenario harness yet` and succeeds. | DUR | DUR |
+| `scenarios` | The scenario harness's self-tests pass and every scenario under `tools/simtest/scenarios/` passes against the `simulator_picco` binary built by the `simulator` job (screens, log lines, SD-card files, reference images). Self-activating (below): active since task E2 merged. | DUR | DUR |
 | `firmware-2slot` | Self-activating (below). Today: prints `no picco_2slot environment yet` and succeeds. | DUR | DUR |
 | `ci-ok` | Every job above finished with `success` (a failed, cancelled or skipped job fails it). | DUR | DUR |
 
@@ -47,7 +47,7 @@ Run from the repository root. In a Claude Code cloud session run `./scripts/clou
 | `firmware-picco` | `./scripts/cloud-setup.sh && pio run -e picco && .github/scripts/firmware-size.sh picco` |
 | `firmware-other-device` | `./scripts/cloud-setup.sh && pio run -e x4pro`. Fine in a cloud session: `x4pro` uses no `custom_sdkconfig`. |
 | `simulator` | `./scripts/cloud-setup.sh && pio run -e simulator_picco && .github/scripts/sim-smoke.sh` (needs Pillow: `pip install pillow`). The screenshot is `build/sim-smoke/home.png`, the log `build/sim-smoke/simulator.log`. |
-| `scenarios` | `python3 -m pytest tools/simtest -q` and `xvfb-run -a python3 -m tools.simtest run --all`, once `tools/simtest/` exists. |
+| `scenarios` | `pio run -e simulator_picco`, `python3 -m pip install -r tools/simtest/requirements.txt`, then `python3 -m pytest tools/simtest -q` and `xvfb-run -a python3 -m tools.simtest run --all --report-dir build/simtest-report` |
 | `firmware-2slot` | `pio run -e picco_2slot && .github/scripts/firmware-size.sh picco_2slot "" --gate`, once the environment exists. |
 
 ## Artifacts
@@ -59,7 +59,7 @@ Run from the repository root. In a Claude Code cloud session run `./scripts/clou
 | `simulator-smoke` | `simulator` | `home.png` (480 x 800 Home screen from the headless run) and `simulator.log`. |
 | `windows-session-powershell`, `windows-session-pwsh` | `device-tool-windows` | One log per `session.ps1` command, `results.txt` (command, exit code, expected), the tool's own logs from the work folder, the `summary` output and the runtime stamp. All from synthetic images; nothing from a device. |
 | `host-tests-log` | `host-tests`, on failure only | CTest's `LastTest.log`. |
-| `scenario-report` | `scenarios`, once active | The harness's report folder, `build/simtest/`. |
+| `scenario-report` | `scenarios` | The harness's report folder `build/simtest-report/`: `index.html` (every step, screenshots, diffs, logs, the SD card after the run), `results.json`, `junit.xml` (tools/simtest/README.md). |
 | `firmware-picco_2slot` | `firmware-2slot`, once active | As `firmware-picco`, for `picco_2slot`. |
 
 Artifacts are kept for GitHub's default retention period (90 days for a public repository).
@@ -68,7 +68,7 @@ Artifacts are kept for GitHub's default retention period (90 days for a public r
 
 Both jobs always run and always report; they decide from the checked-out tree whether there is work to do, so the tasks that add the harness and the environment need not touch the workflow.
 
-- **`scenarios`** turns on when `tools/simtest/__main__.py` exists (task E2). It then downloads the `simulator-picco` artifact into `.pio/build/simulator_picco/`, installs the SDL2/OpenSSL runtime, Xvfb, `tools/simtest/requirements.txt` if present and pytest, runs `python -m pytest tools/simtest -q` and `python -m tools.simtest run --all` under `xvfb-run -a`, and uploads `build/simtest/` (the environment variable `SIMTEST_REPORT_DIR=build/simtest` is set for the run; the harness should write its report there). Until then it prints `no scenario harness yet` and succeeds.
+- **`scenarios`** turns on when `tools/simtest/__main__.py` exists (task E2). It then downloads the `simulator-picco` artifact into `.pio/build/simulator_picco/`, installs the SDL2/OpenSSL runtime, Xvfb, `tools/simtest/requirements.txt` if present and pytest, runs `python -m pytest tools/simtest -q` and `python -m tools.simtest run --all` under `xvfb-run -a`, and uploads the report folder `build/simtest-report/`. Without the harness it prints `no scenario harness yet` and succeeds; that is how it ran until task E2 merged.
 - **`firmware-2slot`** turns on when `[env:picco_2slot]` appears in `platformio.ini` or `platformio.project.ini` (task D4). It then runs `scripts/cloud-setup.sh`, `pio run -e picco_2slot` and the size gate: `.github/scripts/firmware-size.sh picco_2slot <log> --gate` fails when `firmware.bin` is larger than 7,431,782 bytes (the app slot of the two-slot table, `docs/PLAN.md` section 11 and spike S3; `APP_SLOT_BUDGET_BYTES` in the workflow). If `scripts/size_gate.py` exists it is run as well, as `python3 scripts/size_gate.py .pio/build/picco_2slot/firmware.bin`. Until then it prints `no picco_2slot environment yet` and succeeds. Note: `scripts/cloud-setup.sh` pre-fetches packages for `picco` and `simulator_picco` only; on a runner (no intercepting proxy) `pio run` fetches anything else itself.
 
 ## Caches

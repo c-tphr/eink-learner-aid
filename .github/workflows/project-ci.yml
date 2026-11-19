@@ -437,15 +437,15 @@ jobs:
         run: xvfb-run -a python -m pytest tools/simtest -q
       - if: steps.detect.outputs.present == 'true'
         name: python -m tools.simtest run --all
-        env:
-          SIMTEST_REPORT_DIR: build/simtest
-        run: xvfb-run -a python -m tools.simtest run --all
+        # The harness starts a private Xvfb per scenario (tools/simtest/README.md);
+        # xvfb-run around it is kept so the command is the same as the documented one.
+        run: xvfb-run -a python -m tools.simtest run --all --report-dir build/simtest-report
       - if: always() && steps.detect.outputs.present == 'true'
         name: Upload scenario report
         uses: actions/upload-artifact@v6
         with:
           name: scenario-report
-          path: build/simtest
+          path: build/simtest-report
           if-no-files-found: warn
 
   firmware-2slot:
