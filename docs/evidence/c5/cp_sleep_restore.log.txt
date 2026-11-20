@@ -1,0 +1,216 @@
+   0.056 [simtest] run 1: starting /home/user/eink-learner-aid/.claude/worktrees/agent-aa882264d6e75fac5/.pio/build/simulator_picco/program on SD folder /tmp/simtest-cp_sleep_restore-sd-lgm8zobt (slide switch off, display :0, http port 53795)
+   0.057 [simtest] run 1: pid 10212
+   0.289 [228] [DBG] [CPT] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=made book_bytes=72544 ms=24
+   0.290 [228] [DBG] [CPT] session open checkpoints=1 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c session_bytes=128 layout_bytes=8120
+   0.290 [228] [DBG] [RSVP] book state read mode=none ch=0 word=0
+   0.309 [247] [DBG] [ERS] Progress saved: spine=0 offset=0 page=0
+   0.313 [SIM] WAIT matched: [247] [DBG] [ERS] Progress saved: spine=0 offset=0 page=0
+   0.820 [758] [DBG] [ERS] Progress saved: spine=2 offset=0 page=0
+   0.926 [SIM] WAIT matched: [758] [DBG] [ERS] Progress saved: spine=2 offset=0 page=0
+   1.188 [1126] [DBG] [CPT] sections ch=2 words=608 sections=2 checkpoints=1 failed=0
+   1.188 [1126] [DBG] [CPT] page advance ch=2 first=0 from=0 last=101 step=none reread=-
+   1.203 [1141] [DBG] [ERS] Progress saved: spine=2 offset=525 page=1
+   1.298 [SIM] WAIT matched: [1141] [DBG] [ERS] Progress saved: spine=2 offset=525 page=1
+   1.558 [1496] [DBG] [CPT] page advance ch=2 first=102 from=102 last=190 step=none reread=-
+   1.572 [1510] [DBG] [ERS] Progress saved: spine=2 offset=961 page=2
+   1.679 [SIM] WAIT matched: [1510] [DBG] [ERS] Progress saved: spine=2 offset=961 page=2
+   1.939 [1877] [DBG] [CPT] page advance ch=2 first=191 from=191 last=281 step=none reread=-
+   1.954 [1892] [DBG] [ERS] Progress saved: spine=2 offset=1440 page=3
+   2.054 [SIM] WAIT matched: [1892] [DBG] [ERS] Progress saved: spine=2 offset=1440 page=3
+   2.313 [2251] [DBG] [CPT] page advance ch=2 first=282 from=282 last=380 step=none reread=-
+   2.331 [2269] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   2.423 [SIM] WAIT matched: [2269] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   2.682 [2620] [DBG] [CPT] page advance ch=2 first=381 from=381 last=489 step=none reread=-
+   2.698 [2636] [DBG] [ERS] Progress saved: spine=2 offset=2551 page=5
+   2.794 [SIM] WAIT matched: [2636] [DBG] [ERS] Progress saved: spine=2 offset=2551 page=5
+   3.044 [2982] [DBG] [CPT] page advance ch=2 first=490 from=490 last=607 step=fire reread=-
+   3.044 [2982] [DBG] [CPT] fire source=next-page checkpoint=c0002 section=s0004 ch=2 last_word=607 resume_ch=3 resume_word=0 crossed=1
+   3.044 [2982] [DBG] [CPT] open checkpoint=c0002 prompts=3 section=s0004 mode=page resume_ch=3 resume_word=0 state=read grades=0 activity_bytes=4056 session_bytes=78056 accepted=1
+   3.046 [2984] [DBG] [CPT] saved after=start prompt=- grade=none active=c0002 prompt_index=0 position=2:490:page ok=1 reread=none
+   3.049 [2988] [DBG] [CPT] screen=Prompt question=1/3 prompt=c0002-p1 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   3.173 [SIM] WAIT matched: [2982] [DBG] [CPT] fire source=next-page checkpoint=c0002 section=s0004 ch=2 last_word=607 resume_ch=3 resume_word=0 crossed=1
+   3.471 [3409] [DBG] [CPT] event=reveal prompt=c0002-p1 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+   3.475 [3413] [DBG] [CPT] screen=Answer question=1/3 prompt=c0002-p1 recorded=none focus=AnswerBox part=1/1 lines=7 refresh=clear
+   3.886 [3824] [DBG] [CPT] event=correct prompt=c0002-p1 accepted=1 refusal=0 state=prompt-hidden grade_recorded=1 save=now
+   3.886 [3825] [DBG] [CPT] saved after=correct prompt=c0002-p1 grade=correct active=c0002 prompt_index=1 position=none ok=1 reread=none
+   3.890 [3828] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   4.013 [SIM] WAIT matched: [3825] [DBG] [CPT] saved after=correct prompt=c0002-p1 grade=correct active=c0002 prompt_index=1 position=none ok=1 reread=none
+   4.013 [SIM] WAIT matched: [3828] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   4.748 [4686] [DBG] [CPT] left checkpoint=1 prompt=1 state=prompt-hidden (saved)
+   4.770 [4708] [DBG] [MAIN] Entering deep sleep
+   4.770 [SIM] WAIT matched: [4708] [DBG] [MAIN] Entering deep sleep
+   4.868 [83] [DBG] [CPT] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=cached book_bytes=72544 ms=0
+   4.868 [83] [DBG] [CPT] session open checkpoints=1 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c session_bytes=128 layout_bytes=8120
+   4.868 [83] [DBG] [RSVP] book state read mode=page ch=2 word=490
+   4.870 [85] [DBG] [CPT] restore view=prompt checkpoint=c0002 prompt=2/3 place=3:0:page resume=3:0:page notes=none progress_bytes=78056
+   4.870 [85] [DBG] [CPT] restore open show=prompt speed_read=0 jump=0 ch=0 offset=0 kept_bytes=78188
+   4.872 [SIM] WAIT matched: [85] [DBG] [CPT] restore view=prompt checkpoint=c0002 prompt=2/3 place=3:0:page resume=3:0:page notes=none progress_bytes=78056
+   4.872 [88] [DBG] [CPT] back checkpoint=c0002 prompt=2/3 mode=page activity_bytes=4056
+   4.876 [91] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   4.896 [SIM] WAIT matched: [91] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+   5.416 [631] [DBG] [CPT] event=reveal prompt=c0002-p2 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+   5.420 [635] [DBG] [CPT] screen=Answer question=2/3 prompt=c0002-p2 recorded=none focus=AnswerBox part=1/1 lines=8 refresh=clear
+   5.839 [1055] [DBG] [CPT] event=incorrect prompt=c0002-p2 accepted=1 refusal=0 state=incorrect-choice grade_recorded=1 save=now
+   5.841 [1056] [DBG] [CPT] saved after=incorrect prompt=c0002-p2 grade=incorrect active=c0002 prompt_index=1 position=none ok=1 reread=none
+   5.843 [1059] [DBG] [CPT] screen=Incorrect question=2/3 prompt=c0002-p2 recorded=incorrect focus=RereadPage part=1/1 lines=0 refresh=clear
+   6.267 [1483] [DBG] [CPT] event=reread-page prompt=c0002-p2 accepted=1 refusal=0 state=rereading grade_recorded=0 save=now
+   6.269 [1484] [DBG] [CPT] saved after=reread-page prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:311:page
+   6.269 [1484] [DBG] [CPT] end result=reread-page prompt=1 ch=2 word=311 mode=page saved=1
+   6.269 [1484] [DBG] [CPT] reread start mode=page checkpoint=c0002 section=s0004 prompt=1 ch=2 start=311 last_word=607
+   6.269 [1484] [DBG] [CPT] page resume reread-page ch=2 word=311 offset=1592
+   6.270 [1485] [DBG] [CPT] reread page ch=2 first=282 last=380 any=1 inside=1 word=311
+   6.270 [1485] [DBG] [CPT] reread moved by=page source=table-of-contents mode=page ch=2 word=311 state=rereading left_section=0
+   6.288 [1503] [DBG] [CPT] reread bar metrics screen=480x800 text_bottom=773 line=40
+   6.293 [1508] [DBG] [CPT] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label="Rereading"
+   6.295 [1511] [DBG] [ERS] Progress saved: spine=2 offset=1440 page=3
+   6.388 [SIM] WAIT matched: [1508] [DBG] [CPT] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label="Rereading"
+   6.388 [SIM] WAIT matched: [1511] [DBG] [ERS] Progress saved: spine=2 offset=1440 page=3
+   6.648 [1864] [DBG] [CPT] sections ch=2 words=608 sections=2 checkpoints=1 failed=0
+   6.648 [1864] [DBG] [CPT] page advance ch=2 first=282 from=311 last=380 step=none reread=s0004
+   6.649 [1864] [DBG] [CPT] reread page ch=2 first=381 last=489 any=1 inside=1 word=381
+   6.649 [1864] [DBG] [CPT] reread moved by=page source=next-page mode=page ch=2 word=381 state=rereading left_section=0
+   6.662 [1878] [DBG] [CPT] saved after=reread-moved prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:381:page
+   6.682 [1898] [DBG] [CPT] reread bar metrics screen=480x800 text_bottom=773 line=40
+   6.688 [1903] [DBG] [CPT] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label="Rereading"
+   6.689 [1905] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   6.767 [SIM] WAIT matched: [1878] [DBG] [CPT] saved after=reread-moved prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:381:page
+   6.768 [SIM] WAIT matched: [1905] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   6.768 [simtest] run 1: sending SIGKILL to process group 10212 (imitates pulling the battery)
+   6.773 [simtest] run 1: pid 10212 killed by SIGKILL; SD folder /tmp/simtest-cp_sleep_restore-sd-lgm8zobt kept for the next start
+   6.773 [simtest] run 2: starting /home/user/eink-learner-aid/.claude/worktrees/agent-aa882264d6e75fac5/.pio/build/simulator_picco/program on SD folder /tmp/simtest-cp_sleep_restore-sd-lgm8zobt (slide switch off, display :0, http port 53795)
+   6.774 [simtest] run 2: pid 10307
+   6.978 [198] [DBG] [CPT] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=cached book_bytes=72544 ms=0
+   6.978 [198] [DBG] [CPT] session open checkpoints=1 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c session_bytes=128 layout_bytes=8120
+   6.978 [198] [DBG] [RSVP] book state read mode=page ch=2 word=490
+   6.978 [199] [DBG] [CPT] restore view=reread checkpoint=c0002 prompt=2/3 place=2:381:page resume=3:0:page notes=none progress_bytes=78056
+   6.978 [199] [DBG] [CPT] restore open show=reread speed_read=0 jump=1 ch=2 offset=1978 kept_bytes=78188
+   6.979 [199] [DBG] [CPT] reread page ch=2 first=381 last=489 any=1 inside=1 word=381
+   6.979 [199] [DBG] [CPT] reread moved by=page source=table-of-contents mode=page ch=2 word=381 state=rereading left_section=0
+   6.994 [215] [DBG] [CPT] reread bar metrics screen=480x800 text_bottom=773 line=40
+   6.999 [220] [DBG] [CPT] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label="Rereading"
+   7.001 [221] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   7.103 [SIM] WAIT matched: [199] [DBG] [CPT] restore view=reread checkpoint=c0002 prompt=2/3 place=2:381:page resume=3:0:page notes=none progress_bytes=78056
+   7.104 [SIM] WAIT matched: [220] [DBG] [CPT] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label="Rereading"
+   7.104 [SIM] WAIT matched: [221] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   8.909 [2129] [DBG] [MAIN] Entering deep sleep
+   8.909 [SIM] WAIT matched: [2129] [DBG] [MAIN] Entering deep sleep
+   9.004 [85] [DBG] [CPT] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=cached book_bytes=72544 ms=1
+   9.004 [85] [DBG] [CPT] session open checkpoints=1 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c session_bytes=128 layout_bytes=8120
+   9.004 [85] [DBG] [RSVP] book state read mode=page ch=2 word=490
+   9.004 [85] [DBG] [CPT] restore view=reread checkpoint=c0002 prompt=2/3 place=2:381:page resume=3:0:page notes=none progress_bytes=78056
+   9.004 [85] [DBG] [CPT] restore open show=reread speed_read=0 jump=1 ch=2 offset=1978 kept_bytes=78188
+   9.005 [SIM] WAIT matched: [85] [DBG] [CPT] restore view=reread checkpoint=c0002 prompt=2/3 place=2:381:page resume=3:0:page notes=none progress_bytes=78056
+   9.006 [87] [DBG] [CPT] reread page ch=2 first=381 last=489 any=1 inside=1 word=381
+   9.006 [87] [DBG] [CPT] reread moved by=page source=table-of-contents mode=page ch=2 word=381 state=rereading left_section=0
+   9.021 [101] [DBG] [CPT] reread bar metrics screen=480x800 text_bottom=773 line=40
+   9.026 [107] [DBG] [CPT] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label="Rereading"
+   9.027 [107] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   9.035 [SIM] WAIT matched: [107] [DBG] [CPT] reread bar shown top=773 button=216,774,248,26 clear_of_text=1 label="Rereading"
+   9.035 [SIM] WAIT matched: [107] [DBG] [ERS] Progress saved: spine=2 offset=1978 page=4
+   9.861 [940] [DBG] [CPT] reread list focus=BackToQuestion
+  10.890 [1970] [DBG] [CPT] reread end by=list event=return-early accepted=1 state=prompt-hidden
+  10.891 [1972] [DBG] [CPT] saved after=return-early prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=none
+  10.891 [1972] [DBG] [CPT] back checkpoint=c0002 prompt=2/3 mode=page activity_bytes=4056
+  10.894 [1975] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=incorrect focus=Reveal part=1/1 lines=0 refresh=clear
+  11.199 [SIM] WAIT matched: [1970] [DBG] [CPT] reread end by=list event=return-early accepted=1 state=prompt-hidden
+  11.199 [SIM] WAIT matched: [1975] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=incorrect focus=Reveal part=1/1 lines=0 refresh=clear
+  11.925 [3005] [DBG] [CPT] event=reveal prompt=c0002-p2 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+  11.929 [3009] [DBG] [CPT] screen=Answer question=2/3 prompt=c0002-p2 recorded=incorrect focus=AnswerBox part=1/1 lines=8 refresh=clear
+  12.350 [3430] [DBG] [CPT] screen=Answer question=2/3 prompt=c0002-p2 recorded=incorrect focus=Correct part=1/1 lines=8 refresh=update
+  13.162 [4242] [DBG] [CPT] event=correct prompt=c0002-p2 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now
+  13.163 [4244] [DBG] [CPT] saved after=correct prompt=- grade=none active=c0002 prompt_index=2 position=none ok=1 reread=none
+  13.166 [4247] [DBG] [CPT] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+  13.484 [SIM] WAIT matched: [4242] [DBG] [CPT] event=correct prompt=c0002-p2 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now
+  13.484 [SIM] WAIT matched: [4247] [DBG] [CPT] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=Reveal part=1/1 lines=0 refresh=clear
+  13.589 [4669] [DBG] [CPT] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=SkipPrompt part=1/1 lines=0 refresh=update
+  13.796 [4876] [DBG] [CPT] screen=Prompt question=3/3 prompt=c0002-p3 recorded=none focus=SkipCheckpoint part=1/1 lines=0 refresh=update
+  14.610 [5690] [DBG] [CPT] event=skip-checkpoint prompt=c0002-p3 accepted=1 refusal=0 state=finished grade_recorded=0 save=now
+  14.611 [5692] [DBG] [CPT] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=3:0:page ok=1 reread=none
+  14.611 [5692] [DBG] [CPT] end result=skipped prompt=2 ch=3 word=0 mode=page saved=1
+  14.611 [5692] [DBG] [CPT] resume end=skipped mode=page ch=3 word=0 reread=1
+  14.611 [5692] [DBG] [CPT] page resume chapter ch=3 word=0 offset=1
+  14.632 [5713] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+  14.934 [SIM] WAIT matched: [5692] [DBG] [CPT] end result=skipped prompt=2 ch=3 word=0 mode=page saved=1
+  14.934 [SIM] WAIT matched: [5713] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+  14.934 [simtest] run 2: sending SIGKILL to process group 10307 (imitates pulling the battery)
+  14.941 [simtest] run 2: pid 10307 killed by SIGKILL; SD folder /tmp/simtest-cp_sleep_restore-sd-lgm8zobt kept for the next start
+  14.942 [simtest] run 3: starting /home/user/eink-learner-aid/.claude/worktrees/agent-aa882264d6e75fac5/.pio/build/simulator_picco/program on SD folder /tmp/simtest-cp_sleep_restore-sd-lgm8zobt (slide switch off, display :0, http port 53795)
+  14.943 [simtest] run 3: pid 10384
+  15.140 [192] [DBG] [CPT] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=cached book_bytes=72544 ms=0
+  15.140 [192] [DBG] [CPT] session open checkpoints=1 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c session_bytes=128 layout_bytes=8120
+  15.140 [192] [DBG] [RSVP] book state read mode=page ch=3 word=0
+  15.157 [209] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+  15.266 [SIM] WAIT matched: [209] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+  15.515 [567] [DBG] [CPT] move source=previous-page
+  15.540 [592] [DBG] [ERS] Progress saved: spine=2 offset=2551 page=5
+  15.645 [SIM] WAIT matched: [592] [DBG] [ERS] Progress saved: spine=2 offset=2551 page=5
+  15.905 [957] [DBG] [CPT] sections ch=2 words=608 sections=2 checkpoints=1 failed=0
+  15.905 [957] [DBG] [CPT] page advance ch=2 first=490 from=490 last=607 step=fire reread=-
+  15.905 [957] [DBG] [CPT] fire source=next-page checkpoint=c0002 section=s0004 ch=2 last_word=607 resume_ch=3 resume_word=0 crossed=1
+  15.905 [957] [DBG] [CPT] open checkpoint=c0002 prompts=3 section=s0004 mode=page resume_ch=3 resume_word=0 state=read grades=2 activity_bytes=4056 session_bytes=78056 accepted=1
+  15.906 [958] [DBG] [CPT] saved after=start prompt=- grade=none active=c0002 prompt_index=0 position=2:490:page ok=1 reread=none
+  15.912 [964] [DBG] [CPT] screen=Prompt question=1/3 prompt=c0002-p1 recorded=correct focus=Reveal part=1/1 lines=0 refresh=clear
+  16.022 [SIM] WAIT matched: [957] [DBG] [CPT] fire source=next-page checkpoint=c0002 section=s0004 ch=2 last_word=607 resume_ch=3 resume_word=0 crossed=1
+  16.022 [SIM] WAIT matched: [964] [DBG] [CPT] screen=Prompt question=1/3 prompt=c0002-p1 recorded=correct focus=Reveal part=1/1 lines=0 refresh=clear
+  16.312 [1364] [DBG] [CPT] event=skip-prompt prompt=c0002-p1 accepted=1 refusal=0 state=prompt-hidden grade_recorded=0 save=now
+  16.313 [1365] [DBG] [CPT] saved after=skip-prompt prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=none
+  16.317 [1368] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=incorrect focus=Reveal part=1/1 lines=0 refresh=clear
+  16.441 [SIM] WAIT matched: [1368] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=incorrect focus=Reveal part=1/1 lines=0 refresh=clear
+  16.738 [1789] [DBG] [CPT] event=reveal prompt=c0002-p2 accepted=1 refusal=0 state=answer-shown grade_recorded=0 save=no
+  16.741 [1793] [DBG] [CPT] screen=Answer question=2/3 prompt=c0002-p2 recorded=incorrect focus=AnswerBox part=1/1 lines=8 refresh=clear
+  17.150 [2202] [DBG] [CPT] event=incorrect prompt=c0002-p2 accepted=1 refusal=0 state=incorrect-choice grade_recorded=0 save=no
+  17.153 [2205] [DBG] [CPT] screen=Incorrect question=2/3 prompt=c0002-p2 recorded=incorrect focus=RereadPage part=1/1 lines=0 refresh=clear
+  17.565 [2617] [DBG] [CPT] event=reread-rsvp prompt=c0002-p2 accepted=1 refusal=0 state=rereading grade_recorded=0 save=now
+  17.566 [2618] [DBG] [CPT] saved after=reread-rsvp prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:311:rsvp
+  17.566 [2618] [DBG] [CPT] end result=reread-rsvp prompt=1 ch=2 word=311 mode=rsvp saved=1
+  17.566 [2618] [DBG] [CPT] reread start mode=rsvp checkpoint=c0002 section=s0004 prompt=1 ch=2 start=311 last_word=607
+  17.566 [2618] [DBG] [CPT] page resume reread-rsvp ch=2 word=311 offset=1592
+  17.566 [2618] [DBG] [CPT] mode rsvp source=mode-switch
+  17.567 [2619] [DBG] [RSVP] state read book_wpm=1000 book_words=0 default_wpm=240 default_words=1 wpm=1000 words_per_update=1 position=page ch=2 word=490
+  17.567 [2619] [DBG] [CPT] reread moved by=enter source=mode-switch mode=rsvp ch=2 word=311 state=rereading left_section=0
+  17.567 [2619] [DBG] [RSVP] enter ch=2 page_offset=2551 word=311 chapter_words=608 activity_bytes=5512 from=reread
+  17.572 [2623] [DBG] [RSVP] pause screen focus=Play refresh=clear status="Rereading · 1000 WPM target · -- actual"
+  17.694 [SIM] WAIT matched: [2619] [DBG] [RSVP] enter ch=2 page_offset=2551 word=311 chapter_words=608 activity_bytes=5512 from=reread
+  19.412 [4464] [DBG] [CPT] reread moved by=pause source=rsvp-playback mode=rsvp ch=2 word=331 state=rereading left_section=0
+  19.414 [4466] [DBG] [CPT] saved after=reread-moved prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:331:rsvp
+  19.417 [4469] [DBG] [RSVP] pause screen focus=Play refresh=clear status="Rereading · 1000 WPM target · 836 actual"
+  19.618 [SIM] WAIT matched: [4466] [DBG] [CPT] saved after=reread-moved prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=2:331:rsvp
+  20.274 [5326] [DBG] [CPT] reread moved by=sleep source=rsvp-playback mode=rsvp ch=2 word=331 state=rereading left_section=0
+  20.276 [5328] [DBG] [ERS] Progress saved: spine=2 offset=1696 page=3
+  20.277 [5328] [DBG] [CPT] reread moved by=home source=rsvp-playback mode=rsvp ch=2 word=331 state=rereading left_section=0
+  20.277 [5328] [DBG] [CPT] mode page source=mode-switch
+  20.299 [5351] [DBG] [MAIN] Entering deep sleep
+  20.299 [SIM] WAIT matched: [5351] [DBG] [MAIN] Entering deep sleep
+  20.394 [83] [DBG] [CPT] checkpoint data OEBPS/rsvp/checkpoints.json: sections=5 checkpoints=2 prompts=4 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c bytes=2805 copy=cached book_bytes=72544 ms=0
+  20.394 [83] [DBG] [CPT] session open checkpoints=1 sha=9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c session_bytes=128 layout_bytes=8120
+  20.394 [83] [DBG] [RSVP] book state read mode=page ch=2 word=490
+  20.394 [84] [DBG] [CPT] restore view=reread checkpoint=c0002 prompt=2/3 place=2:331:rsvp resume=3:0:page notes=none progress_bytes=78056
+  20.394 [84] [DBG] [CPT] restore open show=reread speed_read=1 jump=1 ch=2 offset=1696 kept_bytes=78188
+  20.395 [SIM] WAIT matched: [84] [DBG] [CPT] restore view=reread checkpoint=c0002 prompt=2/3 place=2:331:rsvp resume=3:0:page notes=none progress_bytes=78056
+  20.396 [86] [DBG] [CPT] reread page ch=2 under rsvp: not the reread place
+  20.414 [104] [DBG] [ERS] Progress saved: spine=2 offset=1440 page=3
+  20.420 [110] [DBG] [CPT] mode rsvp source=mode-switch
+  20.421 [110] [DBG] [RSVP] state read book_wpm=1000 book_words=0 default_wpm=240 default_words=1 wpm=1000 words_per_update=1 position=page ch=2 word=490
+  20.421 [110] [DBG] [CPT] sections ch=2 words=608 sections=2 checkpoints=1 failed=0
+  20.421 [110] [DBG] [CPT] reread moved by=enter source=mode-switch mode=rsvp ch=2 word=331 state=rereading left_section=0
+  20.421 [110] [DBG] [RSVP] enter ch=2 page_offset=1440 word=331 chapter_words=608 activity_bytes=5512 from=reread
+  20.425 [115] [DBG] [RSVP] pause screen focus=Play refresh=clear status="Rereading · 1000 WPM target · -- actual"
+  20.436 [SIM] WAIT matched: [110] [DBG] [RSVP] enter ch=2 page_offset=1440 word=331 chapter_words=608 activity_bytes=5512 from=reread
+  20.437 [SIM] WAIT matched: [115] [DBG] [RSVP] pause screen focus=Play refresh=clear status="Rereading · 1000 WPM target · -- actual"
+  20.958 [647] [DBG] [CPT] reread end by=pause-screen event=return-early accepted=1 state=prompt-hidden
+  20.959 [649] [DBG] [CPT] saved after=return-early prompt=- grade=none active=c0002 prompt_index=1 position=none ok=1 reread=none
+  20.959 [649] [DBG] [CPT] back checkpoint=c0002 prompt=2/3 mode=page activity_bytes=4056
+  20.964 [654] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=incorrect focus=Reveal part=1/1 lines=0 refresh=clear
+  21.087 [SIM] WAIT matched: [647] [DBG] [CPT] reread end by=pause-screen event=return-early accepted=1 state=prompt-hidden
+  21.087 [SIM] WAIT matched: [654] [DBG] [CPT] screen=Prompt question=2/3 prompt=c0002-p2 recorded=incorrect focus=Reveal part=1/1 lines=0 refresh=clear
+  21.375 [1065] [DBG] [CPT] event=skip-checkpoint prompt=c0002-p2 accepted=1 refusal=0 state=finished grade_recorded=0 save=now
+  21.377 [1067] [DBG] [CPT] saved after=skip-checkpoint prompt=- grade=none active=none prompt_index=0 position=3:0:page ok=1 reread=none
+  21.377 [1067] [DBG] [CPT] end result=skipped prompt=1 ch=3 word=0 mode=page saved=1
+  21.377 [1067] [DBG] [CPT] mode page source=mode-switch
+  21.377 [1067] [DBG] [CPT] resume end=skipped mode=page ch=3 word=0 reread=1
+  21.377 [1067] [DBG] [CPT] page resume chapter ch=3 word=0 offset=1
+  21.396 [1085] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+  21.497 [SIM] WAIT matched: [1067] [DBG] [CPT] end result=skipped prompt=1 ch=3 word=0 mode=page saved=1
+  21.498 [SIM] WAIT matched: [1085] [DBG] [ERS] Progress saved: spine=3 offset=0 page=0
+  21.498 [simtest] run 3: sending SIGTERM to pid 10384 (clean quit)
+  21.530 [simtest] run 3: pid 10384 exit status 0

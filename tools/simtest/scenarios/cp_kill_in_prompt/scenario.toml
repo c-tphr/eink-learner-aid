@@ -6,8 +6,9 @@
 # Pass 1, touch, fired in page view: p1 Reveal, Correct; p2 Reveal; kill with p2's answer on screen.
 # The file: p1 correct, the checkpoint in progress at question 2 (prompt_index 1), resume 3:0:page.
 # Restart: Home's continue-reading card reopens the book directly at question 2 of 3 with the answer
-# hidden (the revealed state is not saved), before any page of the book is drawn. Reveal, Correct; p3
-# Reveal, Correct: page view resumes at chapter 3 word 0.
+# hidden (the revealed state is not saved), before any page of the book is drawn. Sleep and wake: the
+# firmware reopens the book at the same question (it was remembered although no page was drawn).
+# Reveal, Correct; p3 Reveal, Correct: page view resumes at chapter 3 word 0.
 # Pass 2, keys, fired in RSVP: Up to chapter 2's last page, hold: Speed read, hold: Play. p1 (recorded
 # Correct) Reveal, Correct; p2 Reveal; kill. Restart: ENTER on Home reopens the book at question 2 of 3
 # ("Recorded earlier: Correct"), answer hidden. Reveal, Incorrect (nothing saved: p2 has its first grade),
@@ -77,6 +78,12 @@ steps = [
   { wait_log = "\\[CTL\\] Prompt armed" },
   { screen_lacks = "Loading", note = "no page of the book was drawn first" },
   { shot = "t_after_restore_prompt2" },
+  { sleep = true, note = "sleep while the restored question shows: no page was drawn, the book must still reopen" },
+  { wait_log = "Entering deep sleep" },
+  { wake = "POWER" },
+  { wait_log = "\\[CPT\\] restore view=prompt checkpoint=c0002 prompt=2/3 place=3:0:page resume=3:0:page notes=none ", note = "the firmware reopened the book by itself" },
+  { wait_log = "\\[CPT\\] screen=Prompt question=2/3 prompt=c0002-p2 recorded=none focus=Reveal " },
+  { wait_log = "\\[CTL\\] Prompt armed" },
   { tap = [240, 476], note = "Reveal" },
   { wait_log = "\\[CTL\\] Answer armed" },
   { tap = [120, 620], note = "Correct" },

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "book_sha256": "9b35113fe38d8374524edd01a5ef06e20f3035e1fdb4232eb0ed58e0a16ca92c",
+  "overrides": { "wpm": 1000 },
+  "position": { "chapter": 2, "word": 607, "mode": "rsvp" },
+  "grades": {
+    "c0002-p1": { "first": "correct", "at": "2026-11-19T21:59:21" },
+    "c0002-p2": { "first": "correct", "at": "2026-11-19T21:59:22" },
+    "c0002-p3": { "first": "correct", "at": "2026-11-19T21:59:23" }
+  },
+  "active_checkpoint": {
+    "id": "c0002",
+    "prompt_index": 1,
+    "resume": { "chapter": 3, "word": 0, "mode": "rsvp" }
+  }
+}

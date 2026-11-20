@@ -598,7 +598,7 @@ Each step has two screens.
 
 *Simulator picture of the summary. The real screen is e-ink.*
 
-The twelve steps use the books `fixture.prepared.epub` (steps 1 to 10) and `fixture.epub` (steps 11 and 12) in the `books` folder. The full text of each step is in [Appendix A](#appendix-a-the-twelve-steps-of-part-b). Pictures of the reading screens you will meet are in [Appendix B](#appendix-b-screens-you-meet-in-part-b).
+The twelve steps use the books `fixture.prepared.epub` (steps 1 to 10) and `fixture.epub` (steps 11 and 12) in the `books` folder. If you leave a book, or the Picco sleeps, while a question or a reread shows, the book opens again on the same question (with the answer hidden) or in the same reread: this is what steps 9 and 10 check, and it can also happen between steps. The full text of each step is in [Appendix A](#appendix-a-the-twelve-steps-of-part-b). Pictures of the reading screens you will meet are in [Appendix B](#appendix-b-screens-you-meet-in-part-b).
 
 ---
 
@@ -888,6 +888,18 @@ Result: [ ] Pass [ ] Fail [ ] Skip · notes: ____________
 <img src="evidence/c3a/cp_screens_touch-c_prompt1_recorded.png" alt="Recorded earlier" width="240">
 
 *Simulator picture of a question from an earlier pass, with "Recorded earlier". The real screen is e-ink.*
+
+<img src="evidence/c4/cp_reread_rsvp_end-t_rsvp_reread_pause.png" alt="RSVP reread pause screen" width="240">
+
+*Simulator picture of the pause screen during a reread in RSVP (step 5). The top line starts with "Rereading"; "Back to the question" is the wide row under Exit, Menu and Page view. The real screen is e-ink.*
+
+<img src="evidence/c4/cp_reread_page_early-t_page_reread_bar.png" alt="Page view reread strip" width="240">
+
+*Simulator picture of page view during a reread (steps 6 and 10). The strip at the bottom shows "Rereading" and the small "Back to the question" button, where the battery and page number usually are. The real screen is e-ink.*
+
+<img src="evidence/c4/cp_reread_page_early-k_reread_list.png" alt="Rereading this section list" width="240">
+
+*Simulator picture of the list a side-key hold opens during a page-view reread: "Back to the question" is highlighted. The real screen is e-ink.*
 
 <img src="evidence/r5/image-banner.png" alt="Picture banner" width="240">
 
